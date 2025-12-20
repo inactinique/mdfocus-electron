@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PDFList } from './PDFList';
 import { IndexingProgress } from './IndexingProgress';
+import { CollapsibleSection } from '../common/CollapsibleSection';
 import './PDFIndexPanel.css';
 
 interface PDFDocument {
@@ -9,6 +10,7 @@ interface PDFDocument {
   author?: string;
   year?: string;
   pageCount: number;
+  chunkCount?: number;
   indexedAt: Date;
 }
 
@@ -73,13 +75,13 @@ export const PDFIndexPanel: React.FC = () => {
 
   const handleAddPDF = async () => {
     try {
-      const filePaths = await window.electron.dialog.openFile({
+      const result = await window.electron.dialog.openFile({
         filters: [{ name: 'PDF', extensions: ['pdf'] }],
-        multiple: true,
+        properties: ['openFile', 'multiSelections'],
       });
 
-      if (filePaths && filePaths.length > 0) {
-        for (const filePath of filePaths) {
+      if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+        for (const filePath of result.filePaths) {
           await indexPDF(filePath);
         }
       }
@@ -170,17 +172,19 @@ export const PDFIndexPanel: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="pdf-stats">
-        <div className="stat-item">
-          <span className="stat-value">{stats.totalDocuments}</span>
-          <span className="stat-label">Documents</span>
+      <CollapsibleSection title="Statistiques" defaultExpanded={false}>
+        <div className="pdf-stats">
+          <div className="stat-item">
+            <span className="stat-value">{stats.totalDocuments}</span>
+            <span className="stat-label">Documents</span>
+          </div>
+          <div className="stat-divider">|</div>
+          <div className="stat-item">
+            <span className="stat-value">{stats.totalChunks}</span>
+            <span className="stat-label">Chunks</span>
+          </div>
         </div>
-        <div className="stat-divider">|</div>
-        <div className="stat-item">
-          <span className="stat-value">{stats.totalChunks}</span>
-          <span className="stat-label">Chunks</span>
-        </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Indexing Progress */}
       {indexingState.isIndexing && (
@@ -192,25 +196,27 @@ export const PDFIndexPanel: React.FC = () => {
       )}
 
       {/* Document List */}
-      <div
-        className="pdf-content"
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {documents.length === 0 ? (
-          <div className="pdf-empty">
-            <div className="empty-icon">📂</div>
-            <h4>Aucun document</h4>
-            <p>
-              Glissez-déposez des PDFs ici
-              <br />
-              ou cliquez sur + pour en ajouter
-            </p>
-          </div>
-        ) : (
-          <PDFList documents={documents} onDelete={handleDeletePDF} />
-        )}
-      </div>
+      <CollapsibleSection title="Documents" defaultExpanded={true}>
+        <div
+          className="pdf-content"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {documents.length === 0 ? (
+            <div className="pdf-empty">
+              <div className="empty-icon">📂</div>
+              <h4>Aucun document</h4>
+              <p>
+                Glissez-déposez des PDFs ici
+                <br />
+                ou cliquez sur + pour en ajouter
+              </p>
+            </div>
+          ) : (
+            <PDFList documents={documents} onDelete={handleDeletePDF} />
+          )}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 };

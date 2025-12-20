@@ -62,6 +62,11 @@ const api = {
     openFile: (options: any) => ipcRenderer.invoke('dialog:open-file', options),
     saveFile: (options: any) => ipcRenderer.invoke('dialog:save-file', options),
   },
+
+  // File system
+  fs: {
+    readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),
+  },
 };
 
 // Exposer l'API au renderer via window.electron

@@ -134,12 +134,19 @@ export function setupIPCHandlers() {
   ipcMain.handle('pdf:get-statistics', async () => {
     console.log('📞 IPC Call: pdf:get-statistics');
     try {
-      const statistics = await pdfService.getStatistics();
-      console.log('📤 IPC Response: pdf:get-statistics', statistics);
+      const stats = await pdfService.getStatistics();
+      console.log('📤 IPC Response: pdf:get-statistics', stats);
+      // Map backend names to frontend names
+      const statistics = {
+        totalDocuments: stats.documentCount,
+        totalChunks: stats.chunkCount,
+        totalEmbeddings: stats.embeddingCount,
+        databasePath: stats.databasePath
+      };
       return { success: true, statistics };
     } catch (error: any) {
       console.error('❌ pdf:get-statistics error:', error);
-      return { success: false, statistics: { totalDocuments: 0, totalChunks: 0 }, error: error.message };
+      return { success: false, statistics: { totalDocuments: 0, totalChunks: 0, totalEmbeddings: 0 }, error: error.message };
     }
   });
 
@@ -239,6 +246,48 @@ export function setupIPCHandlers() {
       console.log('📤 IPC Response: editor:insert-text - command sent');
     }
     return { success: true };
+  });
+
+  // File system handlers
+  ipcMain.handle('fs:read-directory', async (_event, dirPath: string) => {
+    console.log('📞 IPC Call: fs:read-directory', { dirPath });
+    try {
+      const { readdir, stat } = await import('fs/promises');
+      const path = await import('path');
+
+      const entries = await readdir(dirPath);
+      const items = await Promise.all(
+        entries.map(async (name) => {
+          const fullPath = path.join(dirPath, name);
+          try {
+            const stats = await stat(fullPath);
+            return {
+              name,
+              path: fullPath,
+              isDirectory: stats.isDirectory(),
+              isFile: stats.isFile(),
+            };
+          } catch (error) {
+            console.warn(`⚠️ Could not stat ${fullPath}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filter out null entries and sort: directories first, then files
+      const validItems = items.filter((item): item is NonNullable<typeof item> => item !== null);
+      const sorted = validItems.sort((a, b) => {
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      console.log('📤 IPC Response: fs:read-directory', { itemCount: sorted.length });
+      return { success: true, items: sorted };
+    } catch (error: any) {
+      console.error('❌ fs:read-directory error:', error);
+      return { success: false, items: [], error: error.message };
+    }
   });
 
   // Dialog handlers

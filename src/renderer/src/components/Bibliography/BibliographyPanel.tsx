@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import { CitationList } from './CitationList';
 import { CitationCard } from './CitationCard';
+import { CollapsibleSection } from '../common/CollapsibleSection';
 import './BibliographyPanel.css';
 
 export const BibliographyPanel: React.FC = () => {
@@ -19,12 +20,12 @@ export const BibliographyPanel: React.FC = () => {
 
   const handleImportBibTeX = async () => {
     try {
-      const filePath = await window.electron.dialog.openFile({
+      const result = await window.electron.dialog.openFile({
         filters: [{ name: 'BibTeX', extensions: ['bib'] }],
       });
 
-      if (filePath) {
-        await useBibliographyStore.getState().loadBibliography(filePath);
+      if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+        await useBibliographyStore.getState().loadBibliography(result.filePaths[0]);
       }
     } catch (error) {
       console.error('Failed to import BibTeX:', error);
@@ -45,52 +46,56 @@ export const BibliographyPanel: React.FC = () => {
       </div>
 
       {/* Search & Filters */}
-      <div className="bibliography-controls">
-        <div className="search-box">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Rechercher auteur, titre, année..."
-            value={searchQuery}
-            onChange={(e) => searchCitations(e.target.value)}
-          />
+      <CollapsibleSection title="Recherche et filtres" defaultExpanded={true}>
+        <div className="bibliography-controls">
+          <div className="search-box">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Rechercher auteur, titre, année..."
+              value={searchQuery}
+              onChange={(e) => searchCitations(e.target.value)}
+            />
+          </div>
+
+          <div className="sort-controls">
+            <label className="sort-label">Trier par:</label>
+            <select
+              className="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'author' | 'year' | 'title')}
+            >
+              <option value="author">Auteur</option>
+              <option value="year">Année</option>
+              <option value="title">Titre</option>
+            </select>
+            <button className="sort-order-btn" onClick={toggleSortOrder} title="Ordre de tri">
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
         </div>
 
-        <div className="sort-controls">
-          <label className="sort-label">Trier par:</label>
-          <select
-            className="sort-select"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'author' | 'year' | 'title')}
-          >
-            <option value="author">Auteur</option>
-            <option value="year">Année</option>
-            <option value="title">Titre</option>
-          </select>
-          <button className="sort-order-btn" onClick={toggleSortOrder} title="Ordre de tri">
-            {sortOrder === 'asc' ? '↑' : '↓'}
-          </button>
+        {/* Citation Count */}
+        <div className="citation-count">
+          {filteredCitations.length} citation{filteredCitations.length !== 1 ? 's' : ''}
         </div>
-      </div>
-
-      {/* Citation Count */}
-      <div className="citation-count">
-        {filteredCitations.length} citation{filteredCitations.length !== 1 ? 's' : ''}
-      </div>
+      </CollapsibleSection>
 
       {/* Citation List */}
-      <div className="bibliography-content">
-        {filteredCitations.length === 0 ? (
-          <div className="bibliography-empty">
-            <div className="empty-icon">📖</div>
-            <h4>Aucune citation</h4>
-            <p>Importez un fichier BibTeX pour commencer</p>
-          </div>
-        ) : (
-          <CitationList citations={filteredCitations} />
-        )}
-      </div>
+      <CollapsibleSection title="Citations" defaultExpanded={true}>
+        <div className="bibliography-content">
+          {filteredCitations.length === 0 ? (
+            <div className="bibliography-empty">
+              <div className="empty-icon">📖</div>
+              <h4>Aucune citation</h4>
+              <p>Importez un fichier BibTeX pour commencer</p>
+            </div>
+          ) : (
+            <CitationList citations={filteredCitations} />
+          )}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 };

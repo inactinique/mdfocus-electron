@@ -133,7 +133,14 @@ export class VectorStore {
     const stmt = this.db.prepare('SELECT * FROM documents ORDER BY indexed_at DESC');
     const rows = stmt.all();
 
-    return rows.map((row) => this.parseDocument(row as any));
+    return rows.map((row) => {
+      const doc = this.parseDocument(row as any);
+      // Add chunk count for this document
+      const chunkCountStmt = this.db.prepare('SELECT COUNT(*) as count FROM chunks WHERE document_id = ?');
+      const chunkCountRow = chunkCountStmt.get(doc.id) as { count: number };
+      (doc as any).chunkCount = chunkCountRow.count;
+      return doc;
+    });
   }
 
   deleteDocument(id: string): void {

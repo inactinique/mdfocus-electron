@@ -1,10 +1,26 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import type { DocumentPage, PDFMetadata } from '../../types/pdf-document';
 
 // Configuration de pdfjs pour Node.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = require.resolve('pdfjs-dist/build/pdf.worker.mjs');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Determine the correct path to pdf.worker.mjs
+// When in dist/backend/core/pdf, we need to go to the project root and then to node_modules
+let workerPath: string;
+if (__dirname.includes('/dist/')) {
+  // Running from compiled code in dist/
+  const projectRoot = __dirname.split('/dist/')[0];
+  workerPath = path.join(projectRoot, 'node_modules/pdfjs-dist/build/pdf.worker.mjs');
+} else {
+  // Running from source (development)
+  workerPath = path.join(__dirname, '../../../node_modules/pdfjs-dist/build/pdf.worker.mjs');
+}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath;
 
 export interface PDFStatistics {
   pageCount: number;

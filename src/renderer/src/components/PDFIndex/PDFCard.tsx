@@ -7,6 +7,7 @@ interface PDFDocument {
   author?: string;
   year?: string;
   pageCount: number;
+  chunkCount?: number;
   indexedAt: Date;
 }
 
@@ -42,7 +43,10 @@ export const PDFCard: React.FC<PDFCardProps> = ({ document, onDelete }) => {
         <div className="pdf-info">
           <div className="pdf-reference">{formatReference()}</div>
           <div className="pdf-meta">
-            {document.pageCount} pages • Indexé le {formatDate(document.indexedAt)}
+            {document.pageCount} pages
+            {document.chunkCount !== undefined && ` • ${document.chunkCount} chunks`}
+            {' • Indexé le '}
+            {formatDate(document.indexedAt)}
           </div>
         </div>
         <button className="expand-btn">

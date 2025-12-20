@@ -17,48 +17,44 @@ class ChatService {
       }
 
       let fullResponse = '';
-      let contextText = '';
+      let searchResults: any[] = [];
 
       // Si contexte activé, rechercher dans les documents
       if (options.context) {
-        const searchResults = await pdfService.search(message, { topK: 5 });
+        // Use topK from options or let pdfService.search use the config default
+        searchResults = await pdfService.search(message, { topK: options.topK });
 
         if (searchResults.length > 0) {
-          contextText = searchResults
-            .map((r: any) => r.text)
-            .join('\n\n---\n\n');
-
           console.log(`📚 Using ${searchResults.length} context chunks for RAG`);
         }
       }
 
-      // Construire le prompt avec contexte
-      const systemPrompt = contextText
-        ? `Tu es un assistant d'écriture pour historiens. Utilise le contexte suivant pour répondre à la question de l'utilisateur.
+      // Stream la réponse avec contexte RAG si disponible
+      if (searchResults.length > 0) {
+        // Utiliser generateResponseStreamWithSources pour RAG
+        const generator = ollamaClient.generateResponseStreamWithSources(message, searchResults);
+        this.currentStream = generator;
 
-CONTEXTE:
-${contextText}
-
-Réponds de manière précise et cite les sources quand c'est pertinent.`
-        : 'Tu es un assistant d\'écriture pour historiens.';
-
-      // Stream la réponse
-      this.currentStream = await ollamaClient.chat(
-        [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message },
-        ],
-        {
-          stream: true,
-          onChunk: (chunk: string) => {
-            fullResponse += chunk;
-            // Envoyer le chunk au renderer si une fenêtre est fournie
-            if (options.window) {
-              options.window.webContents.send('chat:stream', chunk);
-            }
-          },
+        for await (const chunk of generator) {
+          fullResponse += chunk;
+          // Envoyer le chunk au renderer si une fenêtre est fournie
+          if (options.window) {
+            options.window.webContents.send('chat:stream', chunk);
+          }
         }
-      );
+      } else {
+        // Utiliser generateResponseStream sans contexte
+        const generator = ollamaClient.generateResponseStream(message, []);
+        this.currentStream = generator;
+
+        for await (const chunk of generator) {
+          fullResponse += chunk;
+          // Envoyer le chunk au renderer si une fenêtre est fournie
+          if (options.window) {
+            options.window.webContents.send('chat:stream', chunk);
+          }
+        }
+      }
 
       console.log(`✅ Chat response generated (${fullResponse.length} chars)`);
       return fullResponse;

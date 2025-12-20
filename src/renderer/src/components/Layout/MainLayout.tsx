@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import { MessageCircle, FileText, Settings, Folder, BookOpen } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { BibliographyPanel } from '../Bibliography/BibliographyPanel';
 import { PDFIndexPanel } from '../PDFIndex/PDFIndexPanel';
 import { ChatInterface } from '../Chat/ChatInterface';
+import { ConfigPanel } from '../Config/ConfigPanel';
+import { ProjectPanel } from '../Project/ProjectPanel';
+import { ProjectPanelSimple } from '../Project/ProjectPanelSimple';
 import { logger } from '../../utils/logger';
 import './MainLayout.css';
 
@@ -45,7 +49,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         </div>
         <div className="toolbar-right">
           <button className="toolbar-button" onClick={() => handleRightViewChange('settings')}>
-            ⚙️
+            <Settings size={20} strokeWidth={1} />
           </button>
         </div>
       </div>
@@ -61,26 +65,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 <button
                   className={`panel-tab ${leftView === 'projects' ? 'active' : ''}`}
                   onClick={() => handleLeftViewChange('projects')}
+                  title="Projets"
                 >
-                  📁 Projets
+                  <Folder size={20} strokeWidth={1} />
                 </button>
                 <button
                   className={`panel-tab ${leftView === 'bibliography' ? 'active' : ''}`}
                   onClick={() => handleLeftViewChange('bibliography')}
+                  title="Bibliographie"
                 >
-                  📚 Bibliographie
+                  <BookOpen size={20} strokeWidth={1} />
                 </button>
               </div>
 
               {/* Panel content */}
               <div className="panel-content">
-                {leftView === 'projects' && (
-                  leftPanel || (
-                    <div className="panel-placeholder">
-                      <p style={{ color: '#888', fontSize: '13px' }}>Aucun projet</p>
-                    </div>
-                  )
-                )}
+                {leftView === 'projects' && (leftPanel || <ProjectPanel />)}
                 {leftView === 'bibliography' && <BibliographyPanel />}
               </div>
             </div>
@@ -107,20 +107,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 <button
                   className={`panel-tab ${rightView === 'chat' ? 'active' : ''}`}
                   onClick={() => handleRightViewChange('chat')}
+                  title="Chat"
                 >
-                  💬 Chat
+                  <MessageCircle size={20} strokeWidth={1} />
                 </button>
                 <button
                   className={`panel-tab ${rightView === 'pdfIndex' ? 'active' : ''}`}
                   onClick={() => handleRightViewChange('pdfIndex')}
+                  title="PDFs"
                 >
-                  📄 PDFs
+                  <FileText size={20} strokeWidth={1} />
                 </button>
                 <button
                   className={`panel-tab ${rightView === 'settings' ? 'active' : ''}`}
                   onClick={() => handleRightViewChange('settings')}
+                  title="Configuration"
                 >
-                  ⚙️ Config
+                  <Settings size={20} strokeWidth={1} />
                 </button>
               </div>
 
@@ -128,18 +131,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               <div className="panel-content">
                 {rightView === 'chat' && <ChatInterface />}
                 {rightView === 'pdfIndex' && <PDFIndexPanel />}
-                {rightView === 'settings' && (
-                  <div className="panel-placeholder">
-                    <div style={{ padding: '16px' }}>
-                      <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#cccccc' }}>
-                        Configuration
-                      </h3>
-                      <p style={{ color: '#888', fontSize: '13px' }}>
-                        Panneau de configuration à venir
-                      </p>
-                    </div>
-                  </div>
-                )}
+                {rightView === 'settings' && <ConfigPanel />}
               </div>
             </div>
           </Panel>

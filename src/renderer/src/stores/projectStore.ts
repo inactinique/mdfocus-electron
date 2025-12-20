@@ -6,7 +6,7 @@ export interface Project {
   id: string;
   name: string;
   path: string;
-  type: 'article' | 'book' | 'presentation';
+  type: 'article' | 'book' | 'presentation' | 'notes';
   createdAt: Date;
   lastOpenedAt: Date;
 }
@@ -51,20 +51,28 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   loadProject: async (projectPath: string) => {
     try {
       // Call IPC to load project
-      const project = await window.electron.project.load(projectPath);
+      const result = await window.electron.project.load(projectPath);
+
+      if (!result.success || !result.project) {
+        throw new Error(result.error || 'Failed to load project');
+      }
+
+      const project = result.project;
 
       set({
         currentProject: {
           ...project,
           createdAt: new Date(project.createdAt),
-          lastOpenedAt: new Date(),
+          lastOpenedAt: new Date(project.lastOpenedAt || project.createdAt),
         },
       });
 
       // Load chapters for book projects
       if (project.type === 'book') {
-        const chapters = await window.electron.project.getChapters(project.id);
-        set({ chapters });
+        const chaptersResult = await window.electron.project.getChapters(project.id);
+        if (chaptersResult.success) {
+          set({ chapters: chaptersResult.chapters });
+        }
       }
 
       // Update recent projects
@@ -77,13 +85,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createProject: async (name: string, type: Project['type'], path: string) => {
     try {
-      const project = await window.electron.project.create({ name, type, path });
+      const result = await window.electron.project.create({ name, type, path });
+
+      if (!result.success || !result.project) {
+        throw new Error(result.error || 'Failed to create project');
+      }
+
+      const project = result.project;
 
       set({
         currentProject: {
           ...project,
           createdAt: new Date(project.createdAt),
-          lastOpenedAt: new Date(),
+          lastOpenedAt: new Date(project.lastOpenedAt || project.createdAt),
         },
         chapters: [],
         currentChapterId: null,
@@ -138,11 +152,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const recentProjects = await Promise.all(
         recentPaths.map(async (path) => {
           try {
-            const project = await window.electron.project.load(path);
+            const result = await window.electron.project.load(path);
+            if (!result.success || !result.project) {
+              return null;
+            }
+            const project = result.project;
             return {
               ...project,
               createdAt: new Date(project.createdAt),
-              lastOpenedAt: new Date(project.lastOpenedAt),
+              lastOpenedAt: new Date(project.lastOpenedAt || project.createdAt),
             };
           } catch {
             return null;

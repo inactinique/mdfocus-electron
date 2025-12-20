@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
   fontSize: 14,
   theme: 'dark',
   wordWrap: true,
-  showPreview: true,
+  showPreview: false,
   previewPosition: 'right',
 };
 
@@ -53,7 +53,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   filePath: null,
   isDirty: false,
   settings: DEFAULT_SETTINGS,
-  showPreview: true,
+  showPreview: false,
 
   setContent: (content: string) => {
     set({

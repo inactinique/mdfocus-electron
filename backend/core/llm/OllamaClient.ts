@@ -46,8 +46,14 @@ export class OllamaClient {
   public embeddingModel: string = 'nomic-embed-text';
   public chatModel: string = 'gemma2:2b';
 
-  constructor(baseURL: string = 'http://localhost:11434') {
+  constructor(
+    baseURL: string = 'http://localhost:11434',
+    chatModel?: string,
+    embeddingModel?: string
+  ) {
     this.baseURL = baseURL;
+    if (chatModel) this.chatModel = chatModel;
+    if (embeddingModel) this.embeddingModel = embeddingModel;
   }
 
   // MARK: - Vérification disponibilité

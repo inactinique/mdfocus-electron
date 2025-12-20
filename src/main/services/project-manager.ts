@@ -2,14 +2,17 @@
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { configManager } from './config-manager.js';
 
 interface Project {
   id?: string;
   name: string;
+  type?: string;
   path: string;
   createdAt: string;
   updatedAt: string;
+  lastOpenedAt?: string;
   content?: string;
   bibliography?: string;
   chapters?: Chapter[];
@@ -23,31 +26,46 @@ interface Chapter {
 }
 
 export class ProjectManager {
-  async createProject(data: { name: string; path: string; content?: string }) {
-    const projectPath = path.join(data.path, data.name);
+  async createProject(data: { name: string; type?: string; path: string; content?: string }) {
+    const projectType = data.type || 'article';
 
-    // Créer le dossier du projet
-    if (!existsSync(projectPath)) {
+    // For notes type, use the path directly (existing folder)
+    // For other types, create a subfolder with the project name
+    const projectPath = projectType === 'notes' ? data.path : path.join(data.path, data.name);
+
+    // Create folder only for non-notes projects
+    if (projectType !== 'notes' && !existsSync(projectPath)) {
       await mkdir(projectPath, { recursive: true });
     }
 
     const project: Project = {
+      id: crypto.randomUUID(),
       name: data.name,
+      type: projectType,
       path: projectPath,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      lastOpenedAt: new Date().toISOString(),
       content: data.content || '',
     };
 
-    // Sauvegarder le fichier projet
+    // For notes type, don't create project.json, just remember the folder
+    if (projectType === 'notes') {
+      // Just add to recent projects (folder path)
+      configManager.addRecentProject(projectPath);
+      console.log('✅ Notes folder opened:', projectPath);
+      return { success: true, path: projectPath, project };
+    }
+
+    // For other project types, create project.json
     const projectFile = path.join(projectPath, 'project.json');
     await writeFile(projectFile, JSON.stringify(project, null, 2));
 
-    // Créer le fichier markdown principal
+    // Create markdown file
     const mdFile = path.join(projectPath, 'document.md');
     await writeFile(mdFile, data.content || '# ' + data.name);
 
-    // Ajouter aux projets récents
+    // Add to recent projects
     configManager.addRecentProject(projectFile);
 
     console.log('✅ Project created:', projectPath);
@@ -56,14 +74,43 @@ export class ProjectManager {
 
   async loadProject(projectPath: string) {
     try {
+      // Check if it's a notes folder (directory without project.json)
+      const { stat } = await import('fs/promises');
+      const stats = await stat(projectPath);
+
+      if (stats.isDirectory()) {
+        // It's a notes folder
+        const folderName = path.basename(projectPath);
+        const project: Project = {
+          id: crypto.randomUUID(),
+          name: folderName,
+          type: 'notes',
+          path: projectPath,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastOpenedAt: new Date().toISOString(),
+        };
+
+        configManager.addRecentProject(projectPath);
+        console.log('✅ Notes folder loaded:', projectPath);
+        return { success: true, project };
+      }
+
+      // It's a project.json file
       const content = await readFile(projectPath, 'utf-8');
       const project: Project = JSON.parse(content);
 
-      // Charger le contenu markdown
+      // Update lastOpenedAt
+      project.lastOpenedAt = new Date().toISOString();
+
+      // Load markdown content
       const mdFile = path.join(path.dirname(projectPath), 'document.md');
       if (existsSync(mdFile)) {
         project.content = await readFile(mdFile, 'utf-8');
       }
+
+      // Save update
+      await writeFile(projectPath, JSON.stringify(project, null, 2));
 
       configManager.addRecentProject(projectPath);
       console.log('✅ Project loaded:', projectPath);

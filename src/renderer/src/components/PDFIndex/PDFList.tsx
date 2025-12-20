@@ -8,6 +8,7 @@ interface PDFDocument {
   author?: string;
   year?: string;
   pageCount: number;
+  chunkCount?: number;
   indexedAt: Date;
 }
 

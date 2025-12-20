@@ -55,13 +55,19 @@ class PDFService {
   async search(query: string, options?: any) {
     if (!this.initialized) await this.init();
 
-    const ragConfig = configManager.getRAGConfig();
-    const results = await this.vectorStore!.search(query, {
-      topK: options?.topK || ragConfig.topK,
-      threshold: options?.threshold || ragConfig.similarityThreshold,
-    });
+    // Generate embedding for the query using Ollama
+    const queryEmbedding = await this.ollamaClient!.generateEmbedding(query);
 
-    return results;
+    const ragConfig = configManager.getRAGConfig();
+    const results = this.vectorStore!.search(
+      queryEmbedding,
+      options?.topK || ragConfig.topK,
+      options?.documentIds
+    );
+
+    // Filter by similarity threshold
+    const threshold = options?.threshold || ragConfig.similarityThreshold;
+    return results.filter(r => r.similarity >= threshold);
   }
 
   async getAllDocuments() {

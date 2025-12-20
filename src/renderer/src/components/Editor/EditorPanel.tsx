@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileText, FolderOpen, Save, Link, BookOpen, Eye } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -93,13 +94,13 @@ export const EditorPanel: React.FC = () => {
       <div className="editor-toolbar">
         <div className="toolbar-section">
           <button className="toolbar-btn" onClick={handleNewFile} title="Nouveau fichier">
-            📄
+            <FileText size={20} strokeWidth={1} />
           </button>
           <button className="toolbar-btn" onClick={handleOpenFile} title="Ouvrir">
-            📂
+            <FolderOpen size={20} strokeWidth={1} />
           </button>
           <button className="toolbar-btn" onClick={handleSaveFile} title="Enregistrer">
-            💾
+            <Save size={20} strokeWidth={1} />
           </button>
         </div>
 
@@ -111,10 +112,10 @@ export const EditorPanel: React.FC = () => {
             <em>I</em>
           </button>
           <button className="toolbar-btn" onClick={handleLink} title="Lien">
-            🔗
+            <Link size={20} strokeWidth={1} />
           </button>
           <button className="toolbar-btn" onClick={handleCitation} title="Citation">
-            📚
+            <BookOpen size={20} strokeWidth={1} />
           </button>
         </div>
 
@@ -124,7 +125,7 @@ export const EditorPanel: React.FC = () => {
             onClick={togglePreview}
             title="Afficher/Masquer l'aperçu"
           >
-            👁️
+            <Eye size={20} strokeWidth={1} />
           </button>
         </div>
       </div>

@@ -1,0 +1,93 @@
+import React from 'react';
+import { CollapsibleSection } from '../common/CollapsibleSection';
+
+export interface EditorConfig {
+  fontSize: number;
+  wordWrap: boolean;
+  showMinimap: boolean;
+}
+
+interface EditorConfigSectionProps {
+  config: EditorConfig;
+  onChange: (config: EditorConfig) => void;
+}
+
+export const EditorConfigSection: React.FC<EditorConfigSectionProps> = ({ config, onChange }) => {
+
+  const handleFieldChange = (field: keyof EditorConfig, value: any) => {
+    onChange({ ...config, [field]: value });
+  };
+
+  return (
+    <CollapsibleSection title="Configuration Éditeur" defaultExpanded={false}>
+      <div className="config-section">
+        <div className="config-section-content">
+          {/* Font Size */}
+          <div className="config-field">
+            <label className="config-label">
+              Taille de police
+              <span className="config-help">
+                Taille du texte dans l'éditeur Markdown (Monaco Editor)
+              </span>
+            </label>
+            <div className="config-input-group">
+              <input
+                type="range"
+                min="10"
+                max="24"
+                value={config.fontSize}
+                onChange={(e) => handleFieldChange('fontSize', parseInt(e.target.value))}
+                className="config-slider"
+              />
+              <input
+                type="number"
+                min="10"
+                max="24"
+                value={config.fontSize}
+                onChange={(e) => handleFieldChange('fontSize', parseInt(e.target.value))}
+                className="config-number"
+              />
+            </div>
+            <div className="config-description">
+              Taille actuelle: {config.fontSize}px
+              <br />
+              <small>S'applique uniquement à l'éditeur de texte principal</small>
+            </div>
+          </div>
+
+          {/* Word Wrap */}
+          <div className="config-field">
+            <label className="config-label">
+              <input
+                type="checkbox"
+                checked={config.wordWrap}
+                onChange={(e) => handleFieldChange('wordWrap', e.target.checked)}
+                style={{ marginRight: '8px' }}
+              />
+              Retour à la ligne automatique
+              <span className="config-help">
+                Les longues lignes sont automatiquement coupées pour rester visibles
+              </span>
+            </label>
+          </div>
+
+          {/* Show Minimap */}
+          <div className="config-field">
+            <label className="config-label">
+              <input
+                type="checkbox"
+                checked={config.showMinimap}
+                onChange={(e) => handleFieldChange('showMinimap', e.target.checked)}
+                style={{ marginRight: '8px' }}
+              />
+              Afficher la minimap
+              <span className="config-help">
+                Barre de défilement avec aperçu miniature du document (comme dans VS Code)
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </CollapsibleSection>
+  );
+};

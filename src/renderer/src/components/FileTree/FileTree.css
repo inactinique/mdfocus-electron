@@ -1,0 +1,65 @@
+.file-tree {
+  width: 100%;
+  user-select: none;
+}
+
+.file-tree-item {
+  display: flex;
+  align-items: center;
+  padding: var(--item-padding-vertical) var(--item-padding-horizontal);
+  cursor: pointer;
+  color: #d4d4d4;
+  font-size: var(--font-size-sm);
+  transition: background-color 0.15s;
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+.file-tree-item:hover {
+  background-color: #2a2a2a;
+}
+
+.file-tree-item.file:hover {
+  background-color: #2a2a2a;
+}
+
+.file-tree-icon {
+  margin-right: var(--spacing-sm);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.file-tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-tree-loading {
+  margin-left: 0.5rem;
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.file-tree-children {
+  /* Children are indented via paddingLeft in DirectoryNode */
+}
+
+.file-tree-loading-container,
+.file-tree-error,
+.file-tree-empty {
+  padding: 1rem;
+  text-align: center;
+  color: #888;
+  font-size: var(--font-size-sm);
+}
+
+.file-tree-error {
+  color: #f48771;
+}
+
+.file-tree-empty {
+  font-style: italic;
+}
