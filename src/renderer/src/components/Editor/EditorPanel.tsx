@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, FolderOpen, Save, Link, BookOpen, Eye } from 'lucide-react';
+import { FileText, FolderOpen, Save, Link, BookOpen, Eye, Table } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -88,6 +88,17 @@ export const EditorPanel: React.FC = () => {
     useEditorStore.getState().insertText('[@citationKey]');
   };
 
+  const handleTable = () => {
+    logger.component('EditorPanel', 'handleTable clicked');
+    const tableTemplate = `
+| Colonne 1 | Colonne 2 | Colonne 3 |
+|-----------|-----------|-----------|
+| Cellule 1 | Cellule 2 | Cellule 3 |
+| Cellule 4 | Cellule 5 | Cellule 6 |
+`;
+    useEditorStore.getState().insertText(tableTemplate);
+  };
+
   return (
     <div className="editor-panel">
       {/* Toolbar */}
@@ -116,6 +127,9 @@ export const EditorPanel: React.FC = () => {
           </button>
           <button className="toolbar-btn" onClick={handleCitation} title="Citation">
             <BookOpen size={20} strokeWidth={1} />
+          </button>
+          <button className="toolbar-btn" onClick={handleTable} title="Insérer un tableau">
+            <Table size={20} strokeWidth={1} />
           </button>
         </div>
 

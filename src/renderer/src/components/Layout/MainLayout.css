@@ -137,7 +137,7 @@
 
 /* Resize Handle */
 .resize-handle {
-  width: 4px;
+  width: 1px;
   background-color: #3e3e42;
   cursor: col-resize;
   transition: background-color 0.2s;

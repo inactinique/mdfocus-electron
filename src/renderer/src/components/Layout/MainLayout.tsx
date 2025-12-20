@@ -6,7 +6,6 @@ import { PDFIndexPanel } from '../PDFIndex/PDFIndexPanel';
 import { ChatInterface } from '../Chat/ChatInterface';
 import { ConfigPanel } from '../Config/ConfigPanel';
 import { ProjectPanel } from '../Project/ProjectPanel';
-import { ProjectPanelSimple } from '../Project/ProjectPanelSimple';
 import { logger } from '../../utils/logger';
 import './MainLayout.css';
 

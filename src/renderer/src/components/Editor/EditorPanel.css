@@ -14,7 +14,7 @@
   padding: 0 16px;
   background-color: #252526;
   border-bottom: 1px solid #3e3e42;
-  min-height: 35px;
+  min-height: 42px;
 }
 
 .toolbar-section {
@@ -61,7 +61,7 @@
 
 /* Resize Handle */
 .editor-resize-handle {
-  width: 4px;
+  width: 1px;
   background-color: #3e3e42;
   cursor: col-resize;
   transition: background-color 0.2s;
