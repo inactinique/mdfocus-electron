@@ -86,17 +86,20 @@ $body$
 \\newlength{\\cslhangindent}
 \\setlength{\\cslhangindent}{1.5em}
 \\newlength{\\csllabelwidth}
-\\setlength{\\csllabelwidth}{3em}
+\\setlength{\\csllabelwidth}{0em}
 \\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
  {\\begin{list}{}{%
   \\setlength{\\itemindent}{-1.5em}
   \\setlength{\\leftmargin}{1.5em}
   \\setlength{\\itemsep}{#2\\baselineskip}
-  \\setlength{\\parsep}{0pt}}}
+  \\setlength{\\parsep}{0pt}
+  \\setlength{\\labelsep}{0pt}
+  \\setlength{\\labelwidth}{0pt}
+  \\renewcommand{\\makelabel}[1]{}}}
  {\\end{list}}
 \\newcommand{\\CSLBlock}[1]{#1\\hfill\\break}
-\\newcommand{\\CSLLeftMargin}[1]{\\parbox[t]{\\csllabelwidth}{}}
-\\newcommand{\\CSLRightInline}[1]{\\parbox[t]{\\linewidth - \\csllabelwidth}{#1}\\break}
+\\newcommand{\\CSLLeftMargin}[1]{}
+\\newcommand{\\CSLRightInline}[1]{#1\\break}
 \\newcommand{\\CSLIndent}[1]{\\hspace{\\cslhangindent}#1}
 \\DeclareRobustCommand{\\citeproctext}{}
 \\DeclareRobustCommand{\\citeprocdate}{}
@@ -153,17 +156,20 @@ $body$
 \\newlength{\\cslhangindent}
 \\setlength{\\cslhangindent}{1.5em}
 \\newlength{\\csllabelwidth}
-\\setlength{\\csllabelwidth}{3em}
+\\setlength{\\csllabelwidth}{0em}
 \\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
  {\\begin{list}{}{%
   \\setlength{\\itemindent}{-1.5em}
   \\setlength{\\leftmargin}{1.5em}
   \\setlength{\\itemsep}{#2\\baselineskip}
-  \\setlength{\\parsep}{0pt}}}
+  \\setlength{\\parsep}{0pt}
+  \\setlength{\\labelsep}{0pt}
+  \\setlength{\\labelwidth}{0pt}
+  \\renewcommand{\\makelabel}[1]{}}}
  {\\end{list}}
 \\newcommand{\\CSLBlock}[1]{#1\\hfill\\break}
-\\newcommand{\\CSLLeftMargin}[1]{\\parbox[t]{\\csllabelwidth}{}}
-\\newcommand{\\CSLRightInline}[1]{\\parbox[t]{\\linewidth - \\csllabelwidth}{#1}\\break}
+\\newcommand{\\CSLLeftMargin}[1]{}
+\\newcommand{\\CSLRightInline}[1]{#1\\break}
 \\newcommand{\\CSLIndent}[1]{\\hspace{\\cslhangindent}#1}
 \\DeclareRobustCommand{\\citeproctext}{}
 \\DeclareRobustCommand{\\citeprocdate}{}
@@ -309,6 +315,9 @@ export class PDFExportService {
       if (bibPath) {
         pandocArgs.push('--bibliography', bibPath);
         pandocArgs.push('--citeproc');
+        // Use a citation style without item numbers
+        pandocArgs.push('--metadata', 'reference-section-title=Références');
+        pandocArgs.push('--metadata', 'suppress-bibliography=false');
       }
 
       // Run pandoc
