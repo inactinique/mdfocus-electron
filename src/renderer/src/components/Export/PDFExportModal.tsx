@@ -201,6 +201,13 @@ export const PDFExportModal: React.FC<PDFExportModalProps> = ({ isOpen, onClose 
             />
           </div>
 
+          {/* Info about abstract for articles and books */}
+          {(currentProject?.type === 'article' || currentProject?.type === 'book') && (
+            <div style={{ fontSize: '0.875rem', color: '#888', marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#2a2a2a', borderRadius: '4px' }}>
+              💡 Le résumé sera automatiquement lu depuis le fichier <code style={{ color: '#4ec9b0' }}>abstract.md</code> de votre projet
+            </div>
+          )}
+
           <div className="form-field">
             <label>Fichier de sortie</label>
             <div className="path-selector">

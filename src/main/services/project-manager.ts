@@ -70,6 +70,12 @@ export class ProjectManager {
     const mdFile = path.join(projectPath, 'document.md');
     await writeFile(mdFile, data.content || '# ' + data.name);
 
+    // For articles and books, create abstract.md
+    if (projectType === 'article' || projectType === 'book') {
+      const abstractFile = path.join(projectPath, 'abstract.md');
+      await writeFile(abstractFile, '# Résumé\n\nRésumé à compléter...');
+    }
+
     // Add to recent projects
     configManager.addRecentProject(projectFile);
 

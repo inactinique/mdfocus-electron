@@ -4,7 +4,10 @@
   "type": "module",
   "description": "Assistant d'écriture pour historiens avec RAG et intégration Zotero/Tropy",
   "main": "dist/src/main/index.js",
-  "author": "mdFocus Team",
+  "author": {
+    "name": "mdFocus Team",
+    "email": "contact@mdfocus.dev"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "concurrently \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\"",
@@ -23,7 +26,7 @@
     "build:win": "npm run build && electron-builder --win",
     "build:dir": "npm run build && electron-builder --dir",
     "preview": "vite preview",
-    "start": "env -u ELECTRON_RUN_AS_NODE electron . --no-sandbox",
+    "start": "env -u ELECTRON_RUN_AS_NODE npx electron . --no-sandbox",
     "start:prod": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",

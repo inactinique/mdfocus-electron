@@ -188,6 +188,26 @@ export const ProjectPanel: React.FC = () => {
               </CollapsibleSection>
             )}
 
+            {/* File list for Article and Book projects */}
+            {(currentProject.type === 'article' || currentProject.type === 'book') && (
+              <CollapsibleSection title="Fichiers du projet" defaultExpanded={true}>
+                <div className="project-files-list">
+                  <div
+                    className="project-file-item"
+                    onClick={() => handleFileSelect(`${currentProject.path}/document.md`)}
+                  >
+                    📄 document.md
+                  </div>
+                  <div
+                    className="project-file-item"
+                    onClick={() => handleFileSelect(`${currentProject.path}/abstract.md`)}
+                  >
+                    📝 abstract.md
+                  </div>
+                </div>
+              </CollapsibleSection>
+            )}
+
             <button
               className="project-btn"
               onClick={closeProject}

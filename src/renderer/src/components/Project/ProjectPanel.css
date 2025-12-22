@@ -282,3 +282,28 @@
   background-color: #4a4a4a;
   border-color: #007acc;
 }
+
+.project-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.project-file-item {
+  padding: 0.5rem 0.75rem;
+  background-color: #252526;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.project-file-item:hover {
+  background-color: #2a2a2a;
+  border-color: #007acc;
+  color: #fff;
+}

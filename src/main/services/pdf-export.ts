@@ -16,6 +16,7 @@ export interface ExportOptions {
     title?: string;
     author?: string;
     date?: string;
+    abstract?: string;
   };
 }
 
@@ -28,6 +29,12 @@ interface PandocProgress {
 // MARK: - Templates
 
 const getLatexTemplate = (projectType: string): string => {
+  // Use Latin Modern fonts - they're guaranteed to be available with TeXLive on all platforms
+  // These fonts have excellent Unicode coverage including French accents
+  const mainFont = 'Latin Modern Roman';
+  const sansFont = 'Latin Modern Sans';
+  const monoFont = 'Latin Modern Mono';
+
   switch (projectType) {
     case 'notes':
       return `\\documentclass[12pt,a4paper]{article}
@@ -40,10 +47,10 @@ const getLatexTemplate = (projectType: string): string => {
 \\usepackage{graphicx}
 \\usepackage{fancyhdr}
 
-% Fonts - EB Garamond with oldstyle numbers
-\\setmainfont{EB Garamond}[Numbers=OldStyle]
-\\setsansfont{Helvetica}
-\\setmonofont{Courier New}
+% Fonts - Latin Modern (guaranteed availability)
+\\setmainfont{${mainFont}}[Ligatures=TeX]
+\\setsansfont{${sansFont}}[Ligatures=TeX]
+\\setmonofont{${monoFont}}[Scale=0.9]
 
 % Header/Footer
 \\pagestyle{fancy}
@@ -77,10 +84,10 @@ $body$
 % Disable section numbering
 \\setcounter{secnumdepth}{0}
 
-% Fonts - EB Garamond with oldstyle numbers
-\\setmainfont{EB Garamond}[Numbers=OldStyle]
-\\setsansfont{Helvetica}
-\\setmonofont{Courier New}
+% Fonts - Latin Modern (guaranteed availability)
+\\setmainfont{${mainFont}}[Ligatures=TeX]
+\\setsansfont{${sansFont}}[Ligatures=TeX]
+\\setmonofont{${monoFont}}[Scale=0.9]
 
 % CSLReferences environment and commands for pandoc citeproc
 \\newlength{\\cslhangindent}
@@ -147,10 +154,10 @@ $body$
 % Disable section numbering
 \\setcounter{secnumdepth}{0}
 
-% Fonts - EB Garamond with oldstyle numbers
-\\setmainfont{EB Garamond}[Numbers=OldStyle]
-\\setsansfont{Helvetica}
-\\setmonofont{Courier New}
+% Fonts - Latin Modern (guaranteed availability)
+\\setmainfont{${mainFont}}[Ligatures=TeX]
+\\setsansfont{${sansFont}}[Ligatures=TeX]
+\\setmonofont{${monoFont}}[Scale=0.9]
 
 % CSLReferences environment and commands for pandoc citeproc
 \\newlength{\\cslhangindent}
@@ -255,6 +262,23 @@ export class PDFExportService {
 
       onProgress?.({ stage: 'preparing', message: 'Préparation des fichiers...', progress: 20 });
 
+      // Try to load abstract from abstract.md if no abstract in metadata
+      let abstract = options.metadata?.abstract;
+      if (!abstract && (options.projectType === 'article' || options.projectType === 'book')) {
+        // projectPath is the folder path for the project
+        const abstractPath = join(options.projectPath, 'abstract.md');
+        console.log('🔍 Looking for abstract at:', abstractPath);
+        if (existsSync(abstractPath)) {
+          const abstractContent = await readFile(abstractPath, 'utf-8');
+          // Remove the "# Résumé" heading and trim
+          abstract = abstractContent.replace(/^#\s*Résumé\s*\n*/i, '').trim();
+          console.log('📄 Abstract loaded from file:', abstractPath);
+          console.log('📄 Abstract content preview:', abstract.substring(0, 200));
+        } else {
+          console.log('⚠️ Abstract file not found at:', abstractPath);
+        }
+      }
+
       // Write markdown content
       const mdPath = join(tempDir, 'input.md');
       await writeFile(mdPath, options.content);
@@ -309,6 +333,9 @@ export class PDFExportService {
       }
       if (options.metadata?.date) {
         pandocArgs.push('-M', `date=${options.metadata.date}`);
+      }
+      if (abstract) {
+        pandocArgs.push('-M', `abstract=${escapeLatex(abstract)}`);
       }
 
       // Add bibliography if available

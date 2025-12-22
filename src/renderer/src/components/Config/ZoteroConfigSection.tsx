@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle, XCircle, ExternalLink } from 'lucide-react';
-import { CollapsibleSection } from '../Common/CollapsibleSection';
+import { CollapsibleSection } from '../common/CollapsibleSection';
 
 export interface ZoteroConfig {
   userId: string;
