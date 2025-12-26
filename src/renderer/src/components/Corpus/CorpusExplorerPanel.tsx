@@ -38,7 +38,8 @@ interface GraphData {
 interface CorpusStatistics {
   documentCount: number;
   chunkCount: number;
-  citationCount: number;
+  citationCount: number; // Citations internes (matchées dans le corpus)
+  totalCitationsExtracted: number; // Total des citations extraites
   languageCount: number;
   languages: string[];
   yearRange: {
@@ -401,8 +402,11 @@ export const CorpusExplorerPanel: React.FC = () => {
             <div className="stat-label">Documents</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">{statistics.citationCount}</div>
-            <div className="stat-label">Citations</div>
+            <div className="stat-value">{statistics.totalCitationsExtracted}</div>
+            <div className="stat-label">Citations extraites</div>
+            <div className="stat-detail">
+              {statistics.citationCount} internes ({Math.round((statistics.citationCount / Math.max(statistics.totalCitationsExtracted, 1)) * 100)}%)
+            </div>
           </div>
           <div className="stat-card">
             <div className="stat-value">{statistics.authorCount}</div>

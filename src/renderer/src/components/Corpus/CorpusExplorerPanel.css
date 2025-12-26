@@ -100,6 +100,13 @@
   letter-spacing: 1px;
 }
 
+.stat-detail {
+  font-size: 12px;
+  margin-top: 8px;
+  opacity: 0.85;
+  font-style: italic;
+}
+
 .stat-info {
   display: flex;
   align-items: center;

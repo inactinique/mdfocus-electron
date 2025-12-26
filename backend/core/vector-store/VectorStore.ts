@@ -538,6 +538,33 @@ export class VectorStore {
     }));
   }
 
+  /**
+   * Compte le nombre de citations matchées (citations internes)
+   */
+  getMatchedCitationsCount(): number {
+    const stmt = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM document_citations
+      WHERE target_doc_id IS NOT NULL
+    `);
+
+    const result = stmt.get() as { count: number };
+    return result.count;
+  }
+
+  /**
+   * Compte le nombre total de citations (y compris non matchées)
+   */
+  getTotalCitationsCount(): number {
+    const stmt = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM document_citations
+    `);
+
+    const result = stmt.get() as { count: number };
+    return result.count;
+  }
+
   getDocumentsCitedBy(documentId: string): string[] {
     const stmt = this.db.prepare(`
       SELECT DISTINCT target_doc_id FROM document_citations

@@ -161,26 +161,22 @@ class PDFService {
     const languages = new Set<string>();
     const years = new Set<string>();
     const authors = new Set<string>();
-    let totalCitations = 0;
 
     for (const doc of documents) {
       if (doc.language) languages.add(doc.language);
       if (doc.year) years.add(doc.year);
       if (doc.author) authors.add(doc.author);
-      if (doc.citationsExtracted) {
-        try {
-          const citations = JSON.parse(doc.citationsExtracted);
-          totalCitations += citations.length;
-        } catch (e) {
-          // Ignorer erreurs de parsing
-        }
-      }
     }
+
+    // Compter les citations
+    const totalCitationsExtracted = this.vectorStore!.getTotalCitationsCount();
+    const matchedCitations = this.vectorStore!.getMatchedCitationsCount();
 
     return {
       documentCount: stats.documentCount,
       chunkCount: stats.chunkCount,
-      citationCount: totalCitations,
+      citationCount: matchedCitations, // Citations internes (matchées dans le corpus)
+      totalCitationsExtracted: totalCitationsExtracted, // Total des citations extraites
       languageCount: languages.size,
       languages: Array.from(languages),
       yearRange: years.size > 0 ? {
