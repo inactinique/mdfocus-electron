@@ -95,6 +95,16 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "backend/python-services",
+        "to": "python-services",
+        "filter": [
+          "**/*",
+          "!**/.venv",
+          "!**/__pycache__",
+          "!**/*.pyc"
+        ]
       }
     ],
     "linux": {

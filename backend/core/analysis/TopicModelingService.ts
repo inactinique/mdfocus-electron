@@ -12,6 +12,7 @@ import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import os from 'os';
 import { promisify } from 'util';
 
 const access = promisify(fs.access);
@@ -72,18 +73,32 @@ export class TopicModelingService {
   private venvPath?: string;
 
   /**
+   * Retourne le chemin vers le venv dans userData
+   * En production: ~/.config/mdFocus/.venv
+   * En dev: backend/python-services/topic-modeling/.venv
+   */
+  private getVenvDir(isProduction: boolean, pythonServicePath: string): string {
+    if (isProduction) {
+      // Venv dans un emplacement writable
+      return path.join(os.homedir(), '.config', 'mdFocus', '.venv');
+    } else {
+      // Venv dans le dossier du service (dev)
+      return path.join(pythonServicePath, '.venv');
+    }
+  }
+
+  /**
    * Retourne le chemin vers l'exécutable Python du venv
    */
-  private getVenvPythonPath(pythonServicePath: string): string {
-    const venvDir = path.join(pythonServicePath, '.venv');
+  private getVenvPythonPath(venvDir: string): string {
     return path.join(venvDir, 'bin', 'python3');
   }
 
   /**
    * Vérifie si le venv existe et est valide
    */
-  private async checkVenvExists(pythonServicePath: string): Promise<boolean> {
-    const venvPython = this.getVenvPythonPath(pythonServicePath);
+  private async checkVenvExists(venvDir: string): Promise<boolean> {
+    const venvPython = this.getVenvPythonPath(venvDir);
     try {
       await access(venvPython, fs.constants.X_OK);
       return true;
@@ -95,11 +110,18 @@ export class TopicModelingService {
   /**
    * Crée et configure le venv avec les dépendances
    */
-  private async setupVenv(pythonServicePath: string): Promise<void> {
+  private async setupVenv(venvDir: string, requirementsPath: string): Promise<void> {
     console.log('📦 Setting up Python virtual environment...');
+    console.log(`   venv location: ${venvDir}`);
+    console.log(`   requirements: ${requirementsPath}`);
 
-    const venvDir = path.join(pythonServicePath, '.venv');
-    const requirementsPath = path.join(pythonServicePath, 'requirements.txt');
+    // Créer le répertoire parent si nécessaire
+    const parentDir = path.dirname(venvDir);
+    try {
+      await mkdir(parentDir, { recursive: true });
+    } catch (error) {
+      // Ignore si le répertoire existe déjà
+    }
 
     return new Promise((resolve, reject) => {
       // Créer le venv
@@ -169,32 +191,50 @@ export class TopicModelingService {
       console.log('🚀 Starting topic modeling service...');
 
       // Déterminer le chemin vers le script Python
-      // Le fichier compilé est dans dist/backend/core/analysis/
-      // Le service Python est dans backend/python-services/topic-modeling/
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = path.dirname(__filename);
 
-      // Remonter jusqu'à la racine du projet (depuis dist/backend/core/analysis/)
-      const projectRoot = path.join(__dirname, '../../../..');
-      const pythonServicePath = path.join(
-        projectRoot,
-        'backend/python-services/topic-modeling'
-      );
+      // Détecter si on est en production (app.asar) ou en développement
+      const isProduction = __filename.includes('app.asar');
+      console.log(`📦 Environment: ${isProduction ? 'production' : 'development'}`);
+
+      let pythonServicePath: string;
+
+      if (isProduction) {
+        // En production: fichiers Python dans extraResources
+        pythonServicePath = path.join(
+          process.resourcesPath,
+          'python-services/topic-modeling'
+        );
+      } else {
+        // En développement: fichiers dans le projet
+        const projectRoot = path.join(__dirname, '../../../..');
+        pythonServicePath = path.join(
+          projectRoot,
+          'backend/python-services/topic-modeling'
+        );
+      }
 
       console.log(`📂 Python service path: ${pythonServicePath}`);
+
+      // Déterminer le chemin du venv
+      const venvDir = this.getVenvDir(isProduction, pythonServicePath);
+      const requirementsPath = path.join(pythonServicePath, 'requirements.txt');
+
+      console.log(`📂 Venv path: ${venvDir}`);
 
       // Vérifier que Python est disponible
       await this.checkPythonAvailable();
 
       // Vérifier si le venv existe, sinon le créer
-      const venvExists = await this.checkVenvExists(pythonServicePath);
+      const venvExists = await this.checkVenvExists(venvDir);
       if (!venvExists) {
         console.log('🔧 Virtual environment not found, creating it...');
-        await this.setupVenv(pythonServicePath);
+        await this.setupVenv(venvDir, requirementsPath);
       }
 
       // Utiliser le Python du venv
-      const pythonExecutable = this.getVenvPythonPath(pythonServicePath);
+      const pythonExecutable = this.getVenvPythonPath(venvDir);
       console.log(`🐍 Using Python from venv: ${pythonExecutable}`);
 
       // Démarrer le subprocess Python avec le venv
