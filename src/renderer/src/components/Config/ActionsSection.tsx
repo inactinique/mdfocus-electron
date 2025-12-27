@@ -47,9 +47,18 @@ Vous devrez ré-indexer tous vos PDFs.
 
     setIsPurging(true);
     try {
-      // TODO: Implement purge endpoint
-      console.log('Purging database...');
-      alert('Fonction de purge à implémenter');
+      // Purge the vector database
+      const result = await window.electron.pdf.purge();
+
+      if (result.success) {
+        console.log('✅ Database purged successfully');
+        alert('✅ Base de données purgée avec succès!\n\nTous les documents et embeddings ont été supprimés.');
+      } else {
+        console.error('❌ Failed to purge database:', result.error);
+        alert(`❌ Erreur lors de la purge:\n${result.error}`);
+      }
+
+      // Reload statistics to show empty database
       await loadStats();
     } catch (error) {
       console.error('Failed to purge database:', error);

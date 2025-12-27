@@ -15,6 +15,7 @@ export interface IndexingProgress {
     | 'summarizing'
     | 'chunking'
     | 'embedding'
+    | 'similarities'
     | 'completed'
     | 'error';
   progress: number; // 0-100
@@ -251,16 +252,29 @@ export class PDFIndexer {
         }
       }
 
+      // 12. Calculer les similarités avec les autres documents
+      onProgress?.({
+        stage: 'similarities',
+        progress: 95,
+        message: 'Calcul des similarités avec les autres documents...',
+      });
+
+      const similaritiesCount = this.vectorStore.computeAndSaveSimilarities(
+        documentId,
+        0.5 // Seuil de similarité
+      );
+
       onProgress?.({
         stage: 'completed',
         progress: 100,
-        message: `✅ Indexation terminée: ${chunks.length} chunks`,
+        message: `✅ Indexation terminée: ${chunks.length} chunks, ${similaritiesCount} similarités`,
       });
 
       console.log(`✅ PDF indexé: ${document.title}`);
       console.log(`   - ${chunks.length} chunks`);
       console.log(`   - ${stats.totalWords} mots total`);
       console.log(`   - Moyenne: ${stats.averageWordCount} mots/chunk`);
+      console.log(`   - ${similaritiesCount} similarités calculées`);
 
       return document;
     } catch (error) {

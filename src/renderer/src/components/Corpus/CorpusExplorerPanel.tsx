@@ -119,6 +119,19 @@ export const CorpusExplorerPanel: React.FC = () => {
       } else {
         throw new Error(graphResult.error || 'Failed to load graph');
       }
+
+      // Charger les topics sauvegardés (si disponibles)
+      try {
+        const topicsResult = await window.electron.corpus.loadTopics();
+        if (topicsResult.success) {
+          setTopicAnalysis(topicsResult);
+          console.log('✅ Loaded saved topics:', topicsResult.topics.length);
+        } else {
+          console.log('ℹ️ No saved topics found');
+        }
+      } catch (err) {
+        console.log('ℹ️ Could not load saved topics:', err);
+      }
     } catch (err: any) {
       console.error('Error loading corpus data:', err);
       setError(err.message || 'Failed to load corpus data');
@@ -149,6 +162,178 @@ export const CorpusExplorerPanel: React.FC = () => {
     } finally {
       setLoadingTopics(false);
     }
+  };
+
+  const exportTopicsAsJSON = () => {
+    if (!topicAnalysis) return;
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      analysisDate: (topicAnalysis as any).analysisDate || new Date().toISOString(),
+      statistics: (topicAnalysis as any).statistics || {},
+      topics: topicAnalysis.topics.map(topic => ({
+        id: topic.id,
+        keywords: topic.keywords,
+        size: topic.size,
+        documents: (fullGraphData?.nodes || [])
+          .filter(node => topicAnalysis.topicAssignments?.[node.id] === topic.id)
+          .map(node => ({
+            id: node.id,
+            title: node.metadata?.title || node.label,
+            author: node.metadata?.author,
+            year: node.metadata?.year,
+          }))
+      })),
+      outliers: (topicAnalysis.outliers || []).map(docId => {
+        const node = fullGraphData?.nodes.find(n => n.id === docId);
+        return {
+          id: docId,
+          title: node?.metadata?.title || node?.label,
+          author: node?.metadata?.author,
+        };
+      })
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `topics-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportTopicsAsCSV = () => {
+    if (!topicAnalysis) return;
+
+    let csv = 'Topic_ID,Keywords,Num_Documents,Document_IDs\n';
+
+    topicAnalysis.topics.forEach(topic => {
+      const keywords = topic.keywords.join(';');
+      const docIds = (fullGraphData?.nodes || [])
+        .filter(node => topicAnalysis.topicAssignments?.[node.id] === topic.id)
+        .map(node => node.id)
+        .join(';');
+
+      csv += `${topic.id},"${keywords}",${topic.size},"${docIds}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `topics-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportTopicsAsMarkdown = () => {
+    if (!topicAnalysis) return;
+
+    let md = `# Analyse Thématique - Export\n\n`;
+    md += `**Date d'export:** ${new Date().toLocaleDateString()}\n`;
+    md += `**Nombre de topics:** ${topicAnalysis.topics.length}\n\n`;
+    md += `---\n\n`;
+
+    topicAnalysis.topics.forEach(topic => {
+      md += `## Topic ${topic.id}\n\n`;
+      md += `**Mots-clés:** ${topic.keywords.join(', ')}\n\n`;
+      md += `**Taille:** ${topic.size} documents\n\n`;
+
+      const topicDocs = (fullGraphData?.nodes || [])
+        .filter(node => topicAnalysis.topicAssignments?.[node.id] === topic.id);
+
+      if (topicDocs.length > 0) {
+        md += `**Documents:**\n\n`;
+        topicDocs.forEach(node => {
+          const title = node.metadata?.title || node.label;
+          const author = node.metadata?.author || '';
+          const year = node.metadata?.year || '';
+          md += `- ${title}${author ? ` (${author}` : ''}${year ? `, ${year})` : author ? ')' : ''}\n`;
+        });
+        md += `\n`;
+      }
+    });
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `topics-export-${new Date().toISOString().split('T')[0]}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportGraphAsGEXF = () => {
+    if (!fullGraphData) return;
+
+    // Générer le fichier GEXF (format XML pour Gephi)
+    let gexf = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    gexf += `<gexf xmlns="http://www.gexf.net/1.2draft" version="1.2">\n`;
+    gexf += `  <meta lastmodifieddate="${new Date().toISOString().split('T')[0]}">\n`;
+    gexf += `    <creator>mdFocus</creator>\n`;
+    gexf += `    <description>Knowledge Graph Export</description>\n`;
+    gexf += `  </meta>\n`;
+    gexf += `  <graph mode="static" defaultedgetype="directed">\n`;
+
+    // Attributs des nœuds
+    gexf += `    <attributes class="node">\n`;
+    gexf += `      <attribute id="0" title="type" type="string"/>\n`;
+    gexf += `      <attribute id="1" title="title" type="string"/>\n`;
+    gexf += `      <attribute id="2" title="author" type="string"/>\n`;
+    gexf += `      <attribute id="3" title="year" type="string"/>\n`;
+    gexf += `      <attribute id="4" title="pageCount" type="integer"/>\n`;
+    gexf += `      <attribute id="5" title="centrality" type="float"/>\n`;
+    gexf += `    </attributes>\n`;
+
+    // Attributs des arêtes
+    gexf += `    <attributes class="edge">\n`;
+    gexf += `      <attribute id="0" title="type" type="string"/>\n`;
+    gexf += `      <attribute id="1" title="weight" type="float"/>\n`;
+    gexf += `    </attributes>\n`;
+
+    // Nœuds
+    gexf += `    <nodes>\n`;
+    fullGraphData.nodes.forEach((node) => {
+      const escapedLabel = (node.label || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const escapedTitle = (node.metadata?.title || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const escapedAuthor = (node.metadata?.author || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      gexf += `      <node id="${node.id}" label="${escapedLabel}">\n`;
+      gexf += `        <attvalues>\n`;
+      gexf += `          <attvalue for="0" value="${node.type}"/>\n`;
+      gexf += `          <attvalue for="1" value="${escapedTitle}"/>\n`;
+      gexf += `          <attvalue for="2" value="${escapedAuthor}"/>\n`;
+      gexf += `          <attvalue for="3" value="${node.metadata?.year || ''}"/>\n`;
+      gexf += `          <attvalue for="4" value="${node.metadata?.pageCount || 0}"/>\n`;
+      gexf += `          <attvalue for="5" value="${node.centrality || 0}"/>\n`;
+      gexf += `        </attvalues>\n`;
+      gexf += `      </node>\n`;
+    });
+    gexf += `    </nodes>\n`;
+
+    // Arêtes
+    gexf += `    <edges>\n`;
+    fullGraphData.edges.forEach((edge, index) => {
+      gexf += `      <edge id="${index}" source="${edge.source}" target="${edge.target}">\n`;
+      gexf += `        <attvalues>\n`;
+      gexf += `          <attvalue for="0" value="${edge.type}"/>\n`;
+      gexf += `          <attvalue for="1" value="${edge.weight}"/>\n`;
+      gexf += `        </attvalues>\n`;
+      gexf += `      </edge>\n`;
+    });
+    gexf += `    </edges>\n`;
+
+    gexf += `  </graph>\n`;
+    gexf += `</gexf>`;
+
+    const blob = new Blob([gexf], { type: 'application/gexf+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `knowledge-graph-${new Date().toISOString().split('T')[0]}.gexf`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Obtenir les documents d'un topic
@@ -466,9 +651,20 @@ export const CorpusExplorerPanel: React.FC = () => {
           <div className="topics-list">
             <div className="topics-header">
               <span>{topicAnalysis.topics?.length || 0} topics identifiés</span>
-              <button onClick={loadTopics} disabled={loadingTopics} className="reload-topics-btn">
-                {loadingTopics ? 'Analyse...' : 'Réanalyser'}
-              </button>
+              <div className="topics-actions">
+                <button onClick={loadTopics} disabled={loadingTopics} className="reload-topics-btn">
+                  {loadingTopics ? 'Analyse...' : 'Réanalyser'}
+                </button>
+                <button onClick={exportTopicsAsJSON} className="export-btn" title="Exporter en JSON">
+                  📥 JSON
+                </button>
+                <button onClick={exportTopicsAsCSV} className="export-btn" title="Exporter en CSV">
+                  📥 CSV
+                </button>
+                <button onClick={exportTopicsAsMarkdown} className="export-btn" title="Exporter en Markdown">
+                  📥 MD
+                </button>
+              </div>
             </div>
             {(topicAnalysis.topics || []).map((topic) => {
               const topicDocs = getDocumentsForTopic(topic.id);
@@ -528,19 +724,24 @@ export const CorpusExplorerPanel: React.FC = () => {
       {/* Graphe de connaissances */}
       <CollapsibleSection title="Graphe de connaissances" defaultExpanded={true}>
         <div className="graph-container">
-          <div className="graph-legend">
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#FF6B6B' }}></span>
-              <span>Citations</span>
+          <div className="graph-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div className="graph-legend">
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: '#FF6B6B' }}></span>
+                <span>Citations</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: '#50C878' }}></span>
+                <span>Similarité</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: '#9B59B6' }}></span>
+                <span>Co-citations</span>
+              </div>
             </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#50C878' }}></span>
-              <span>Similarité</span>
-            </div>
-            <div className="legend-item">
-              <span className="legend-color" style={{ backgroundColor: '#9B59B6' }}></span>
-              <span>Co-citations</span>
-            </div>
+            <button onClick={exportGraphAsGEXF} className="export-btn" title="Exporter le graphe pour Gephi">
+              📥 Exporter GEXF
+            </button>
           </div>
 
           <div className="graph-visualization">

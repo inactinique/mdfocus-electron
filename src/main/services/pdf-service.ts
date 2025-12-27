@@ -244,22 +244,66 @@ class PDFService {
     try {
       await topicService.start();
 
+      const analysisOptions = {
+        minTopicSize: options?.minTopicSize || 3,
+        language: options?.language || 'multilingual',
+        nGramRange: options?.nGramRange || [1, 3],
+      };
+
       const result = await topicService.analyzeTopics(
         embeddings,
         texts,
         documentIds,
-        {
-          minTopicSize: options?.minTopicSize || 3,
-          language: options?.language || 'multilingual',
-          nGramRange: options?.nGramRange || [1, 3],
-        }
+        analysisOptions
       );
+
+      // Sauvegarder les résultats dans la base de données
+      this.vectorStore!.saveTopicAnalysis(result, analysisOptions);
+      console.log('✅ Topic analysis saved to database');
 
       return result;
     } finally {
       // Toujours arrêter le service
       await topicService.stop();
     }
+  }
+
+  /**
+   * Charge la dernière analyse de topics sauvegardée
+   */
+  loadTopicAnalysis() {
+    this.ensureInitialized();
+
+    const result = this.vectorStore!.loadLatestTopicAnalysis();
+    return result;
+  }
+
+  /**
+   * Purge toutes les données de la base vectorielle
+   */
+  purgeAllData() {
+    this.ensureInitialized();
+
+    console.log('🗑️ Purging all data from vector store...');
+    this.vectorStore!.purgeAllData();
+    console.log('✅ Vector store purged successfully');
+  }
+
+  /**
+   * Ferme le PDF Service et libère les ressources
+   */
+  close() {
+    if (this.vectorStore) {
+      console.log('🔒 Closing PDF Service vector store...');
+      this.vectorStore.close();
+      this.vectorStore = null;
+    }
+
+    this.pdfIndexer = null;
+    this.ollamaClient = null;
+    this.currentProjectPath = null;
+
+    console.log('✅ PDF Service closed');
   }
 }
 

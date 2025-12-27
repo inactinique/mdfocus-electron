@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import { randomUUID } from 'crypto';
 import type {
   PDFDocument,
   DocumentChunk,
@@ -8,6 +9,11 @@ import type {
   SearchResult,
   VectorStoreStatistics,
 } from '../../types/pdf-document';
+import type {
+  Topic,
+  TopicAnalysisResult,
+  TopicAnalysisOptions,
+} from '../analysis/TopicModelingService';
 
 export class VectorStore {
   private db: Database.Database;
@@ -116,6 +122,50 @@ export class VectorStore {
       );
     `);
 
+    // Tables pour la persistance des analyses de topics (BERTopic)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS topic_analyses (
+        id TEXT PRIMARY KEY,
+        analysis_date TEXT NOT NULL,
+        is_current INTEGER DEFAULT 1,
+        options_json TEXT,
+        statistics_json TEXT
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS topics (
+        id TEXT PRIMARY KEY,
+        analysis_id TEXT NOT NULL,
+        topic_id INTEGER NOT NULL,
+        label TEXT,
+        keywords_json TEXT,
+        size INTEGER,
+        FOREIGN KEY (analysis_id) REFERENCES topic_analyses(id) ON DELETE CASCADE
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS topic_assignments (
+        id TEXT PRIMARY KEY,
+        analysis_id TEXT NOT NULL,
+        document_id TEXT NOT NULL,
+        topic_id INTEGER,
+        FOREIGN KEY (analysis_id) REFERENCES topic_analyses(id) ON DELETE CASCADE,
+        FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS topic_outliers (
+        id TEXT PRIMARY KEY,
+        analysis_id TEXT NOT NULL,
+        document_id TEXT NOT NULL,
+        FOREIGN KEY (analysis_id) REFERENCES topic_analyses(id) ON DELETE CASCADE,
+        FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+      );
+    `);
+
     // Index pour accélérer les recherches
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id);
@@ -124,6 +174,10 @@ export class VectorStore {
       CREATE INDEX IF NOT EXISTS idx_citations_target ON document_citations(target_doc_id);
       CREATE INDEX IF NOT EXISTS idx_similarities_doc1 ON document_similarities(doc_id_1);
       CREATE INDEX IF NOT EXISTS idx_similarities_doc2 ON document_similarities(doc_id_2);
+      CREATE INDEX IF NOT EXISTS idx_topics_analysis ON topics(analysis_id);
+      CREATE INDEX IF NOT EXISTS idx_topic_assignments_analysis ON topic_assignments(analysis_id);
+      CREATE INDEX IF NOT EXISTS idx_topic_assignments_document ON topic_assignments(document_id);
+      CREATE INDEX IF NOT EXISTS idx_topic_outliers_analysis ON topic_outliers(analysis_id);
     `);
 
     console.log('✅ Tables créées');
@@ -640,6 +694,223 @@ export class VectorStore {
       'DELETE FROM document_similarities WHERE doc_id_1 = ? OR doc_id_2 = ?'
     );
     stmt.run(documentId, documentId);
+  }
+
+  /**
+   * Calcule et sauvegarde les similarités entre un document et tous les autres documents existants
+   * @param documentId ID du document pour lequel calculer les similarités
+   * @param threshold Seuil minimum de similarité pour sauvegarder (par défaut 0.5)
+   * @returns Nombre de similarités sauvegardées
+   */
+  computeAndSaveSimilarities(documentId: string, threshold: number = 0.5): number {
+    console.log(`🔍 Computing similarities for document ${documentId.substring(0, 8)}... (threshold: ${threshold})`);
+
+    // Récupérer les chunks du document donné avec leurs embeddings
+    const docChunks = this.getChunksForDocument(documentId);
+
+    if (docChunks.length === 0) {
+      console.log('⚠️ No chunks found for document, skipping similarity computation');
+      return 0;
+    }
+
+    // Récupérer tous les autres documents
+    const allDocuments = this.getAllDocuments();
+    let similaritiesCount = 0;
+
+    for (const otherDoc of allDocuments) {
+      // Ne pas se comparer avec soi-même
+      if (otherDoc.id === documentId) continue;
+
+      // Récupérer les chunks de l'autre document
+      const otherChunks = this.getChunksForDocument(otherDoc.id);
+
+      if (otherChunks.length === 0) continue;
+
+      // Calculer la similarité moyenne entre tous les chunks
+      let totalSimilarity = 0;
+      let comparisons = 0;
+
+      for (const docChunk of docChunks) {
+        for (const otherChunk of otherChunks) {
+          const similarity = this.cosineSimilarity(docChunk.embedding, otherChunk.embedding);
+          totalSimilarity += similarity;
+          comparisons++;
+        }
+      }
+
+      const avgSimilarity = totalSimilarity / comparisons;
+
+      // Sauvegarder seulement si au-dessus du seuil
+      if (avgSimilarity >= threshold) {
+        this.saveSimilarity(documentId, otherDoc.id, avgSimilarity);
+        similaritiesCount++;
+        console.log(`   ✓ Similarity with ${otherDoc.title?.substring(0, 30) || otherDoc.id.substring(0, 8)}: ${avgSimilarity.toFixed(3)}`);
+      }
+    }
+
+    console.log(`✅ Computed ${similaritiesCount} similarities above threshold ${threshold}`);
+    return similaritiesCount;
+  }
+
+  // MARK: - Topic Analysis Persistence
+
+  /**
+   * Sauvegarde une analyse de topics dans la base de données
+   * @param result Résultat de l'analyse BERTopic
+   * @param options Options utilisées pour l'analyse
+   * @returns ID de l'analyse sauvegardée
+   */
+  saveTopicAnalysis(result: TopicAnalysisResult, options?: TopicAnalysisOptions): string {
+    const analysisId = randomUUID();
+    const now = new Date().toISOString();
+
+    // Marquer toutes les analyses précédentes comme non-courantes
+    this.db.prepare('UPDATE topic_analyses SET is_current = 0').run();
+
+    // Sauvegarder l'analyse principale
+    const insertAnalysis = this.db.prepare(`
+      INSERT INTO topic_analyses (id, analysis_date, is_current, options_json, statistics_json)
+      VALUES (?, ?, 1, ?, ?)
+    `);
+
+    insertAnalysis.run(
+      analysisId,
+      now,
+      JSON.stringify(options || {}),
+      JSON.stringify(result.statistics)
+    );
+
+    // Sauvegarder les topics
+    const insertTopic = this.db.prepare(`
+      INSERT INTO topics (id, analysis_id, topic_id, label, keywords_json, size)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const topic of result.topics) {
+      const topicDbId = randomUUID();
+      insertTopic.run(
+        topicDbId,
+        analysisId,
+        topic.id,
+        topic.label,
+        JSON.stringify(topic.keywords),
+        topic.size
+      );
+    }
+
+    // Sauvegarder les assignations
+    const insertAssignment = this.db.prepare(`
+      INSERT INTO topic_assignments (id, analysis_id, document_id, topic_id)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    for (const [docId, topicId] of Object.entries(result.topicAssignments)) {
+      const assignmentId = randomUUID();
+      insertAssignment.run(assignmentId, analysisId, docId, topicId);
+    }
+
+    // Sauvegarder les outliers
+    const insertOutlier = this.db.prepare(`
+      INSERT INTO topic_outliers (id, analysis_id, document_id)
+      VALUES (?, ?, ?)
+    `);
+
+    for (const docId of result.outliers) {
+      const outlierId = randomUUID();
+      insertOutlier.run(outlierId, analysisId, docId);
+    }
+
+    console.log(`✅ Topic analysis saved: ${result.topics.length} topics, ${Object.keys(result.topicAssignments).length} assignments`);
+    return analysisId;
+  }
+
+  /**
+   * Charge la dernière analyse de topics sauvegardée
+   * @returns Résultat de l'analyse ou null si aucune analyse n'existe
+   */
+  loadLatestTopicAnalysis(): (TopicAnalysisResult & { analysisDate: string; options: TopicAnalysisOptions }) | null {
+    // Récupérer l'analyse la plus récente
+    const analysis = this.db.prepare(`
+      SELECT * FROM topic_analyses
+      WHERE is_current = 1
+      ORDER BY analysis_date DESC
+      LIMIT 1
+    `).get() as { id: string; analysis_date: string; options_json: string; statistics_json: string } | undefined;
+
+    if (!analysis) {
+      console.log('ℹ️ No saved topic analysis found');
+      return null;
+    }
+
+    const analysisId = analysis.id;
+
+    // Récupérer les topics
+    const topicsRows = this.db.prepare(`
+      SELECT topic_id, label, keywords_json, size
+      FROM topics
+      WHERE analysis_id = ?
+      ORDER BY topic_id
+    `).all(analysisId) as Array<{
+      topic_id: number;
+      label: string;
+      keywords_json: string;
+      size: number;
+    }>;
+
+    const topics: Topic[] = topicsRows.map((row) => ({
+      id: row.topic_id,
+      label: row.label,
+      keywords: JSON.parse(row.keywords_json),
+      documents: [], // Sera rempli ci-dessous
+      size: row.size,
+    }));
+
+    // Récupérer les assignations
+    const assignmentsRows = this.db.prepare(`
+      SELECT document_id, topic_id
+      FROM topic_assignments
+      WHERE analysis_id = ?
+    `).all(analysisId) as Array<{ document_id: string; topic_id: number }>;
+
+    const topicAssignments: Record<string, number> = {};
+    for (const row of assignmentsRows) {
+      topicAssignments[row.document_id] = row.topic_id;
+
+      // Ajouter le document_id à la liste des documents du topic
+      const topic = topics.find((t) => t.id === row.topic_id);
+      if (topic) {
+        topic.documents.push(row.document_id);
+      }
+    }
+
+    // Récupérer les outliers
+    const outliersRows = this.db.prepare(`
+      SELECT document_id
+      FROM topic_outliers
+      WHERE analysis_id = ?
+    `).all(analysisId) as Array<{ document_id: string }>;
+
+    const outliers = outliersRows.map((row) => row.document_id);
+
+    const result: TopicAnalysisResult & { analysisDate: string; options: TopicAnalysisOptions } = {
+      topics,
+      topicAssignments,
+      outliers,
+      statistics: JSON.parse(analysis.statistics_json),
+      analysisDate: analysis.analysis_date,
+      options: JSON.parse(analysis.options_json),
+    };
+
+    console.log(`✅ Loaded topic analysis: ${topics.length} topics, ${Object.keys(topicAssignments).length} assignments`);
+    return result;
+  }
+
+  /**
+   * Supprime toutes les analyses de topics
+   */
+  deleteAllTopicAnalyses(): void {
+    this.db.prepare('DELETE FROM topic_analyses').run();
+    console.log('✅ All topic analyses deleted');
   }
 
   // Fermer la base de données
