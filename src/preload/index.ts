@@ -156,6 +156,16 @@ const api = {
     loadTopics: () => ipcRenderer.invoke('corpus:load-topics'),
     getTopicTimeline: () => ipcRenderer.invoke('corpus:get-topic-timeline'),
   },
+
+  // IPC Renderer for menu shortcuts
+  ipcRenderer: {
+    on: (channel: string, listener: (...args: any[]) => void) => {
+      ipcRenderer.on(channel, listener);
+    },
+    removeListener: (channel: string, listener: (...args: any[]) => void) => {
+      ipcRenderer.removeListener(channel, listener);
+    },
+  },
 };
 
 // Exposer l'API au renderer via window.electron

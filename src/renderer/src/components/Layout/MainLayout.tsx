@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MessageCircle, FileText, Settings, Folder, BookOpen, FileDown, Network } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MessageCircle, FileText, Settings, Folder, BookOpen, Network } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { BibliographyPanel } from '../Bibliography/BibliographyPanel';
 import { PDFIndexPanel } from '../PDFIndex/PDFIndexPanel';
@@ -39,26 +39,49 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     setRightView(view);
   };
 
+  // Listen to menu shortcuts for panel switching and PDF export
+  useEffect(() => {
+    const handleSwitchPanel = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const panel = customEvent.detail;
+
+      switch (panel) {
+        case 'projects':
+          setLeftView('projects');
+          break;
+        case 'bibliography':
+          setLeftView('bibliography');
+          break;
+        case 'chat':
+          setRightView('chat');
+          break;
+        case 'pdfs':
+          setRightView('pdfIndex');
+          break;
+        case 'corpus':
+          setRightView('corpus');
+          break;
+        case 'settings':
+          setRightView('settings');
+          break;
+      }
+    };
+
+    const handleShowPDFExport = () => {
+      setShowExportModal(true);
+    };
+
+    window.addEventListener('switch-panel', handleSwitchPanel);
+    window.addEventListener('show-pdf-export-dialog', handleShowPDFExport);
+
+    return () => {
+      window.removeEventListener('switch-panel', handleSwitchPanel);
+      window.removeEventListener('show-pdf-export-dialog', handleShowPDFExport);
+    };
+  }, []);
+
   return (
     <div className="main-layout">
-      {/* Top Toolbar */}
-      <div className="toolbar">
-        <div className="toolbar-left">
-          <h1 className="app-title">mdFocus</h1>
-        </div>
-        <div className="toolbar-center">
-          <span className="project-name">Sans titre</span>
-        </div>
-        <div className="toolbar-right">
-          <button className="toolbar-button" onClick={() => setShowExportModal(true)} title="Exporter en PDF">
-            <FileDown size={20} strokeWidth={1} />
-          </button>
-          <button className="toolbar-button" onClick={() => handleRightViewChange('settings')}>
-            <Settings size={20} strokeWidth={1} />
-          </button>
-        </div>
-      </div>
-
       {/* Main 3-panel layout */}
       <div className="main-content">
         <PanelGroup direction="horizontal">
