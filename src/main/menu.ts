@@ -185,7 +185,7 @@ export function createApplicationMenu(mainWindow: BrowserWindow): Menu {
     {
       label: 'Affichage',
       submenu: [
-        // Preview disabled for now
+        // Preview disabled
         // {
         //   label: 'Basculer aperçu',
         //   accelerator: 'CmdOrCtrl+K',

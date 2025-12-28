@@ -3,8 +3,8 @@ import { FileText, FolderOpen, Save, Link, BookOpen, Table, Superscript, Quote, 
 // import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MarkdownEditor } from './MarkdownEditor';
 // import { MarkdownPreview } from './MarkdownPreview';
-// import { DocumentStats } from './DocumentStats';
-// import { ContextualSuggestions } from './ContextualSuggestions';
+import { DocumentStats } from './DocumentStats';
+import { ContextualSuggestions } from './ContextualSuggestions';
 import { useEditorStore } from '../../stores/editorStore';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import { logger } from '../../utils/logger';
@@ -14,31 +14,30 @@ export const EditorPanel: React.FC = () => {
   const { showStats, toggleStats, loadFile, saveFile, setContent, content, insertFormatting } = useEditorStore();
   const { citations } = useBibliographyStore();
 
-  // Suggestions config - temporarily disabled
-  // const [suggestionsConfig, setSuggestionsConfig] = useState({
-  //   enableCitationSuggestions: true,
-  //   citationSuggestionDelay: 500,
-  //   maxCitationSuggestions: 5,
-  //   enableReformulationSuggestions: false,
-  //   reformulationDelay: 2000,
-  //   reformulationMinWords: 10,
-  //   showSuggestionsInline: true,
-  // });
+  const [suggestionsConfig, setSuggestionsConfig] = React.useState({
+    enableCitationSuggestions: true,
+    citationSuggestionDelay: 500,
+    maxCitationSuggestions: 5,
+    enableReformulationSuggestions: false,
+    reformulationDelay: 2000,
+    reformulationMinWords: 10,
+    showSuggestionsInline: true,
+  });
 
   // Load suggestions config on mount
-  // useEffect(() => {
-  //   const loadSuggestionsConfig = async () => {
-  //     try {
-  //       const config = await window.electron.config.get('suggestions');
-  //       if (config) {
-  //         setSuggestionsConfig(config);
-  //       }
-  //     } catch (error) {
-  //       console.error('Failed to load suggestions config:', error);
-  //     }
-  //   };
-  //   loadSuggestionsConfig();
-  // }, []);
+  React.useEffect(() => {
+    const loadSuggestionsConfig = async () => {
+      try {
+        const config = await window.electron.config.get('suggestions');
+        if (config) {
+          setSuggestionsConfig(config);
+        }
+      } catch (error) {
+        console.error('Failed to load suggestions config:', error);
+      }
+    };
+    loadSuggestionsConfig();
+  }, []);
 
   const handleNewFile = () => {
     logger.component('EditorPanel', 'handleNewFile clicked');
@@ -221,7 +220,7 @@ export const EditorPanel: React.FC = () => {
           </button>
         </div>
 
-        {/* Preview button - disabled for now
+        {/* Preview button - disabled
         <div className="toolbar-section">
           <button
             className={`toolbar-btn ${showPreview ? 'active' : ''}`}
@@ -234,19 +233,19 @@ export const EditorPanel: React.FC = () => {
         */}
       </div>
 
-      {/* Stats bar (if enabled) - temporarily disabled for debugging */}
-      {/* {showStats && <DocumentStats />} */}
+      {/* Stats bar (if enabled) */}
+      {showStats && <DocumentStats />}
 
-      {/* Editor (Preview disabled for now) */}
+      {/* Editor (Preview disabled) */}
       <div className="editor-content">
         <MarkdownEditor />
       </div>
 
-      {/* Contextual Suggestions - Temporarily disabled due to runtime error */}
-      {/* <ContextualSuggestions
+      {/* Contextual Suggestions */}
+      <ContextualSuggestions
         content={content}
         suggestionsConfig={suggestionsConfig}
-      /> */}
+      />
     </div>
   );
 };

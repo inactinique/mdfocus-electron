@@ -75,7 +75,7 @@ export const MarkdownEditor: React.FC = () => {
       useEditorStore.getState().insertFormatting('blockquote');
     });
 
-    // Preview disabled for now
+    // Preview disabled
     // editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
     //   useEditorStore.getState().togglePreview();
     // });
