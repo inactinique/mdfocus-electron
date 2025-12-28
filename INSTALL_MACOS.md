@@ -69,7 +69,45 @@ brew install python@3.11
 
 **Note :** L'environnement virtuel Python (venv) sera créé automatiquement par mdFocus au premier lancement.
 
-### 4. Ollama (LLM local)
+### 4. Pandoc et LaTeX (pour l'export PDF)
+
+mdFocus nécessite Pandoc et XeLaTeX pour exporter les documents en PDF.
+
+```bash
+# Installer Pandoc
+brew install pandoc
+
+# Installer MacTeX (distribution LaTeX complète pour macOS)
+brew install --cask mactex
+
+# Alternative légère : BasicTeX (plus petit mais suffisant)
+brew install --cask basictex
+```
+
+**Si vous utilisez BasicTeX**, installez les packages supplémentaires requis :
+
+```bash
+# Ajouter tlmgr au PATH
+eval "$(/usr/local/texlive/2024basic/bin/universal-darwin/tlmgr path add)"
+
+# Installer les packages nécessaires
+sudo tlmgr update --self
+sudo tlmgr install xetex
+sudo tlmgr install collection-fontsrecommended
+sudo tlmgr install babel-french
+```
+
+**Vérification :**
+
+```bash
+# Vérifier Pandoc
+pandoc --version
+
+# Vérifier XeLaTeX
+xelatex --version
+```
+
+### 5. Ollama (LLM local)
 
 Ollama est nécessaire pour les fonctionnalités d'IA locales (embeddings et chat).
 
@@ -262,7 +300,13 @@ Si vous utilisez Zotero :
    python3 --version  # 3.11.x ou supérieur
    ```
 
-4. **Tester mdFocus**
+4. **Vérifier Pandoc et XeLaTeX**
+   ```bash
+   pandoc --version   # 2.x ou supérieur
+   xelatex --version  # TeX Live 2020+ ou supérieur
+   ```
+
+5. **Tester mdFocus**
    - Créer un nouveau projet
    - Importer un PDF dans `src/pdfs/`
    - Indexer le PDF via l'interface

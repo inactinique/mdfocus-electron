@@ -5,6 +5,7 @@ import { existsSync } from 'fs';
 import { setupIPCHandlers } from './ipc/handlers.js';
 import { configManager } from './services/config-manager.js';
 import { pdfService } from './services/pdf-service.js';
+import { setupApplicationMenu } from './menu.js';
 
 // Obtenir __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -44,6 +45,9 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // Setup application menu with keyboard shortcuts
+  setupApplicationMenu(mainWindow);
 }
 
 app.whenReady().then(async () => {

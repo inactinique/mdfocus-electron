@@ -148,12 +148,24 @@ export const ProjectPanel: React.FC = () => {
       <div className="project-content">
         {/* Action Buttons */}
         <div className="project-actions">
-          <button className="toolbar-btn" onClick={() => setShowCreateModal(true)} title="Nouveau projet">
-            <FilePlus size={20} strokeWidth={1} />
-          </button>
-          <button className="toolbar-btn" onClick={handleOpenProject} title="Ouvrir un projet">
-            <FolderOpen size={20} strokeWidth={1} />
-          </button>
+          <div className="project-actions-left">
+            <button className="toolbar-btn" onClick={() => setShowCreateModal(true)} title="Nouveau projet">
+              <FilePlus size={20} strokeWidth={1} />
+            </button>
+            <button className="toolbar-btn" onClick={handleOpenProject} title="Ouvrir un projet">
+              <FolderOpen size={20} strokeWidth={1} />
+            </button>
+          </div>
+          <div className="project-actions-right">
+            <button
+              className="toolbar-btn"
+              onClick={() => setShowPDFExportModal(true)}
+              title="Exporter en PDF"
+              disabled={!currentProject}
+            >
+              <FileDown size={20} strokeWidth={1} />
+            </button>
+          </div>
         </div>
 
         {/* Current Project Info */}
@@ -228,15 +240,6 @@ export const ProjectPanel: React.FC = () => {
                 <CollapsibleSection title="Apparence" defaultExpanded={true}>
                   <BeamerConfig projectPath={currentProject.path} />
                 </CollapsibleSection>
-
-                <button
-                  className="project-btn export-btn"
-                  onClick={() => setShowPDFExportModal(true)}
-                  style={{ marginTop: '1rem', width: '100%' }}
-                >
-                  <FileDown size={18} />
-                  Exporter en PDF
-                </button>
               </>
             )}
 

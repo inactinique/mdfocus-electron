@@ -6,6 +6,7 @@ const api = {
   project: {
     create: (data: any) => ipcRenderer.invoke('project:create', data),
     load: (path: string) => ipcRenderer.invoke('project:load', path),
+    close: () => ipcRenderer.invoke('project:close'),
     save: (data: any) => ipcRenderer.invoke('project:save', data),
     getRecent: () => ipcRenderer.invoke('project:get-recent'),
     removeRecent: (path: string) => ipcRenderer.invoke('project:remove-recent', path),
@@ -28,6 +29,7 @@ const api = {
       ipcRenderer.invoke('pdf:delete', documentId),
     getAll: () => ipcRenderer.invoke('pdf:get-all'),
     getStatistics: () => ipcRenderer.invoke('pdf:get-statistics'),
+    purge: () => ipcRenderer.invoke('pdf:purge'),
   },
 
   // Chat RAG
@@ -76,6 +78,7 @@ const api = {
     exists: (filePath: string) => ipcRenderer.invoke('fs:exists', filePath),
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
+    copyFile: (sourcePath: string, targetPath: string) => ipcRenderer.invoke('fs:copy-file', sourcePath, targetPath),
   },
 
   // Zotero
@@ -150,6 +153,18 @@ const api = {
       nGramRange?: [number, number];
       nrTopics?: number;
     }) => ipcRenderer.invoke('corpus:analyze-topics', options),
+    loadTopics: () => ipcRenderer.invoke('corpus:load-topics'),
+    getTopicTimeline: () => ipcRenderer.invoke('corpus:get-topic-timeline'),
+  },
+
+  // IPC Renderer for menu shortcuts
+  ipcRenderer: {
+    on: (channel: string, listener: (...args: any[]) => void) => {
+      ipcRenderer.on(channel, listener);
+    },
+    removeListener: (channel: string, listener: (...args: any[]) => void) => {
+      ipcRenderer.removeListener(channel, listener);
+    },
   },
 };
 

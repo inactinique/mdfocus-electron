@@ -30,12 +30,15 @@ interface EditorState {
   loadFile: (filePath: string) => Promise<void>;
   saveFile: () => Promise<void>;
   saveFileAs: (filePath: string) => Promise<void>;
+  saveCurrentFile: () => Promise<void>;
+  createNewFile: () => void;
 
   updateSettings: (settings: Partial<EditorSettings>) => void;
   togglePreview: () => void;
 
   insertText: (text: string) => void;
   insertCitation: (citationKey: string) => void;
+  insertFormatting: (type: 'bold' | 'italic' | 'link' | 'citation' | 'table') => void;
 }
 
 // MARK: - Default settings
@@ -163,5 +166,47 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   insertCitation: (citationKey: string) => {
     const citationText = `[@${citationKey}]`;
     get().insertText(citationText);
+  },
+
+  saveCurrentFile: async () => {
+    await get().saveFile();
+  },
+
+  createNewFile: () => {
+    logger.store('Editor', 'createNewFile called');
+    set({
+      content: '',
+      filePath: null,
+      isDirty: false,
+    });
+  },
+
+  insertFormatting: (type: 'bold' | 'italic' | 'link' | 'citation' | 'table') => {
+    logger.store('Editor', 'insertFormatting called', { type });
+    const { content } = get();
+    let textToInsert = '';
+
+    switch (type) {
+      case 'bold':
+        textToInsert = '**texte en gras**';
+        break;
+      case 'italic':
+        textToInsert = '_texte en italique_';
+        break;
+      case 'link':
+        textToInsert = '[texte du lien](url)';
+        break;
+      case 'citation':
+        textToInsert = '[@clé_citation]';
+        break;
+      case 'table':
+        textToInsert = '\n| Colonne 1 | Colonne 2 |\n|-----------|----------|\n| Cellule 1 | Cellule 2 |\n';
+        break;
+    }
+
+    set({
+      content: content + textToInsert,
+      isDirty: true,
+    });
   },
 }));

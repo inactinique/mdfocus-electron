@@ -88,11 +88,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         hasBibliographySource: !!project.bibliographySource
       });
 
-      if (project.bibliography) {
+      // Try loading from bibliographySource first (new system), fallback to bibliography (old system)
+      let bibliographyPath: string | null = null;
+
+      if (project.bibliographySource?.filePath) {
+        // New system: construct path from project directory + relative file path
+        bibliographyPath = `${project.path}/${project.bibliographySource.filePath}`;
+        console.log('📚 Using bibliographySource:', project.bibliographySource);
+      } else if (project.bibliography) {
+        // Old system: use absolute path directly
+        bibliographyPath = project.bibliography;
+        console.log('📚 Using legacy bibliography path');
+      }
+
+      if (bibliographyPath) {
         try {
           const { useBibliographyStore } = await import('./bibliographyStore');
-          console.log('📚 Loading bibliography from:', project.bibliography);
-          await useBibliographyStore.getState().loadBibliography(project.bibliography);
+          console.log('📚 Loading bibliography from:', bibliographyPath);
+          await useBibliographyStore.getState().loadBibliography(bibliographyPath);
           console.log('✅ Bibliography loaded for project');
         } catch (error) {
           console.error('❌ Failed to load project bibliography:', error);
@@ -147,7 +160,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  closeProject: () => {
+  closeProject: async () => {
+    try {
+      // Close backend resources (PDF Service, vector store, etc.)
+      await window.electron.project.close();
+      console.log('✅ Backend resources closed');
+    } catch (error) {
+      console.error('❌ Failed to close backend resources:', error);
+    }
+
+    // Clear frontend state
     set({
       currentProject: null,
       chapters: [],

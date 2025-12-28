@@ -68,6 +68,19 @@ export function setupIPCHandlers() {
     }
   });
 
+  ipcMain.handle('project:close', async () => {
+    console.log('📞 IPC Call: project:close');
+    try {
+      // Close PDF Service and free resources
+      pdfService.close();
+      console.log('📤 IPC Response: project:close - success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ project:close error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('project:save', async (_event, data: any) => {
     console.log('📞 IPC Call: project:save', { path: data.path, contentLength: data.content?.length });
     try {
@@ -169,6 +182,24 @@ export function setupIPCHandlers() {
     }
   });
 
+  ipcMain.handle('pdf:purge', async () => {
+    console.log('📞 IPC Call: pdf:purge');
+    try {
+      const projectPath = projectManager.getCurrentProjectPath();
+      if (!projectPath) {
+        return { success: false, error: 'No project is currently open. Please open or create a project first.' };
+      }
+
+      await pdfService.init(projectPath);
+      pdfService.purgeAllData();
+      console.log('📤 IPC Response: pdf:purge - success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ pdf:purge error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('pdf:get-all', async (_event) => {
     try {
       const projectPath = projectManager.getCurrentProjectPath();
@@ -219,9 +250,21 @@ export function setupIPCHandlers() {
       // Initialiser le service PDF pour ce projet (nécessaire pour le RAG)
       if (options?.context) {
         const projectPath = projectManager.getCurrentProjectPath();
+        console.log('🔍 [RAG DEBUG] Current project path:', projectPath);
+
         if (projectPath) {
+          console.log('🔍 [RAG DEBUG] Initializing PDF service for:', projectPath);
           await pdfService.init(projectPath);
+          console.log('✅ [RAG DEBUG] PDF service initialized successfully');
+
+          // Test search to verify RAG is working
+          const stats = await pdfService.getStatistics();
+          console.log('🔍 [RAG DEBUG] Vector DB statistics:', stats);
+        } else {
+          console.warn('⚠️  [RAG DEBUG] No project path - RAG will not be used');
         }
+      } else {
+        console.log('🔍 [RAG DEBUG] Context not requested - RAG disabled');
       }
 
       const window = BrowserWindow.fromWebContents(event.sender);
@@ -395,6 +438,19 @@ export function setupIPCHandlers() {
       return { success: true };
     } catch (error: any) {
       console.error('❌ fs:write-file error:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('fs:copy-file', async (_event, sourcePath: string, targetPath: string) => {
+    console.log('📞 IPC Call: fs:copy-file', { sourcePath, targetPath });
+    try {
+      const { copyFile } = await import('fs/promises');
+      await copyFile(sourcePath, targetPath);
+      console.log('📤 IPC Response: fs:copy-file - success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ fs:copy-file error:', error);
       throw error;
     }
   });
@@ -587,6 +643,61 @@ export function setupIPCHandlers() {
       return { success: true, ...result };
     } catch (error: any) {
       console.error('❌ corpus:analyze-topics error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('corpus:load-topics', async () => {
+    console.log('📞 IPC Call: corpus:load-topics');
+    try {
+      const projectPath = projectManager.getCurrentProjectPath();
+      if (!projectPath) {
+        return { success: false, error: 'No project is currently open. Please open or create a project first.' };
+      }
+
+      await pdfService.init(projectPath);
+      const result = pdfService.loadTopicAnalysis();
+
+      if (result) {
+        console.log('📤 IPC Response: corpus:load-topics', {
+          topicCount: result.topics.length,
+          documentCount: result.topicAssignments ? Object.keys(result.topicAssignments).length : 0,
+          analysisDate: result.analysisDate,
+        });
+        return { success: true, ...result };
+      } else {
+        console.log('📤 IPC Response: corpus:load-topics - no saved analysis');
+        return { success: false, error: 'No saved topic analysis found' };
+      }
+    } catch (error: any) {
+      console.error('❌ corpus:load-topics error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('corpus:get-topic-timeline', async () => {
+    console.log('📞 IPC Call: corpus:get-topic-timeline');
+    try {
+      const projectPath = projectManager.getCurrentProjectPath();
+      if (!projectPath) {
+        return { success: false, error: 'No project is currently open. Please open or create a project first.' };
+      }
+
+      await pdfService.init(projectPath);
+      const timeline = pdfService.getTopicTimeline();
+
+      if (timeline) {
+        console.log('📤 IPC Response: corpus:get-topic-timeline', {
+          yearCount: timeline.length,
+          yearRange: timeline.length > 0 ? `${timeline[0].year}-${timeline[timeline.length - 1].year}` : 'N/A',
+        });
+        return { success: true, timeline };
+      } else {
+        console.log('📤 IPC Response: corpus:get-topic-timeline - no timeline data');
+        return { success: false, error: 'No topic timeline data found' };
+      }
+    } catch (error: any) {
+      console.error('❌ corpus:get-topic-timeline error:', error);
       return { success: false, error: error.message };
     }
   });

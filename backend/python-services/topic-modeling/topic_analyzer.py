@@ -228,10 +228,11 @@ class TopicAnalyzer:
 
             if topic_words:
                 # Extraire les top keywords (mots avec scores les plus élevés)
-                keywords = [word for word, score in topic_words[:10]]
+                # Augmenté à 20 pour plus de mots descriptifs
+                keywords = [word for word, score in topic_words[:20]]
 
-                # Générer un label automatique (3 premiers mots-clés)
-                label = " - ".join(keywords[:3])
+                # Générer un label automatique (5 premiers mots-clés pour plus de contexte)
+                label = " - ".join(keywords[:5])
 
                 # Trouver les documents assignés à ce topic
                 doc_indices = [i for i, t in enumerate(topics) if t == topic_id]

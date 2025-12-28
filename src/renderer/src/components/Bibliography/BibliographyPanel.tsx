@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { CitationList } from './CitationList';
 import { CitationCard } from './CitationCard';
 import { CollapsibleSection } from '../common/CollapsibleSection';
@@ -8,6 +9,7 @@ import { ZoteroImport } from './ZoteroImport';
 import './BibliographyPanel.css';
 
 export const BibliographyPanel: React.FC = () => {
+  const currentProject = useProjectStore((state) => state.currentProject);
   const {
     filteredCitations,
     searchQuery,
@@ -27,7 +29,30 @@ export const BibliographyPanel: React.FC = () => {
       });
 
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
-        await useBibliographyStore.getState().loadBibliography(result.filePaths[0]);
+        const sourcePath = result.filePaths[0];
+
+        // Load the bibliography into memory
+        await useBibliographyStore.getState().loadBibliography(sourcePath);
+
+        // If we have a project (non-notes), save the bibliography source configuration
+        if (currentProject && currentProject.type !== 'notes') {
+          // Copy the .bib file to the project directory
+          const bibFileName = sourcePath.split('/').pop() || 'bibliography.bib';
+          const targetPath = `${currentProject.path}/${bibFileName}`;
+
+          // Copy file to project directory
+          await window.electron.fs.copyFile(sourcePath, targetPath);
+
+          // Save the bibliography source to project.json
+          const projectJsonPath = `${currentProject.path}/project.json`;
+          await window.electron.project.setBibliographySource({
+            projectPath: projectJsonPath,
+            type: 'file',
+            filePath: bibFileName,
+          });
+
+          console.log('✅ Bibliography source saved to project');
+        }
       }
     } catch (error) {
       console.error('Failed to import BibTeX:', error);

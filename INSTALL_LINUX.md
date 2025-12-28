@@ -40,8 +40,14 @@ sudo apt install -y \
   xdg-utils \
   libatspi2.0-0 \
   libsecret-1-0 \
-  libgbm1
+  libgbm1 \
+  pandoc \
+  texlive-xetex \
+  texlive-fonts-recommended \
+  texlive-lang-french
 ```
+
+**Note :** Pandoc et XeLaTeX sont nécessaires pour l'export PDF depuis mdFocus.
 
 #### Fedora/RHEL/CentOS
 
@@ -60,7 +66,11 @@ sudo dnf install -y \
   xdg-utils \
   at-spi2-core \
   libsecret \
-  mesa-libgbm
+  mesa-libgbm \
+  pandoc \
+  texlive-xetex \
+  texlive-collection-fontsrecommended \
+  texlive-babel-french
 ```
 
 #### Arch Linux
@@ -79,7 +89,11 @@ sudo pacman -Syu --needed \
   xdg-utils \
   at-spi2-core \
   libsecret \
-  mesa
+  mesa \
+  pandoc \
+  texlive-core \
+  texlive-fontsrecommended \
+  texlive-lang
 ```
 
 ### 2. Node.js et npm
@@ -502,7 +516,13 @@ Si vous utilisez Zotero :
    python3 --version  # 3.11.x ou supérieur
    ```
 
-4. **Tester mdFocus**
+4. **Vérifier Pandoc et XeLaTeX**
+   ```bash
+   pandoc --version   # 2.x ou supérieur
+   xelatex --version  # TeX Live 2020+ ou supérieur
+   ```
+
+5. **Tester mdFocus**
    - Créer un nouveau projet
    - Importer un PDF dans `src/pdfs/`
    - Indexer le PDF via l'interface
