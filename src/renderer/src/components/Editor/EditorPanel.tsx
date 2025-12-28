@@ -1,43 +1,45 @@
 import React from 'react';
-import { FileText, FolderOpen, Save, Link, BookOpen, Table, Superscript, Quote, BarChart3, CheckCircle } from 'lucide-react';
+import { FileText, FolderOpen, Save, Link, BookOpen, Table, Superscript, Quote, BarChart3, CheckCircle, Lightbulb } from 'lucide-react';
 // import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MarkdownEditor } from './MarkdownEditor';
 // import { MarkdownPreview } from './MarkdownPreview';
 import { DocumentStats } from './DocumentStats';
-import { ContextualSuggestions } from './ContextualSuggestions';
+import { CitationSuggestionsPanel } from './CitationSuggestionsPanel';
+// import { ContextualSuggestions } from './ContextualSuggestions';
 import { useEditorStore } from '../../stores/editorStore';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import { logger } from '../../utils/logger';
 import './EditorPanel.css';
 
 export const EditorPanel: React.FC = () => {
-  const { showStats, toggleStats, loadFile, saveFile, setContent, content, insertFormatting } = useEditorStore();
+  const { showStats, toggleStats, showSuggestions, toggleSuggestions, loadFile, saveFile, setContent, content, insertFormatting } = useEditorStore();
   const { citations } = useBibliographyStore();
 
-  const [suggestionsConfig, setSuggestionsConfig] = React.useState({
-    enableCitationSuggestions: true,
-    citationSuggestionDelay: 500,
-    maxCitationSuggestions: 5,
-    enableReformulationSuggestions: false,
-    reformulationDelay: 2000,
-    reformulationMinWords: 10,
-    showSuggestionsInline: true,
-  });
+  // Suggestions config - disabled while ContextualSuggestions is disabled
+  // const [suggestionsConfig, setSuggestionsConfig] = React.useState({
+  //   enableCitationSuggestions: true,
+  //   citationSuggestionDelay: 500,
+  //   maxCitationSuggestions: 5,
+  //   enableReformulationSuggestions: false,
+  //   reformulationDelay: 2000,
+  //   reformulationMinWords: 10,
+  //   showSuggestionsInline: true,
+  // });
 
   // Load suggestions config on mount
-  React.useEffect(() => {
-    const loadSuggestionsConfig = async () => {
-      try {
-        const config = await window.electron.config.get('suggestions');
-        if (config) {
-          setSuggestionsConfig(config);
-        }
-      } catch (error) {
-        console.error('Failed to load suggestions config:', error);
-      }
-    };
-    loadSuggestionsConfig();
-  }, []);
+  // React.useEffect(() => {
+  //   const loadSuggestionsConfig = async () => {
+  //     try {
+  //       const config = await window.electron.config.get('suggestions');
+  //       if (config) {
+  //         setSuggestionsConfig(config);
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to load suggestions config:', error);
+  //     }
+  //   };
+  //   loadSuggestionsConfig();
+  // }, []);
 
   const handleNewFile = () => {
     logger.component('EditorPanel', 'handleNewFile clicked');
@@ -218,6 +220,13 @@ export const EditorPanel: React.FC = () => {
           <button className="toolbar-btn" onClick={handleCheckCitations} title="Vérifier les citations">
             <CheckCircle size={20} strokeWidth={1} />
           </button>
+          <button
+            className={`toolbar-btn ${showSuggestions ? 'active' : ''}`}
+            onClick={toggleSuggestions}
+            title="Suggestions de citations"
+          >
+            <Lightbulb size={20} strokeWidth={1} />
+          </button>
         </div>
 
         {/* Preview button - disabled
@@ -236,16 +245,24 @@ export const EditorPanel: React.FC = () => {
       {/* Stats bar (if enabled) */}
       {showStats && <DocumentStats />}
 
-      {/* Editor (Preview disabled) */}
-      <div className="editor-content">
-        <MarkdownEditor />
+      {/* Editor with optional suggestions panel */}
+      <div className="editor-content" style={{ display: 'flex', height: '100%' }}>
+        <div style={{ flex: showSuggestions ? '1 1 70%' : '1 1 100%', overflow: 'auto' }}>
+          <MarkdownEditor />
+        </div>
+        {showSuggestions && (
+          <div style={{ flex: '0 0 30%', minWidth: '300px', maxWidth: '400px' }}>
+            <CitationSuggestionsPanel />
+          </div>
+        )}
       </div>
 
-      {/* Contextual Suggestions */}
+      {/* Contextual Suggestions - Disabled (overlay issues)
       <ContextualSuggestions
         content={content}
         suggestionsConfig={suggestionsConfig}
       />
+      */}
     </div>
   );
 };

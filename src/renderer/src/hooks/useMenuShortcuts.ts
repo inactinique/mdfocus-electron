@@ -8,7 +8,7 @@ import { useBibliographyStore } from '../stores/bibliographyStore';
  * This should be called once at the app root level
  */
 export function useMenuShortcuts() {
-  const { saveCurrentFile, loadFile, createNewFile, insertFormatting, togglePreview, toggleStats } =
+  const { saveCurrentFile, loadFile, createNewFile, insertFormatting, togglePreview, toggleStats, toggleSuggestions } =
     useEditorStore();
   const { createProject, loadProject } = useProjectStore();
   const { searchCitations, citations } = useBibliographyStore();
@@ -106,6 +106,10 @@ export function useMenuShortcuts() {
       toggleStats();
     };
 
+    const handleToggleSuggestions = () => {
+      toggleSuggestions();
+    };
+
     const handleCheckCitations = () => {
       // Extract all citations from content
       const { content } = useEditorStore.getState();
@@ -181,6 +185,7 @@ export function useMenuShortcuts() {
     window.electron.ipcRenderer.on('menu:insert-footnote', handleInsertFootnote);
     window.electron.ipcRenderer.on('menu:insert-blockquote', handleInsertBlockQuote);
     window.electron.ipcRenderer.on('menu:toggle-stats', handleToggleStats);
+    window.electron.ipcRenderer.on('menu:toggle-suggestions', handleToggleSuggestions);
     window.electron.ipcRenderer.on('menu:check-citations', handleCheckCitations);
     window.electron.ipcRenderer.on('menu:toggle-preview', handleTogglePreview);
     window.electron.ipcRenderer.on('menu:switch-panel', handleSwitchPanel);
@@ -206,6 +211,7 @@ export function useMenuShortcuts() {
       window.electron.ipcRenderer.removeListener('menu:insert-footnote', handleInsertFootnote);
       window.electron.ipcRenderer.removeListener('menu:insert-blockquote', handleInsertBlockQuote);
       window.electron.ipcRenderer.removeListener('menu:toggle-stats', handleToggleStats);
+      window.electron.ipcRenderer.removeListener('menu:toggle-suggestions', handleToggleSuggestions);
       window.electron.ipcRenderer.removeListener('menu:check-citations', handleCheckCitations);
       window.electron.ipcRenderer.removeListener('menu:toggle-preview', handleTogglePreview);
       window.electron.ipcRenderer.removeListener('menu:switch-panel', handleSwitchPanel);
@@ -222,6 +228,7 @@ export function useMenuShortcuts() {
     insertFormatting,
     togglePreview,
     toggleStats,
+    toggleSuggestions,
     createProject,
     loadProject,
     searchCitations,

@@ -43,6 +43,10 @@ interface EditorState {
   // Document stats
   showStats: boolean;
   toggleStats: () => void;
+
+  // Citation suggestions
+  showSuggestions: boolean;
+  toggleSuggestions: () => void;
 }
 
 // MARK: - Default settings
@@ -66,6 +70,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   showPreview: false,
   showStats: false,
+  showSuggestions: false,
 
   setContent: (content: string) => {
     set({
@@ -164,6 +169,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleStats: () => {
     set((state) => ({
       showStats: !state.showStats,
+    }));
+  },
+
+  toggleSuggestions: () => {
+    set((state) => ({
+      showSuggestions: !state.showSuggestions,
     }));
   },
 

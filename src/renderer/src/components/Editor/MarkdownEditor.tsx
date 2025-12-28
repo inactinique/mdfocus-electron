@@ -84,6 +84,10 @@ export const MarkdownEditor: React.FC = () => {
       useEditorStore.getState().toggleStats();
     });
 
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyL, () => {
+      useEditorStore.getState().toggleSuggestions();
+    });
+
     // Add custom citation autocomplete
     monaco.languages.registerCompletionItemProvider('markdown', {
       provideCompletionItems: (model, position) => {

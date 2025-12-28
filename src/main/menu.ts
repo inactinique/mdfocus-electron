@@ -172,6 +172,13 @@ export function createApplicationMenu(mainWindow: BrowserWindow): Menu {
           },
         },
         {
+          label: 'Suggestions de citations',
+          accelerator: 'CmdOrCtrl+Shift+L',
+          click: () => {
+            mainWindow.webContents.send('menu:toggle-suggestions');
+          },
+        },
+        {
           label: 'Vérifier les citations',
           accelerator: 'CmdOrCtrl+Shift+C',
           click: () => {
