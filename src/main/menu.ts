@@ -148,6 +148,36 @@ export function createApplicationMenu(mainWindow: BrowserWindow): Menu {
             mainWindow.webContents.send('menu:insert-table');
           },
         },
+        { type: 'separator' as const },
+        {
+          label: 'Note de bas de page',
+          accelerator: 'CmdOrCtrl+Shift+F',
+          click: () => {
+            mainWindow.webContents.send('menu:insert-footnote');
+          },
+        },
+        {
+          label: 'Bloc citation',
+          accelerator: 'CmdOrCtrl+Shift+Q',
+          click: () => {
+            mainWindow.webContents.send('menu:insert-blockquote');
+          },
+        },
+        { type: 'separator' as const },
+        {
+          label: 'Statistiques du document',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            mainWindow.webContents.send('menu:toggle-stats');
+          },
+        },
+        {
+          label: 'Vérifier les citations',
+          accelerator: 'CmdOrCtrl+Shift+C',
+          click: () => {
+            mainWindow.webContents.send('menu:check-citations');
+          },
+        },
       ],
     },
 

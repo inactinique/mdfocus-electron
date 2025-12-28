@@ -8,10 +8,10 @@ import { useBibliographyStore } from '../stores/bibliographyStore';
  * This should be called once at the app root level
  */
 export function useMenuShortcuts() {
-  const { saveCurrentFile, loadFile, createNewFile, insertFormatting, togglePreview } =
+  const { saveCurrentFile, loadFile, createNewFile, insertFormatting, togglePreview, toggleStats } =
     useEditorStore();
   const { createProject, loadProject } = useProjectStore();
-  const { searchCitations } = useBibliographyStore();
+  const { searchCitations, citations } = useBibliographyStore();
 
   useEffect(() => {
     // File operations
@@ -94,6 +94,45 @@ export function useMenuShortcuts() {
       insertFormatting('table');
     };
 
+    const handleInsertFootnote = () => {
+      insertFormatting('footnote');
+    };
+
+    const handleInsertBlockQuote = () => {
+      insertFormatting('blockquote');
+    };
+
+    const handleToggleStats = () => {
+      toggleStats();
+    };
+
+    const handleCheckCitations = () => {
+      // Extract all citations from content
+      const { content } = useEditorStore.getState();
+      const citationMatches = content.match(/\[@([^\]]+)\]/g) || [];
+      const citedKeys = citationMatches.map(match => match.replace(/\[@|]/g, ''));
+
+      // Get all available citation keys
+      const availableKeys = citations.map(c => c.id);
+
+      // Find missing citations
+      const missingCitations = citedKeys.filter(key => !availableKeys.includes(key));
+      const duplicateCitations = citedKeys.filter((key, index) => citedKeys.indexOf(key) !== index);
+
+      if (missingCitations.length === 0 && duplicateCitations.length === 0) {
+        alert('✅ Toutes les citations sont valides !');
+      } else {
+        let message = '';
+        if (missingCitations.length > 0) {
+          message += `❌ Citations manquantes dans la bibliographie:\n${missingCitations.join(', ')}\n\n`;
+        }
+        if (duplicateCitations.length > 0) {
+          message += `⚠️ Citations en double:\n${[...new Set(duplicateCitations)].join(', ')}`;
+        }
+        alert(message);
+      }
+    };
+
     // View operations
     const handleTogglePreview = () => {
       togglePreview();
@@ -139,6 +178,10 @@ export function useMenuShortcuts() {
     window.electron.ipcRenderer.on('menu:insert-link', handleInsertLink);
     window.electron.ipcRenderer.on('menu:insert-citation', handleInsertCitation);
     window.electron.ipcRenderer.on('menu:insert-table', handleInsertTable);
+    window.electron.ipcRenderer.on('menu:insert-footnote', handleInsertFootnote);
+    window.electron.ipcRenderer.on('menu:insert-blockquote', handleInsertBlockQuote);
+    window.electron.ipcRenderer.on('menu:toggle-stats', handleToggleStats);
+    window.electron.ipcRenderer.on('menu:check-citations', handleCheckCitations);
     window.electron.ipcRenderer.on('menu:toggle-preview', handleTogglePreview);
     window.electron.ipcRenderer.on('menu:switch-panel', handleSwitchPanel);
     window.electron.ipcRenderer.on('menu:import-bibtex', handleImportBibTeX);
@@ -160,6 +203,10 @@ export function useMenuShortcuts() {
       window.electron.ipcRenderer.removeListener('menu:insert-link', handleInsertLink);
       window.electron.ipcRenderer.removeListener('menu:insert-citation', handleInsertCitation);
       window.electron.ipcRenderer.removeListener('menu:insert-table', handleInsertTable);
+      window.electron.ipcRenderer.removeListener('menu:insert-footnote', handleInsertFootnote);
+      window.electron.ipcRenderer.removeListener('menu:insert-blockquote', handleInsertBlockQuote);
+      window.electron.ipcRenderer.removeListener('menu:toggle-stats', handleToggleStats);
+      window.electron.ipcRenderer.removeListener('menu:check-citations', handleCheckCitations);
       window.electron.ipcRenderer.removeListener('menu:toggle-preview', handleTogglePreview);
       window.electron.ipcRenderer.removeListener('menu:switch-panel', handleSwitchPanel);
       window.electron.ipcRenderer.removeListener('menu:import-bibtex', handleImportBibTeX);
@@ -174,8 +221,10 @@ export function useMenuShortcuts() {
     createNewFile,
     insertFormatting,
     togglePreview,
+    toggleStats,
     createProject,
     loadProject,
     searchCitations,
+    citations,
   ]);
 }

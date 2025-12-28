@@ -6,6 +6,7 @@ import { EditorConfigSection, type EditorConfig } from './EditorConfigSection';
 import { UIConfigSection } from './UIConfigSection';
 import { ActionsSection } from './ActionsSection';
 import { ZoteroConfigSection, type ZoteroConfig } from './ZoteroConfigSection';
+import { SuggestionsConfigSection, type SuggestionsConfig } from './SuggestionsConfigSection';
 import { useEditorStore } from '../../stores/editorStore';
 import './ConfigPanel.css';
 
@@ -74,6 +75,16 @@ export const ConfigPanel: React.FC = () => {
     autoSync: false,
   });
 
+  const [suggestionsConfig, setSuggestionsConfig] = useState<SuggestionsConfig>({
+    enableCitationSuggestions: true,
+    citationSuggestionDelay: 500,
+    maxCitationSuggestions: 5,
+    enableReformulationSuggestions: false,
+    reformulationDelay: 2000,
+    reformulationMinWords: 10,
+    showSuggestionsInline: true,
+  });
+
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -99,11 +110,13 @@ export const ConfigPanel: React.FC = () => {
       const llm = await window.electron.config.get('llm');
       const editor = await window.electron.config.get('editor');
       const zotero = await window.electron.config.get('zotero');
+      const suggestions = await window.electron.config.get('suggestions');
 
       if (rag) setRagConfig(rag);
       if (llm) setLLMConfig(llm);
       if (editor) setEditorConfig(editor);
       if (zotero) setZoteroConfig(zotero);
+      if (suggestions) setSuggestionsConfig(suggestions);
     } catch (error) {
       console.error('Failed to load config:', error);
     }
@@ -118,6 +131,7 @@ export const ConfigPanel: React.FC = () => {
       await window.electron.config.set('llm', llmConfig);
       await window.electron.config.set('editor', editorConfig);
       await window.electron.config.set('zotero', zoteroConfig);
+      await window.electron.config.set('suggestions', suggestionsConfig);
 
       // Update editorStore with new settings
       updateSettings({
@@ -168,6 +182,15 @@ export const ConfigPanel: React.FC = () => {
         showMinimap: true,
         fontFamily: 'system',
       });
+      setSuggestionsConfig({
+        enableCitationSuggestions: true,
+        citationSuggestionDelay: 500,
+        maxCitationSuggestions: 5,
+        enableReformulationSuggestions: false,
+        reformulationDelay: 2000,
+        reformulationMinWords: 10,
+        showSuggestionsInline: true,
+      });
 
       await handleSaveConfig();
     } catch (error) {
@@ -200,6 +223,11 @@ export const ConfigPanel: React.FC = () => {
 
       <div className="config-content">
         <UIConfigSection />
+
+        <SuggestionsConfigSection
+          config={suggestionsConfig}
+          onChange={setSuggestionsConfig}
+        />
 
         <RAGConfigSection
           config={ragConfig}
