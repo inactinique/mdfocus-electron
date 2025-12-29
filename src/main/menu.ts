@@ -1,4 +1,5 @@
 import { Menu, MenuItemConstructorOptions, BrowserWindow, app } from 'electron';
+import { t } from './i18n.js';
 
 /**
  * Creates and returns the application menu with keyboard shortcuts
@@ -16,7 +17,7 @@ export function createApplicationMenu(mainWindow: BrowserWindow): Menu {
               { role: 'about' as const },
               { type: 'separator' as const },
               {
-                label: 'Paramètres',
+                label: t('settings'),
                 accelerator: 'Cmd+,',
                 click: () => {
                   mainWindow.webContents.send('menu:open-settings');
@@ -37,24 +38,24 @@ export function createApplicationMenu(mainWindow: BrowserWindow): Menu {
 
     // File Menu
     {
-      label: 'Fichier',
+      label: t('file'),
       submenu: [
         {
-          label: 'Nouveau fichier',
+          label: t('newFile'),
           accelerator: 'CmdOrCtrl+N',
           click: () => {
             mainWindow.webContents.send('menu:new-file');
           },
         },
         {
-          label: 'Ouvrir fichier',
+          label: t('openFile'),
           accelerator: 'CmdOrCtrl+O',
           click: () => {
             mainWindow.webContents.send('menu:open-file');
           },
         },
         {
-          label: 'Sauvegarder',
+          label: t('save'),
           accelerator: 'CmdOrCtrl+S',
           click: () => {
             mainWindow.webContents.send('menu:save-file');

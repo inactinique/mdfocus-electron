@@ -1,0 +1,78 @@
+{
+  "app": {
+    "name": "mdFocus"
+  },
+  "actions": {
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "export": "Exporter",
+    "import": "Importer",
+    "browse": "Parcourir",
+    "reset": "Réinitialiser",
+    "delete": "Supprimer",
+    "edit": "Éditer",
+    "create": "Créer",
+    "open": "Ouvrir",
+    "search": "Rechercher"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "saved": "Configuration sauvegardée",
+    "saveError": "Erreur lors de la sauvegarde",
+    "resetConfirm": "Réinitialiser la configuration aux valeurs par défaut ?",
+    "language": "Langue",
+    "selectLanguage": "Sélectionner la langue"
+  },
+  "editor": {
+    "title": "Éditeur",
+    "fontSize": "Taille de police",
+    "wordWrap": "Retour à la ligne automatique",
+    "minimap": "Afficher la minimap",
+    "fontFamily": "Police de caractères",
+    "noCitations": "Aucune citation",
+    "importBibliography": "Importez votre bibliographie..."
+  },
+  "ui": {
+    "title": "Interface utilisateur",
+    "density": "Densité de l'interface",
+    "comfortable": "Confortable (par défaut)",
+    "compact": "Compact (plus d'éléments visibles)"
+  },
+  "bibliography": {
+    "title": "Bibliographie",
+    "import": "Importer fichier BibTeX",
+    "searchAndFilters": "Recherche et filtres",
+    "searchPlaceholder": "Rechercher auteur, titre, année...",
+    "sortBy": "Trier par:",
+    "author": "Auteur",
+    "year": "Année",
+    "titleField": "Titre"
+  },
+  "project": {
+    "title": "Projet",
+    "fillAllFields": "Veuillez remplir tous les champs",
+    "createError": "Erreur lors de la création du projet",
+    "openError": "Erreur lors de l'ouverture du projet"
+  },
+  "export": {
+    "pdf": {
+      "title": "Export PDF",
+      "documentTitle": "Titre du document",
+      "author": "Auteur (optionnel)",
+      "missingDeps": "Dépendances manquantes:",
+      "pandoc": "Pandoc",
+      "xelatex": "XeLaTeX",
+      "abstractNote": "Le résumé sera automatiquement lu depuis...",
+      "beamer": "Présentation Beamer",
+      "outputFile": "Fichier de sortie",
+      "exporting": "Export en cours...",
+      "success": "Export réussi! PDF créé à:",
+      "error": "Erreur lors de l'export"
+    }
+  },
+  "rag": {
+    "title": "Configuration RAG",
+    "topK": "Nombre de chunks (topK)"
+  }
+}

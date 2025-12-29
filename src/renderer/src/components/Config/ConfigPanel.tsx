@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RotateCcw, Save } from 'lucide-react';
 import { RAGConfigSection } from './RAGConfigSection';
 import { LLMConfigSection } from './LLMConfigSection';
 import { EditorConfigSection, type EditorConfig } from './EditorConfigSection';
 import { UIConfigSection } from './UIConfigSection';
+import { LanguageConfigSection } from './LanguageConfigSection';
 import { ActionsSection } from './ActionsSection';
 import { ZoteroConfigSection, type ZoteroConfig } from './ZoteroConfigSection';
 import { SuggestionsConfigSection, type SuggestionsConfig } from './SuggestionsConfigSection';
@@ -40,6 +42,7 @@ export interface LLMConfig {
 }
 
 export const ConfigPanel: React.FC = () => {
+  const { t } = useTranslation('common');
   const { settings: editorSettings, updateSettings } = useEditorStore();
 
   const [ragConfig, setRagConfig] = useState<RAGConfig>({
@@ -141,18 +144,18 @@ export const ConfigPanel: React.FC = () => {
         fontFamily: editorConfig.fontFamily,
       });
 
-      setSaveMessage('✅ Configuration sauvegardée');
+      setSaveMessage('✅ ' + t('settings.saved'));
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
       console.error('Failed to save config:', error);
-      setSaveMessage('❌ Erreur lors de la sauvegarde');
+      setSaveMessage('❌ ' + t('settings.saveError'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleResetConfig = async () => {
-    if (!window.confirm('Réinitialiser la configuration aux valeurs par défaut ?')) {
+    if (!window.confirm(t('settings.resetConfirm'))) {
       return;
     }
 
@@ -223,6 +226,8 @@ export const ConfigPanel: React.FC = () => {
 
       <div className="config-content">
         <UIConfigSection />
+
+        <LanguageConfigSection />
 
         <SuggestionsConfigSection
           config={suggestionsConfig}

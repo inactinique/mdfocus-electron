@@ -1,0 +1,78 @@
+{
+  "app": {
+    "name": "mdFocus"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "export": "Export",
+    "import": "Import",
+    "browse": "Browse",
+    "reset": "Reset",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "open": "Open",
+    "search": "Search"
+  },
+  "settings": {
+    "title": "Settings",
+    "saved": "Configuration saved",
+    "saveError": "Error saving configuration",
+    "resetConfirm": "Reset configuration to default values?",
+    "language": "Language",
+    "selectLanguage": "Select language"
+  },
+  "editor": {
+    "title": "Editor",
+    "fontSize": "Font size",
+    "wordWrap": "Word wrap",
+    "minimap": "Show minimap",
+    "fontFamily": "Font family",
+    "noCitations": "No citations",
+    "importBibliography": "Import your bibliography..."
+  },
+  "ui": {
+    "title": "User interface",
+    "density": "Interface density",
+    "comfortable": "Comfortable (default)",
+    "compact": "Compact (more visible elements)"
+  },
+  "bibliography": {
+    "title": "Bibliography",
+    "import": "Import BibTeX file",
+    "searchAndFilters": "Search and filters",
+    "searchPlaceholder": "Search author, title, year...",
+    "sortBy": "Sort by:",
+    "author": "Author",
+    "year": "Year",
+    "titleField": "Title"
+  },
+  "project": {
+    "title": "Project",
+    "fillAllFields": "Please fill all fields",
+    "createError": "Error creating project",
+    "openError": "Error opening project"
+  },
+  "export": {
+    "pdf": {
+      "title": "PDF Export",
+      "documentTitle": "Document title",
+      "author": "Author (optional)",
+      "missingDeps": "Missing dependencies:",
+      "pandoc": "Pandoc",
+      "xelatex": "XeLaTeX",
+      "abstractNote": "The abstract will be automatically read from...",
+      "beamer": "Beamer presentation",
+      "outputFile": "Output file",
+      "exporting": "Exporting...",
+      "success": "Export successful! PDF created at:",
+      "error": "Export error"
+    }
+  },
+  "rag": {
+    "title": "RAG Configuration",
+    "topK": "Number of chunks (topK)"
+  }
+}

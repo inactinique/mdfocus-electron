@@ -1,0 +1,78 @@
+{
+  "app": {
+    "name": "mdFocus"
+  },
+  "actions": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "browse": "Durchsuchen",
+    "reset": "Zurücksetzen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "open": "Öffnen",
+    "search": "Suchen"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "saved": "Konfiguration gespeichert",
+    "saveError": "Fehler beim Speichern",
+    "resetConfirm": "Konfiguration auf Standardwerte zurücksetzen?",
+    "language": "Sprache",
+    "selectLanguage": "Sprache auswählen"
+  },
+  "editor": {
+    "title": "Editor",
+    "fontSize": "Schriftgröße",
+    "wordWrap": "Automatischer Zeilenumbruch",
+    "minimap": "Minimap anzeigen",
+    "fontFamily": "Schriftart",
+    "noCitations": "Keine Zitate",
+    "importBibliography": "Ihre Bibliographie importieren..."
+  },
+  "ui": {
+    "title": "Benutzeroberfläche",
+    "density": "Oberflächendichte",
+    "comfortable": "Komfortabel (Standard)",
+    "compact": "Kompakt (mehr sichtbare Elemente)"
+  },
+  "bibliography": {
+    "title": "Bibliographie",
+    "import": "BibTeX-Datei importieren",
+    "searchAndFilters": "Suche und Filter",
+    "searchPlaceholder": "Autor, Titel, Jahr suchen...",
+    "sortBy": "Sortieren nach:",
+    "author": "Autor",
+    "year": "Jahr",
+    "titleField": "Titel"
+  },
+  "project": {
+    "title": "Projekt",
+    "fillAllFields": "Bitte alle Felder ausfüllen",
+    "createError": "Fehler beim Erstellen des Projekts",
+    "openError": "Fehler beim Öffnen des Projekts"
+  },
+  "export": {
+    "pdf": {
+      "title": "PDF-Export",
+      "documentTitle": "Dokumenttitel",
+      "author": "Autor (optional)",
+      "missingDeps": "Fehlende Abhängigkeiten:",
+      "pandoc": "Pandoc",
+      "xelatex": "XeLaTeX",
+      "abstractNote": "Die Zusammenfassung wird automatisch gelesen von...",
+      "beamer": "Beamer-Präsentation",
+      "outputFile": "Ausgabedatei",
+      "exporting": "Wird exportiert...",
+      "success": "Export erfolgreich! PDF erstellt unter:",
+      "error": "Exportfehler"
+    }
+  },
+  "rag": {
+    "title": "RAG-Konfiguration",
+    "topK": "Anzahl der Chunks (topK)"
+  }
+}
