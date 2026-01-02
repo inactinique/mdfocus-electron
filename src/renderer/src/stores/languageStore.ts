@@ -20,13 +20,17 @@ export const useLanguageStore = create<LanguageState>((set) => ({
       console.log('[Language Store] i18n language changed to:', i18n.language)
 
       // Sauvegarder dans la configuration
-      await window.electron.config.set('language', language)
+      if (window.electron?.config) {
+        await window.electron.config.set('language', language)
+      }
 
       // Mettre à jour le store
       set({ currentLanguage: language })
 
       // Notifier le main process pour mettre à jour les menus
-      window.electron.ipcRenderer.send('language-changed', language)
+      if (window.electron?.ipcRenderer) {
+        window.electron.ipcRenderer.send('language-changed', language)
+      }
       console.log('[Language Store] Language change complete')
     } catch (error) {
       console.error('Error changing language:', error)
@@ -37,6 +41,18 @@ export const useLanguageStore = create<LanguageState>((set) => ({
     try {
       console.log('[Language Store] Initializing language...')
       console.log('[Language Store] Current i18n language:', i18n.language)
+
+      // Vérifier que l'API Electron est disponible
+      if (!window.electron?.config) {
+        console.warn('[Language Store] Electron API not available, using system language')
+        const systemLanguage = navigator.language.split('-')[0]
+        const language = (['fr', 'en', 'de'].includes(systemLanguage)
+          ? systemLanguage
+          : 'fr') as SupportedLanguage
+        await i18n.changeLanguage(language)
+        set({ currentLanguage: language })
+        return
+      }
 
       // Charger la langue depuis la configuration
       const savedLanguage = await window.electron.config.get('language')

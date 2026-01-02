@@ -14,6 +14,11 @@ export function useMenuShortcuts() {
   const { searchCitations, citations } = useBibliographyStore();
 
   useEffect(() => {
+    // Vérifier que l'API Electron est disponible
+    if (!window.electron || !window.electron.ipcRenderer) {
+      console.warn('Electron API not available, skipping menu shortcuts setup');
+      return;
+    }
     // File operations
     const handleNewFile = () => {
       createNewFile();
