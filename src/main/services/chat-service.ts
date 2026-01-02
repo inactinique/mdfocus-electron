@@ -185,6 +185,9 @@ class ChatService {
         }
       }
 
+      // Récupérer le contexte du projet
+      const projectContext = pdfService.getProjectContext();
+
       // Stream la réponse avec contexte RAG si disponible
       if (searchResults.length > 0) {
         console.log('✅ [RAG DETAILED DEBUG] Generating response WITH context:', {
@@ -192,10 +195,11 @@ class ChatService {
           contextsUsed: searchResults.length,
           avgSimilarity: (searchResults.reduce((sum, r) => sum + r.similarity, 0) / searchResults.length).toFixed(4),
           mode: 'RAG_WITH_SOURCES',
+          projectContextLoaded: !!projectContext,
         });
 
         // Utiliser generateResponseStreamWithSources pour RAG
-        const generator = ollamaClient.generateResponseStreamWithSources(message, searchResults);
+        const generator = ollamaClient.generateResponseStreamWithSources(message, searchResults, projectContext);
         this.currentStream = generator;
 
         for await (const chunk of generator) {

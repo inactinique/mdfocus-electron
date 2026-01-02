@@ -54,7 +54,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   },
   rag: {
     topK: 10,
-    similarityThreshold: 0.2,
+    similarityThreshold: 0.12, // Réduit pour recherche multilingue (FR query → EN docs)
     chunkingConfig: 'cpuOptimized',
     summarizer: {
       enabled: true,

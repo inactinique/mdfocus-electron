@@ -6,7 +6,47 @@ import { KnowledgeGraphBuilder } from '../../../backend/core/analysis/KnowledgeG
 import { TopicModelingService } from '../../../backend/core/analysis/TopicModelingService.js';
 import { configManager } from './config-manager.js';
 import path from 'path';
+import fs from 'fs';
 import { app } from 'electron';
+
+// Dictionnaire de termes académiques FR→EN pour query expansion
+const ACADEMIC_TERMS_FR_TO_EN: Record<string, string[]> = {
+  'taxonomie de bloom': ['bloom\'s taxonomy', 'bloom taxonomy', 'blooms taxonomy'],
+  'zone proximale développement': ['zone of proximal development', 'zpd', 'vygotsky'],
+  'apprentissage significatif': ['meaningful learning', 'significant learning'],
+  'constructivisme': ['constructivism', 'constructivist'],
+  'socioconstructivisme': ['social constructivism', 'socioconstructivism'],
+  'métacognition': ['metacognition', 'metacognitive'],
+  'pédagogie active': ['active learning', 'active pedagogy'],
+  // Ajoutez d'autres termes selon vos besoins
+};
+
+/**
+ * Détecte et traduit les termes académiques français en anglais
+ */
+function expandQueryMultilingual(query: string): string[] {
+  const queries = [query]; // Version originale
+  const lowerQuery = query.toLowerCase();
+
+  // Chercher des termes connus à traduire
+  for (const [frTerm, enTranslations] of Object.entries(ACADEMIC_TERMS_FR_TO_EN)) {
+    if (lowerQuery.includes(frTerm)) {
+      // Ajouter chaque traduction anglaise
+      enTranslations.forEach(enTerm => {
+        const translatedQuery = query.replace(new RegExp(frTerm, 'gi'), enTerm);
+        queries.push(translatedQuery);
+      });
+    }
+  }
+
+  console.log('🌐 [MULTILINGUAL] Query expansion:', {
+    original: query,
+    expanded: queries,
+    count: queries.length
+  });
+
+  return queries;
+}
 
 class PDFService {
   private pdfIndexer: PDFIndexer | null = null;
@@ -87,57 +127,89 @@ class PDFService {
     this.ensureInitialized();
 
     const searchStart = Date.now();
-
-    // Generate embedding for the query using Ollama
-    console.log('🔍 [PDF-SERVICE DEBUG] Generating embedding for query:', {
-      queryLength: query.length,
-      queryPreview: query.substring(0, 50) + (query.length > 50 ? '...' : ''),
-    });
-
-    const queryEmbedding = await this.ollamaClient!.generateEmbedding(query);
-    const embeddingDuration = Date.now() - searchStart;
-
-    console.log('🔍 [PDF-SERVICE DEBUG] Embedding generated:', {
-      embeddingDimensions: queryEmbedding.length,
-      embeddingDuration: `${embeddingDuration}ms`,
-      embeddingPreview: Array.from(queryEmbedding.slice(0, 5)).map(v => v.toFixed(4)),
-    });
-
     const ragConfig = configManager.getRAGConfig();
     const topK = options?.topK || ragConfig.topK;
+    const threshold = options?.threshold || ragConfig.similarityThreshold;
 
-    console.log('🔍 [PDF-SERVICE DEBUG] Searching vector store:', {
-      topK: topK,
-      documentIdsFilter: options?.documentIds?.length || 'none',
-    });
+    // 🆕 Query expansion multilingue
+    const expandedQueries = expandQueryMultilingual(query);
+    const allResults = new Map<string, any>(); // chunk.id → meilleur résultat
 
-    const vectorSearchStart = Date.now();
-    const results = this.vectorStore!.search(
-      queryEmbedding,
-      topK,
-      options?.documentIds
-    );
-    const vectorSearchDuration = Date.now() - vectorSearchStart;
+    // Générer embeddings et chercher pour chaque variante
+    for (const expandedQuery of expandedQueries) {
+      console.log('🔍 [PDF-SERVICE DEBUG] Generating embedding for query variant:', {
+        queryLength: expandedQuery.length,
+        queryPreview: expandedQuery.substring(0, 50) + (expandedQuery.length > 50 ? '...' : ''),
+      });
+
+      const queryEmbedding = await this.ollamaClient!.generateEmbedding(expandedQuery);
+      const embeddingDuration = Date.now() - searchStart;
+
+      console.log('🔍 [PDF-SERVICE DEBUG] Embedding generated:', {
+        embeddingDimensions: queryEmbedding.length,
+        embeddingDuration: `${embeddingDuration}ms`,
+        embeddingPreview: Array.from(queryEmbedding.slice(0, 5)).map(v => v.toFixed(4)),
+      });
+
+      console.log('🔍 [PDF-SERVICE DEBUG] Searching vector store:', {
+        topK: topK,
+        documentIdsFilter: options?.documentIds?.length || 'none',
+      });
+
+      const vectorSearchStart = Date.now();
+      const results = this.vectorStore!.search(
+        queryEmbedding,
+        topK,
+        options?.documentIds
+      );
+      const vectorSearchDuration = Date.now() - vectorSearchStart;
+
+      // Merger les résultats (garder le meilleur score par chunk)
+      for (const result of results) {
+        const chunkId = result.chunk.id;
+        const existing = allResults.get(chunkId);
+
+        if (!existing || result.similarity > existing.similarity) {
+          allResults.set(chunkId, result);
+        }
+      }
+
+      console.log('🔍 [PDF-SERVICE DEBUG] Query variant results:', {
+        query: expandedQuery.substring(0, 50),
+        variantResults: results.length,
+        totalUniqueChunks: allResults.size,
+        vectorSearchDuration: `${vectorSearchDuration}ms`,
+      });
+    }
+
+    // Convertir Map en array et trier par similarité
+    let mergedResults = Array.from(allResults.values())
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, topK); // Garder seulement top K résultats
 
     // Filter by similarity threshold
-    const threshold = options?.threshold || ragConfig.similarityThreshold;
-    const filteredResults = results.filter(r => r.similarity >= threshold);
+    let filteredResults = mergedResults.filter(r => r.similarity >= threshold);
 
-    console.log('🔍 [PDF-SERVICE DEBUG] Search results:', {
-      totalResults: results.length,
+    // 🆕 Fallback automatique pour recherche multilingue
+    if (filteredResults.length === 0 && mergedResults.length > 0) {
+      const minFallbackResults = Math.min(3, mergedResults.length);
+      console.warn('⚠️  [PDF-SERVICE DEBUG] All results filtered out by threshold!');
+      console.warn('⚠️  [PDF-SERVICE DEBUG] Applying fallback: keeping top', minFallbackResults, 'results');
+      console.warn('⚠️  [PDF-SERVICE DEBUG] Best similarity:', mergedResults[0]?.similarity.toFixed(4));
+      console.warn('⚠️  [PDF-SERVICE DEBUG] This may indicate cross-language search (e.g., FR query → EN docs)');
+
+      filteredResults = mergedResults.slice(0, minFallbackResults);
+    }
+
+    console.log('🔍 [PDF-SERVICE DEBUG] Final search results:', {
+      totalUniqueChunks: mergedResults.length,
       filteredResults: filteredResults.length,
       threshold: threshold,
-      vectorSearchDuration: `${vectorSearchDuration}ms`,
-      allSimilarities: results.map(r => r.similarity.toFixed(4)),
+      fallbackApplied: filteredResults.length > 0 && filteredResults.length < mergedResults.filter(r => r.similarity >= threshold).length,
+      allSimilarities: mergedResults.map(r => r.similarity.toFixed(4)),
       filteredSimilarities: filteredResults.map(r => r.similarity.toFixed(4)),
-      belowThresholdCount: results.length - filteredResults.length,
+      totalDuration: `${Date.now() - searchStart}ms`,
     });
-
-    if (filteredResults.length === 0 && results.length > 0) {
-      console.warn('⚠️  [PDF-SERVICE DEBUG] All results filtered out by threshold!');
-      console.warn('⚠️  [PDF-SERVICE DEBUG] Consider lowering threshold from', threshold);
-      console.warn('⚠️  [PDF-SERVICE DEBUG] Best similarity was:', results[0]?.similarity.toFixed(4));
-    }
 
     return filteredResults;
   }
@@ -170,6 +242,29 @@ class PDFService {
 
   getVectorStore() {
     return this.vectorStore;
+  }
+
+  /**
+   * Lit le contexte du projet depuis context.md
+   */
+  getProjectContext(): string | null {
+    if (!this.currentProjectPath) {
+      return null;
+    }
+
+    const contextPath = path.join(this.currentProjectPath, 'context.md');
+
+    try {
+      if (fs.existsSync(contextPath)) {
+        const context = fs.readFileSync(contextPath, 'utf-8').trim();
+        console.log('📋 [PROJECT CONTEXT] Loaded:', context.substring(0, 100) + '...');
+        return context;
+      }
+    } catch (error) {
+      console.warn('⚠️  [PROJECT CONTEXT] Could not read context file:', error);
+    }
+
+    return null;
   }
 
   /**

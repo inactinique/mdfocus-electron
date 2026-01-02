@@ -221,6 +221,12 @@ export const ProjectPanel: React.FC = () => {
                   >
                     📝 abstract.md
                   </div>
+                  <div
+                    className="project-file-item"
+                    onClick={() => handleFileSelect(`${currentProject.path}/context.md`)}
+                  >
+                    🎯 context.md
+                  </div>
                 </div>
               </CollapsibleSection>
             )}

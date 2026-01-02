@@ -87,10 +87,13 @@ export class ProjectManager {
     const mdFile = path.join(projectPath, 'document.md');
     await writeFile(mdFile, data.content || '# ' + data.name);
 
-    // For articles and books, create abstract.md
+    // For articles and books, create abstract.md and context.md
     if (projectType === 'article' || projectType === 'book') {
       const abstractFile = path.join(projectPath, 'abstract.md');
       await writeFile(abstractFile, '# Résumé\n\nRésumé à compléter...');
+
+      const contextFile = path.join(projectPath, 'context.md');
+      await writeFile(contextFile, '# Contexte du projet\n\nDécrivez ici le contexte de votre recherche. Ce contexte sera utilisé pour améliorer les réponses de l\'assistant IA.\n\nExemple : "Cette recherche porte sur l\'impact de l\'intelligence artificielle dans l\'éducation supérieure, avec un focus particulier sur la taxonomie de Bloom et les stratégies pédagogiques actives."');
     }
 
     // For presentations, create slides.md with Beamer syntax

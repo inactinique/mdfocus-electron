@@ -382,11 +382,12 @@ export class OllamaClient {
 
   async *generateResponseStreamWithSources(
     prompt: string,
-    sources: SearchResult[]
+    sources: SearchResult[],
+    projectContext?: string
   ): AsyncGenerator<string> {
     const url = `${this.baseURL}/api/generate`;
 
-    const fullPrompt = this.buildPromptWithSources(prompt, sources);
+    const fullPrompt = this.buildPromptWithSources(prompt, sources, projectContext);
 
     const request: OllamaGenerateRequest = {
       model: this.chatModel,
@@ -478,14 +479,34 @@ Réponds de manière précise et académique en te basant sur les extraits fourn
 
   // MARK: - Construction du prompt avec sources complètes
 
-  private buildPromptWithSources(userQuery: string, sources: SearchResult[]): string {
+  private buildPromptWithSources(userQuery: string, sources: SearchResult[], projectContext?: string): string {
     if (sources.length === 0) {
+      // Si aucune source ET aucun projet, message d'erreur
+      if (!projectContext) {
+        return `ERREUR: Aucun projet chargé et aucun document disponible.
+
+Pour utiliser cet assistant, vous devez :
+1. Charger un projet (File → Open Project)
+2. Indexer des documents PDF dans ce projet
+
+Sans projet ni documents, je ne peux pas vous aider.`;
+      }
+      // Si projet mais pas de sources
       return userQuery;
     }
 
     let prompt = `Tu es un assistant académique spécialisé en sciences humaines et sociales, particulièrement en histoire contemporaine. Tu aides les chercheurs à analyser et comprendre leurs documents PDF.
+`;
 
-Voici des extraits pertinents des documents indexés :
+    // 🆕 Ajouter le contexte du projet si disponible
+    if (projectContext) {
+      prompt += `\nCONTEXTE DU PROJET:
+${projectContext}
+
+`;
+    }
+
+    prompt += `Voici des extraits pertinents des documents indexés :
 
 `;
 
