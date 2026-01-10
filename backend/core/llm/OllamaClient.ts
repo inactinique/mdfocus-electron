@@ -81,9 +81,10 @@ export class OllamaClient {
   public embeddingModel: string = 'nomic-embed-text';
   public chatModel: string = 'gemma2:2b';
 
-  // Limite de caractères pour nomic-embed-text (échec entre 2100-2200)
-  // On utilise 2000 comme limite sécuritaire
-  private readonly NOMIC_MAX_LENGTH = 2000;
+  // Limite de caractères pour nomic-embed-text
+  // Modèle supporte 8192 tokens ≈ 5000-6000 chars
+  // On utilise 3500 chars comme limite sécuritaire (laisse marge pour contexte document)
+  private readonly NOMIC_MAX_LENGTH = 3500;
 
   constructor(
     baseURL: string = 'http://127.0.0.1:11434',
@@ -174,7 +175,7 @@ export class OllamaClient {
   // MARK: - Génération d'embeddings
 
   /**
-   * Découpe un texte en chunks de taille maximale
+   * Découpe un texte en chunks de taille maximale (sentence-aware)
    */
   private chunkText(text: string, maxLength: number): string[] {
     if (text.length <= maxLength) {
@@ -185,9 +186,30 @@ export class OllamaClient {
     let currentIndex = 0;
 
     while (currentIndex < text.length) {
-      const chunk = text.substring(currentIndex, currentIndex + maxLength);
+      let endIndex = Math.min(currentIndex + maxLength, text.length);
+
+      // Try to find sentence boundary if not at end
+      if (endIndex < text.length) {
+        // Look backward up to 200 chars for sentence ending
+        const searchStart = Math.max(currentIndex, endIndex - 200);
+        const searchText = text.substring(searchStart, endIndex);
+        const sentenceEndings = /[.!?;](?=\s|$)/g;
+        let lastMatch = null;
+        let match;
+
+        while ((match = sentenceEndings.exec(searchText)) !== null) {
+          lastMatch = match;
+        }
+
+        if (lastMatch) {
+          // Cut at last sentence boundary
+          endIndex = searchStart + lastMatch.index + 1;
+        }
+      }
+
+      const chunk = text.substring(currentIndex, endIndex).trim();
       chunks.push(chunk);
-      currentIndex += maxLength;
+      currentIndex = endIndex;
     }
 
     return chunks;

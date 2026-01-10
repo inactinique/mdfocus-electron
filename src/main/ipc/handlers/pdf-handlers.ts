@@ -108,6 +108,21 @@ export function setupPDFHandlers() {
     }
   });
 
+  ipcMain.handle('pdf:clean-orphaned-chunks', async () => {
+    console.log('📞 IPC Call: pdf:clean-orphaned-chunks');
+    try {
+      const projectPath = projectManager.getCurrentProjectPath();
+      requireProject(projectPath);
+
+      pdfService.cleanOrphanedChunks();
+      console.log('📤 IPC Response: pdf:clean-orphaned-chunks - success');
+      return successResponse();
+    } catch (error: any) {
+      console.error('❌ pdf:clean-orphaned-chunks error:', error);
+      return errorResponse(error);
+    }
+  });
+
   ipcMain.handle('pdf:get-all', async () => {
     try {
       const projectPath = projectManager.getCurrentProjectPath();

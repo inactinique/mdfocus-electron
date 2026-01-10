@@ -28,7 +28,11 @@ export class AdaptiveChunker {
   /**
    * Create chunks using adaptive structure-aware strategy
    */
-  createChunks(pages: DocumentPage[], documentId: string): DocumentChunk[] {
+  createChunks(
+    pages: DocumentPage[],
+    documentId: string,
+    documentMeta?: { title?: string; abstract?: string }
+  ): DocumentChunk[] {
     // Combine all pages
     const fullText = pages.map((p) => p.text).join('\n\n');
     const pageMapping = this.createPageMapping(pages);
@@ -41,11 +45,18 @@ export class AdaptiveChunker {
     let chunkIndex = 0;
 
     for (const section of sections) {
+      // Skip references section (low value for RAG)
+      if (section.type === 'references') {
+        console.log(`⏭️  Skipping references section (low RAG value)`);
+        continue;
+      }
+
       const sectionChunks = this.chunkSection(
         section,
         documentId,
         chunkIndex,
-        pageMapping
+        pageMapping,
+        documentMeta
       );
       chunks.push(...sectionChunks);
       chunkIndex += sectionChunks.length;
@@ -254,18 +265,25 @@ export class AdaptiveChunker {
     section: Section,
     documentId: string,
     startingIndex: number,
-    pageMapping: PageMapping[]
+    pageMapping: PageMapping[],
+    documentMeta?: { title?: string; abstract?: string }
   ): DocumentChunk[] {
     const words = section.content.split(/\s+/).filter((w) => w.length > 0);
 
     // If section fits in one chunk, return it as-is
     if (words.length <= this.config.maxChunkSize) {
       const pageNumber = this.findPageNumber(section.startPosition, pageMapping);
+      const content = this.enhanceChunkWithContext(
+        this.cleanText(section.content),
+        documentMeta,
+        section.title
+      );
+
       return [
         {
           id: randomUUID(),
           documentId,
-          content: this.cleanText(section.content),
+          content,
           pageNumber,
           chunkIndex: startingIndex,
           startPosition: section.startPosition,
@@ -280,7 +298,7 @@ export class AdaptiveChunker {
     }
 
     // Section is too large, split by paragraphs
-    const paragraphs = section.content.split(/\n\n+/);
+    const paragraphs = this.splitIntoParagraphs(section.content);
     const chunks: DocumentChunk[] = [];
     let currentChunk = '';
     let currentStart = section.startPosition;
@@ -295,16 +313,23 @@ export class AdaptiveChunker {
         currentWords.length + paragraphWords.length > this.config.maxChunkSize &&
         currentChunk.length > 0
       ) {
-        // Save current chunk
+        // Ensure we end at sentence boundary
+        const finalChunk = this.ensureSentenceBoundary(currentChunk.trim());
         const pageNumber = this.findPageNumber(currentStart, pageMapping);
+        const content = this.enhanceChunkWithContext(
+          this.cleanText(finalChunk),
+          documentMeta,
+          section.title
+        );
+
         chunks.push({
           id: randomUUID(),
           documentId,
-          content: this.cleanText(currentChunk),
+          content,
           pageNumber,
           chunkIndex,
           startPosition: currentStart,
-          endPosition: currentStart + currentChunk.length,
+          endPosition: currentStart + finalChunk.length,
           metadata: {
             sectionTitle: section.title,
             sectionType: section.type,
@@ -312,10 +337,10 @@ export class AdaptiveChunker {
           },
         });
 
-        // Start new chunk with overlap
-        const overlapWords = currentWords.slice(-this.config.overlapSize);
-        currentChunk = overlapWords.join(' ') + ' ';
-        currentStart += currentChunk.length;
+        // Start new chunk with smart overlap (sentence boundaries)
+        const overlap = this.createSmartOverlap(finalChunk, this.config.overlapSize);
+        currentChunk = overlap + ' ';
+        currentStart += finalChunk.length;
         chunkIndex++;
       }
 
@@ -327,15 +352,22 @@ export class AdaptiveChunker {
     if (currentChunk.trim().length > 0) {
       const chunkWords = currentChunk.split(/\s+/).filter((w) => w.length > 0);
       if (chunkWords.length >= this.config.minChunkSize) {
+        const finalChunk = this.ensureSentenceBoundary(currentChunk.trim());
         const pageNumber = this.findPageNumber(currentStart, pageMapping);
+        const content = this.enhanceChunkWithContext(
+          this.cleanText(finalChunk),
+          documentMeta,
+          section.title
+        );
+
         chunks.push({
           id: randomUUID(),
           documentId,
-          content: this.cleanText(currentChunk),
+          content,
           pageNumber,
           chunkIndex,
           startPosition: currentStart,
-          endPosition: currentStart + currentChunk.length,
+          endPosition: currentStart + finalChunk.length,
           metadata: {
             sectionTitle: section.title,
             sectionType: section.type,
@@ -379,6 +411,153 @@ export class AdaptiveChunker {
       }
     }
     return mapping[mapping.length - 1]?.pageNumber ?? 1;
+  }
+
+  /**
+   * Split text into paragraphs while preserving lists and tables
+   */
+  private splitIntoParagraphs(text: string): string[] {
+    // Detect structured content (lists, tables)
+    const structuredRanges = this.detectStructuredContent(text);
+
+    // Split by double newlines but preserve structured content
+    const rawParagraphs = text.split(/\n\n+/);
+    const paragraphs: string[] = [];
+
+    for (const para of rawParagraphs) {
+      // Check if this paragraph is part of a list or table
+      const isList = /^(\d+\.|[-*•])\s+/.test(para.trim());
+      const isTable = /^\|.+\|$/.test(para.trim());
+
+      if (isList || isTable) {
+        // Keep structured content together
+        paragraphs.push(para);
+      } else {
+        paragraphs.push(para);
+      }
+    }
+
+    return paragraphs;
+  }
+
+  /**
+   * Detect structured content (lists, tables) to keep together
+   */
+  private detectStructuredContent(
+    text: string
+  ): Array<{ start: number; end: number; type: 'list' | 'table' }> {
+    const ranges: Array<{ start: number; end: number; type: 'list' | 'table' }> = [];
+
+    // Detect numbered/bullet lists
+    const listPattern = /^(\d+\.|[-*•])\s+.+(\n(\d+\.|[-*•])\s+.+)+/gm;
+    let match;
+    while ((match = listPattern.exec(text)) !== null) {
+      ranges.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        type: 'list',
+      });
+    }
+
+    // Detect markdown tables
+    const tablePattern = /^\|.+\|(\n\|.+\|)+/gm;
+    while ((match = tablePattern.exec(text)) !== null) {
+      ranges.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        type: 'table',
+      });
+    }
+
+    return ranges;
+  }
+
+  /**
+   * Ensure chunk ends at a sentence boundary
+   */
+  private ensureSentenceBoundary(text: string): string {
+    // If text already ends with sentence punctuation, return as-is
+    if (/[.!?;]\s*$/.test(text)) {
+      return text;
+    }
+
+    // Find last sentence ending, looking backward up to 100 chars
+    const searchStart = Math.max(0, text.length - 100);
+    const searchText = text.substring(searchStart);
+    const sentenceEndings = /[.!?;](?=\s|$)/g;
+    let lastMatch = null;
+    let match;
+
+    while ((match = sentenceEndings.exec(searchText)) !== null) {
+      lastMatch = match;
+    }
+
+    if (lastMatch) {
+      // Cut at last sentence boundary
+      const cutPoint = searchStart + lastMatch.index + 1;
+      return text.substring(0, cutPoint).trim();
+    }
+
+    // No sentence boundary found, return as-is
+    return text;
+  }
+
+  /**
+   * Create smart overlap at sentence boundaries
+   */
+  private createSmartOverlap(text: string, targetWords: number): string {
+    // Split into sentences
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    let overlap = '';
+    let wordCount = 0;
+
+    // Take sentences from the end until we reach target
+    for (let i = sentences.length - 1; i >= 0 && wordCount < targetWords; i--) {
+      const sentence = sentences[i];
+      const sentenceWords = sentence.split(/\s+/).filter((w) => w.length > 0).length;
+
+      // Add sentence if it doesn't exceed target by too much (+20 tolerance)
+      if (wordCount + sentenceWords <= targetWords + 20) {
+        overlap = sentence + ' ' + overlap;
+        wordCount += sentenceWords;
+      } else {
+        // Would exceed too much, stop here
+        break;
+      }
+    }
+
+    return overlap.trim();
+  }
+
+  /**
+   * Add document context to chunk content
+   */
+  private enhanceChunkWithContext(
+    content: string,
+    documentMeta?: { title?: string; abstract?: string },
+    sectionTitle?: string
+  ): string {
+    if (!documentMeta?.title) {
+      return content;
+    }
+
+    // Lightweight context prefix (doesn't consume too many tokens)
+    const contextParts: string[] = [];
+
+    if (documentMeta.title) {
+      contextParts.push(`Doc: ${documentMeta.title}`);
+    }
+
+    if (sectionTitle && sectionTitle !== 'Document') {
+      contextParts.push(`Section: ${sectionTitle}`);
+    }
+
+    if (contextParts.length > 0) {
+      const context = `[${contextParts.join(' | ')}]\n\n`;
+      return context + content;
+    }
+
+    return content;
   }
 
   /**

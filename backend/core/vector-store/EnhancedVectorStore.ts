@@ -283,6 +283,66 @@ export class EnhancedVectorStore {
     this.vectorStore.saveCitation(citation);
   }
 
+  getCitationsForDocument(documentId: string): any[] {
+    return this.vectorStore.getCitationsForDocument(documentId);
+  }
+
+  getSimilarDocuments(documentId: string, threshold?: number, limit?: number): any[] {
+    return this.vectorStore.getSimilarDocuments(documentId, threshold, limit);
+  }
+
+  getTotalCitationsCount(): number {
+    return this.vectorStore.getTotalCitationsCount();
+  }
+
+  getMatchedCitationsCount(): number {
+    return this.vectorStore.getMatchedCitationsCount();
+  }
+
+  getDocumentsCitedBy(documentId: string): string[] {
+    return this.vectorStore.getDocumentsCitedBy(documentId);
+  }
+
+  getDocumentsCiting(documentId: string): string[] {
+    return this.vectorStore.getDocumentsCiting(documentId);
+  }
+
+  deleteCitationsForDocument(documentId: string): void {
+    this.vectorStore.deleteCitationsForDocument(documentId);
+  }
+
+  saveSimilarity(docId1: string, docId2: string, similarity: number): void {
+    this.vectorStore.saveSimilarity(docId1, docId2, similarity);
+  }
+
+  deleteSimilaritiesForDocument(documentId: string): void {
+    this.vectorStore.deleteSimilaritiesForDocument(documentId);
+  }
+
+  computeAndSaveSimilarities(documentId: string, threshold?: number): number {
+    return this.vectorStore.computeAndSaveSimilarities(documentId, threshold);
+  }
+
+  getChunksForDocument(documentId: string): any[] {
+    return this.vectorStore.getChunksForDocument(documentId);
+  }
+
+  deleteAllTopicAnalyses(): void {
+    this.vectorStore.deleteAllTopicAnalyses();
+  }
+
+  loadLatestTopicAnalysis(): any {
+    return this.vectorStore.loadLatestTopicAnalysis();
+  }
+
+  getTopicTimeline(): any {
+    return this.vectorStore.getTopicTimeline();
+  }
+
+  saveTopicAnalysis(result: any, options: any): string {
+    return this.vectorStore.saveTopicAnalysis(result, options);
+  }
+
   getStatistics(): any {
     return this.vectorStore.getStatistics();
   }
@@ -293,6 +353,21 @@ export class EnhancedVectorStore {
 
   verifyIntegrity(): any {
     return this.vectorStore.verifyIntegrity();
+  }
+
+  purgeAllData(): void {
+    // Purge HNSW index (reinitialize with empty index)
+    this.hnswStore.clear();
+    console.log('✅ HNSW index purged');
+
+    // Purge BM25 index (reinitialize)
+    this.bm25Index = new BM25Index();
+    this.hybridSearch.setBM25Index(this.bm25Index);
+    console.log('✅ BM25 index purged');
+
+    // Purge base vector store (SQLite)
+    this.vectorStore.purgeAllData();
+    console.log('✅ Vector store purged');
   }
 
   getAllChunksWithEmbeddings(): any[] {

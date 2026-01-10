@@ -31,6 +31,7 @@ const api = {
     getAll: () => ipcRenderer.invoke('pdf:get-all'),
     getStatistics: () => ipcRenderer.invoke('pdf:get-statistics'),
     purge: () => ipcRenderer.invoke('pdf:purge'),
+    cleanOrphanedChunks: () => ipcRenderer.invoke('pdf:clean-orphaned-chunks'),
   },
 
   // Chat RAG

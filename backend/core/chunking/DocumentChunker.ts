@@ -46,7 +46,11 @@ export class DocumentChunker {
 
   // MARK: - Chunking principal
 
-  createChunks(pages: DocumentPage[], documentId: string): DocumentChunk[] {
+  createChunks(
+    pages: DocumentPage[],
+    documentId: string,
+    documentMeta?: { title?: string; abstract?: string }
+  ): DocumentChunk[] {
     const chunks: DocumentChunk[] = [];
     let chunkIndex = 0;
 
@@ -67,8 +71,19 @@ export class DocumentChunker {
 
     let i = 0;
     while (i < words.length) {
-      // Déterminer la taille du chunk
-      const endIndex = Math.min(i + this.config.maxChunkSize, words.length);
+      // Déterminer la taille du chunk avec sentence boundary awareness
+      let endIndex = Math.min(i + this.config.maxChunkSize, words.length);
+
+      // Try to end at sentence boundary (look ahead up to 50 words)
+      if (endIndex < words.length) {
+        for (let j = endIndex; j > Math.max(i, endIndex - 50); j--) {
+          if (/[.!?;]$/.test(words[j])) {
+            endIndex = j + 1;
+            break;
+          }
+        }
+      }
+
       const chunkWords = words.slice(i, endIndex);
       const chunkText = chunkWords.join(' ');
 
@@ -83,10 +98,17 @@ export class DocumentChunker {
 
       // Créer le chunk seulement s'il est assez long
       if (chunkWords.length >= this.config.minChunkSize || endIndex === words.length) {
+        let content = this.cleanChunkText(chunkText);
+
+        // Add document context if available
+        if (documentMeta?.title) {
+          content = `[Doc: ${documentMeta.title}]\n\n` + content;
+        }
+
         const chunk: DocumentChunk = {
           id: randomUUID(),
           documentId,
-          content: this.cleanChunkText(chunkText),
+          content,
           pageNumber,
           chunkIndex,
           startPosition: chunkStart,

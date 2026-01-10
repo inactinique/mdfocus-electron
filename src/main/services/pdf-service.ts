@@ -631,6 +631,17 @@ class PDFService {
   }
 
   /**
+   * Nettoie les chunks orphelins (sans document parent)
+   */
+  cleanOrphanedChunks() {
+    this.ensureInitialized();
+
+    console.log('🧹 Cleaning orphaned chunks from vector store...');
+    this.vectorStore!.cleanOrphanedChunks();
+    console.log('✅ Orphaned chunks cleaned successfully');
+  }
+
+  /**
    * Ferme le PDF Service et libère les ressources
    */
   close() {

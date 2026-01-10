@@ -219,7 +219,16 @@ export class PDFIndexer {
         message: 'Découpage du texte en chunks...',
       });
 
-      const chunks = this.chunker.createChunks(pages, documentId);
+      // Pass document metadata to adaptive chunker for context enhancement
+      const documentMeta = {
+        title: document.title,
+        abstract: summary,
+      };
+
+      const chunks =
+        this.chunker instanceof AdaptiveChunker
+          ? this.chunker.createChunks(pages, documentId, documentMeta)
+          : this.chunker.createChunks(pages, documentId);
 
       const stats = this.chunker.getChunkingStats(chunks);
       console.log(
