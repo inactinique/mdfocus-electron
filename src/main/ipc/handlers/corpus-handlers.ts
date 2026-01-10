@@ -13,7 +13,7 @@ export function setupCorpusHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
+      // Service already initialized in project:load
       const graphData = await pdfService.buildKnowledgeGraph(options);
 
       console.log('📤 IPC Response: corpus:get-graph', {
@@ -33,7 +33,7 @@ export function setupCorpusHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
+      // Service already initialized in project:load
       const statistics = await pdfService.getCorpusStatistics();
 
       console.log('📤 IPC Response: corpus:get-statistics', statistics);
@@ -50,7 +50,7 @@ export function setupCorpusHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
+      // Service already initialized in project:load
       const result = await pdfService.analyzeTopics(options);
 
       console.log('📤 IPC Response: corpus:analyze-topics', {
@@ -70,7 +70,7 @@ export function setupCorpusHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
+      // Service already initialized in project:load
       const result = pdfService.loadTopicAnalysis();
 
       if (result) {
@@ -96,7 +96,7 @@ export function setupCorpusHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
+      // Service already initialized in project:load
       const timeline = pdfService.getTopicTimeline();
 
       if (timeline) {
@@ -123,7 +123,7 @@ export function setupCorpusHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
+      // Service already initialized in project:load
       const statistics = await pdfService.getTextStatistics(options);
 
       console.log('📤 IPC Response: corpus:get-text-statistics', {

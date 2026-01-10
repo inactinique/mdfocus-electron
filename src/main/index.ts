@@ -94,3 +94,26 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+// Arrêter proprement le service Topic Modeling lors de la fermeture de l'app
+app.on('before-quit', async (event) => {
+  // Empêcher la fermeture immédiate pour permettre un arrêt propre
+  event.preventDefault();
+
+  try {
+    // Importer et arrêter le service s'il est en cours d'exécution
+    const { topicModelingService } = await import('./services/topic-modeling-service.js');
+    const status = topicModelingService.getStatus();
+
+    if (status.isRunning) {
+      console.log('🛑 Stopping topic modeling service before quit...');
+      await topicModelingService.stop();
+      console.log('✅ Topic modeling service stopped');
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not stop topic modeling service:', error);
+  }
+
+  // Continuer la fermeture
+  app.exit();
+});

@@ -4,6 +4,7 @@ import { CollapsibleSection } from '../common/CollapsibleSection';
 import { TopicTimeline } from './TopicTimeline';
 import { TextometricsPanel } from './TextometricsPanel';
 import { HelperTooltip } from '../Methodology/HelperTooltip';
+import { useProjectStore } from '../../stores/projectStore';
 import './CorpusExplorerPanel.css';
 
 interface GraphNode {
@@ -69,9 +70,16 @@ interface TopicAnalysisResult {
     numOutliers: number;
     numDocumentsInTopics: number;
   };
+  options?: {
+    minTopicSize?: number;
+    nrTopics?: number | 'auto';
+    language?: string;
+    nGramRange?: [number, number];
+  };
 }
 
 export const CorpusExplorerPanel: React.FC = () => {
+  const { currentProject } = useProjectStore();
   const [statistics, setStatistics] = useState<CorpusStatistics | null>(null);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [fullGraphData, setFullGraphData] = useState<GraphData | null>(null);
@@ -94,9 +102,19 @@ export const CorpusExplorerPanel: React.FC = () => {
 
   const graphRef = useRef<any>();
 
+  // Charger les données seulement quand un projet est chargé
   useEffect(() => {
-    loadCorpusData();
-  }, []);
+    if (currentProject) {
+      loadCorpusData();
+    } else {
+      setLoading(false);
+      setStatistics(null);
+      setGraphData(null);
+      setFullGraphData(null);
+      setTopicAnalysis(null);
+      setError(null);
+    }
+  }, [currentProject]);
 
   useEffect(() => {
     applyFilters();
@@ -136,6 +154,12 @@ export const CorpusExplorerPanel: React.FC = () => {
         if (topicsResult.success) {
           setTopicAnalysis(topicsResult);
           console.log('✅ Loaded saved topics:', topicsResult.topics.length);
+
+          // Restaurer le nombre de topics depuis les options sauvegardées
+          if (topicsResult.options?.nrTopics && topicsResult.options.nrTopics !== 'auto') {
+            setNumTopics(topicsResult.options.nrTopics);
+            console.log('✅ Restored numTopics:', topicsResult.options.nrTopics);
+          }
 
           // Charger la timeline des topics
           try {
@@ -186,11 +210,21 @@ export const CorpusExplorerPanel: React.FC = () => {
         }
       } else {
         console.error('Failed to load topics:', result.error);
-        alert('Erreur lors de l\'analyse des topics: ' + result.error);
+        const errorMsg = result.error || 'Erreur inconnue';
+        if (errorMsg.includes('not available') || errorMsg.includes('not start') || errorMsg.includes('timeout')) {
+          alert('Le service de topic modeling n\'est pas disponible.\n\nPour l\'activer, ouvrez les Paramètres et installez l\'environnement Python dans la section "Topic Modeling".');
+        } else {
+          alert('Erreur lors de l\'analyse des topics: ' + errorMsg);
+        }
       }
     } catch (err: any) {
       console.error('Error loading topics:', err);
-      alert('Erreur lors de l\'analyse des topics: ' + err.message);
+      const errorMsg = err.message || 'Erreur inconnue';
+      if (errorMsg.includes('not available') || errorMsg.includes('not start') || errorMsg.includes('timeout')) {
+        alert('Le service de topic modeling n\'est pas disponible.\n\nPour l\'activer, ouvrez les Paramètres et installez l\'environnement Python dans la section "Topic Modeling".');
+      } else {
+        alert('Erreur lors de l\'analyse des topics: ' + errorMsg);
+      }
     } finally {
       setLoadingTopics(false);
     }
@@ -522,6 +556,19 @@ export const CorpusExplorerPanel: React.FC = () => {
     }
   };
 
+  // Aucun projet chargé
+  if (!currentProject) {
+    return (
+      <div className="corpus-explorer-panel">
+        <div className="corpus-empty">
+          <div className="empty-icon">📁</div>
+          <h3>Aucun projet</h3>
+          <p>Ouvrez ou créez un projet pour explorer le corpus.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="corpus-explorer-panel">
@@ -736,6 +783,18 @@ export const CorpusExplorerPanel: React.FC = () => {
                 )}
               </div>
               <div className="topics-actions">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9em' }}>
+                  Nb topics:
+                  <input
+                    type="number"
+                    min="2"
+                    max="50"
+                    value={numTopics}
+                    onChange={(e) => setNumTopics(parseInt(e.target.value) || 10)}
+                    className="topics-number-input"
+                    style={{ width: '60px' }}
+                  />
+                </label>
                 <button onClick={loadTopics} disabled={loadingTopics} className="reload-topics-btn">
                   {loadingTopics ? 'Analyse...' : 'Réanalyser'}
                 </button>

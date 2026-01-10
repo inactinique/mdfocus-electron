@@ -94,6 +94,7 @@ export class HistoryManager {
   private dbPath: string;
   public readonly projectPath: string;
   private currentSessionId: string | null = null;
+  private isOpen: boolean = false;
 
   constructor(projectPath: string) {
     if (!projectPath) {
@@ -111,6 +112,7 @@ export class HistoryManager {
 
     // Open database
     this.db = new Database(this.dbPath);
+    this.isOpen = true;
     this.enableForeignKeys();
 
     // Initialize schema
@@ -910,13 +912,26 @@ export class HistoryManager {
   // Utility Methods
   // ==========================================================================
 
+  /**
+   * Check if the database connection is still open
+   */
+  public isDatabaseOpen(): boolean {
+    return this.isOpen;
+  }
+
   close(): void {
+    if (!this.isOpen) {
+      console.log('⚠️  HistoryManager already closed');
+      return;
+    }
+
     // End current session if active
     if (this.currentSessionId) {
       this.endSession();
     }
 
     this.db.close();
+    this.isOpen = false;
     console.log('✅ HistoryManager closed');
   }
 }

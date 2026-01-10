@@ -19,4 +19,16 @@ content = content.replace(
 
 writeFileSync(pdfExtractorPath, content);
 
+// Fix PDFIndexer imports - ajouter .js aux imports locaux
+const pdfIndexerPath = 'dist/backend/core/pdf/PDFIndexer.js';
+let indexerContent = readFileSync(pdfIndexerPath, 'utf-8');
+
+// Corriger l'import de PDFExtractor
+indexerContent = indexerContent.replace(
+  /from ['"]\.\/PDFExtractor['"]/g,
+  "from './PDFExtractor.js'"
+);
+
+writeFileSync(pdfIndexerPath, indexerContent);
+
 console.log('✅ Backend ES module issues fixed');

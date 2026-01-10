@@ -488,34 +488,81 @@ class PDFService {
       throw new Error(`Not enough documents with embeddings for topic modeling. Found ${embeddings.length} documents, need at least 5.`);
     }
 
-    // Initialiser et démarrer le service Topic Modeling
-    const topicService = new TopicModelingService();
+    // Utiliser le singleton du service Topic Modeling (importé depuis topic-modeling-service)
+    const { topicModelingService } = await import('./topic-modeling-service.js');
 
-    try {
-      await topicService.start();
-
-      const analysisOptions = {
-        minTopicSize: options?.minTopicSize || 3,
-        language: options?.language || 'multilingual',
-        nGramRange: options?.nGramRange || [1, 3],
-      };
-
-      const result = await topicService.analyzeTopics(
-        embeddings,
-        texts,
-        documentIds,
-        analysisOptions
-      );
-
-      // Sauvegarder les résultats dans la base de données
-      this.vectorStore!.saveTopicAnalysis(result, analysisOptions);
-      console.log('✅ Topic analysis saved to database');
-
-      return result;
-    } finally {
-      // Toujours arrêter le service
-      await topicService.stop();
+    // Démarrer le service s'il n'est pas déjà en cours d'exécution
+    // Le service reste en mémoire entre les analyses pour de meilleures performances
+    const status = topicModelingService.getStatus();
+    if (!status.isRunning && !status.isStarting) {
+      console.log('🚀 Starting topic modeling service (will be cached for future use)...');
+      await topicModelingService.start();
+    } else if (status.isStarting) {
+      console.log('⏳ Topic modeling service is already starting, waiting...');
+      // Attendre que le service démarre
+      await topicModelingService.start();
+    } else {
+      console.log('✅ Topic modeling service already running (using cached instance)');
     }
+
+    // Paramètres par défaut optimisés pour de meilleurs résultats
+    // Heuristique intelligente pour le nombre de topics basée sur la taille du corpus:
+    // - Petits corpus (< 30 docs): 3-5 topics
+    // - Moyens corpus (30-100 docs): 5-10 topics
+    // - Grands corpus (100-500 docs): 10-20 topics
+    // - Très grands corpus (> 500 docs): 20-30 topics
+    let defaultNrTopics: number | 'auto' = 'auto';
+    if (!options?.nrTopics) {
+      const numDocs = embeddings.length;
+      if (numDocs < 30) {
+        defaultNrTopics = Math.max(3, Math.floor(numDocs / 6));
+      } else if (numDocs < 100) {
+        defaultNrTopics = Math.max(5, Math.floor(numDocs / 10));
+      } else if (numDocs < 500) {
+        defaultNrTopics = Math.max(10, Math.floor(numDocs / 10));
+      } else {
+        defaultNrTopics = Math.max(20, Math.floor(numDocs / 20));
+      }
+      console.log(`📊 Auto-calculated nrTopics: ${defaultNrTopics} (based on ${numDocs} documents)`);
+    }
+
+    // Ajuster min_topic_size en fonction du nombre de topics demandés
+    // Si l'utilisateur demande beaucoup de topics, réduire min_topic_size
+    let adjustedMinTopicSize = options?.minTopicSize || 2;
+    const requestedTopics = options?.nrTopics || defaultNrTopics;
+
+    if (requestedTopics !== 'auto' && typeof requestedTopics === 'number') {
+      // Si on demande beaucoup de topics par rapport au corpus, réduire min_topic_size
+      const topicsPerDoc = requestedTopics / embeddings.length;
+      if (topicsPerDoc > 0.08) {
+        // Plus de 1 topic pour 12 documents → très granulaire, utiliser min_topic_size=1
+        adjustedMinTopicSize = 1;
+        console.log(`📊 Adjusted minTopicSize to 1 (high topic granularity requested: ${requestedTopics} topics for ${embeddings.length} docs)`);
+      }
+    }
+
+    const analysisOptions = {
+      minTopicSize: adjustedMinTopicSize,
+      nrTopics: requestedTopics,
+      language: options?.language || 'multilingual',
+      nGramRange: options?.nGramRange || [1, 3],
+    };
+
+    const result = await topicModelingService.analyzeTopics(
+      embeddings,
+      texts,
+      documentIds,
+      analysisOptions
+    );
+
+    // Sauvegarder les résultats dans la base de données
+    this.vectorStore!.saveTopicAnalysis(result, analysisOptions);
+    console.log('✅ Topic analysis saved to database');
+
+    // NOTE: Le service reste en cours d'exécution pour de futures analyses
+    // Il sera arrêté automatiquement quand l'application se ferme
+
+    return result;
   }
 
   /**

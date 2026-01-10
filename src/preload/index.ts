@@ -6,6 +6,7 @@ const api = {
   project: {
     create: (data: any) => ipcRenderer.invoke('project:create', data),
     load: (path: string) => ipcRenderer.invoke('project:load', path),
+    getMetadata: (path: string) => ipcRenderer.invoke('project:get-metadata', path),
     close: () => ipcRenderer.invoke('project:close'),
     save: (data: any) => ipcRenderer.invoke('project:save', data),
     getRecent: () => ipcRenderer.invoke('project:get-recent'),
@@ -165,6 +166,17 @@ const api = {
     getTextStatistics: (options?: {
       topN?: number;
     }) => ipcRenderer.invoke('corpus:get-text-statistics', options),
+  },
+
+  // Topic Modeling Environment
+  topicModeling: {
+    checkStatus: () => ipcRenderer.invoke('topic-modeling:check-status'),
+    setupEnvironment: () => ipcRenderer.invoke('topic-modeling:setup-environment'),
+    onSetupProgress: (callback: (message: string) => void) => {
+      const listener = (_event: any, message: string) => callback(message);
+      ipcRenderer.on('topic-modeling:setup-progress', listener);
+      return () => ipcRenderer.removeListener('topic-modeling:setup-progress', listener);
+    },
   },
 
   // History / Journal

@@ -75,7 +75,12 @@ export class ProjectManager {
     if (projectType === 'notes') {
       // Just add to recent projects (folder path)
       configManager.addRecentProject(projectPath);
-      console.log('✅ Notes folder opened:', projectPath);
+
+      // Store as current project
+      this.currentProject = project;
+      this.currentProjectPath = projectPath;
+
+      console.log('✅ Notes folder created:', projectPath);
       return { success: true, path: projectPath, project };
     }
 
@@ -155,6 +160,10 @@ N'oubliez pas de mentionner les perspectives futures.
 
     // Add to recent projects
     configManager.addRecentProject(projectFile);
+
+    // Store as current project
+    this.currentProject = project;
+    this.currentProjectPath = projectPath;
 
     console.log('✅ Project created:', projectPath);
     return { success: true, path: projectFile, project };

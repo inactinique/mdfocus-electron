@@ -1,4 +1,5 @@
 import type { SearchResult } from '../../types/pdf-document';
+import http from 'http';
 
 // MARK: - Types
 
@@ -85,13 +86,50 @@ export class OllamaClient {
   private readonly NOMIC_MAX_LENGTH = 2000;
 
   constructor(
-    baseURL: string = 'http://localhost:11434',
+    baseURL: string = 'http://127.0.0.1:11434',
     chatModel?: string,
     embeddingModel?: string
   ) {
     this.baseURL = baseURL;
     if (chatModel) this.chatModel = chatModel;
     if (embeddingModel) this.embeddingModel = embeddingModel;
+  }
+
+  /**
+   * Helper method to make HTTP GET requests using Node.js http module
+   * More reliable than fetch in Electron main process
+   */
+  private httpGet(url: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const request = http.get(url, (response) => {
+        let data = '';
+
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        response.on('end', () => {
+          try {
+            if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
+              resolve(JSON.parse(data));
+            } else {
+              reject(new Error(`HTTP ${response.statusCode}: ${data}`));
+            }
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      request.on('error', (error) => {
+        reject(error);
+      });
+
+      request.setTimeout(5000, () => {
+        request.destroy();
+        reject(new Error('Request timeout'));
+      });
+    });
   }
 
   // MARK: - Vérification disponibilité
@@ -110,24 +148,27 @@ export class OllamaClient {
   async listAvailableModels(): Promise<LLMModel[]> {
     const url = `${this.baseURL}/api/tags`;
 
-    const response = await fetch(url, {
-      method: 'GET',
-    });
+    try {
+      console.log('🔍 Fetching Ollama models from:', url);
+      console.log('   Using Node.js http module (more reliable in Electron)');
 
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status}`);
+      const data = await this.httpGet(url) as OllamaModelsResponse;
+      console.log('✅ Successfully fetched', data.models.length, 'models');
+
+      // Convertir les modèles Ollama en LLMModel
+      return data.models.map((model) => ({
+        id: model.name,
+        name: model.name,
+        size: this.formatSize(model.size),
+        description: 'Modèle Ollama',
+        recommendedFor: this.inferRecommendations(model.name),
+      }));
+    } catch (error: any) {
+      console.error('❌ Failed to fetch Ollama models:', error.message);
+      console.error('   URL attempted:', url);
+      console.error('   Base URL:', this.baseURL);
+      throw error;
     }
-
-    const data = await response.json() as OllamaModelsResponse;
-
-    // Convertir les modèles Ollama en LLMModel
-    return data.models.map((model) => ({
-      id: model.name,
-      name: model.name,
-      size: this.formatSize(model.size),
-      description: 'Modèle Ollama',
-      recommendedFor: this.inferRecommendations(model.name),
-    }));
   }
 
   // MARK: - Génération d'embeddings
