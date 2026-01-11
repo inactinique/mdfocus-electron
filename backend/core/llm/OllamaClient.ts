@@ -408,6 +408,9 @@ export class OllamaClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
       signal: AbortSignal.timeout(timeout),
+      // @ts-ignore - undici-specific options
+      headersTimeout: timeout, // Wait for headers as long as the main timeout
+      bodyTimeout: timeout, // Wait for body chunks as long as the main timeout
     });
 
     if (!response.ok || !response.body) {
@@ -492,6 +495,9 @@ export class OllamaClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
       signal: AbortSignal.timeout(timeout),
+      // @ts-ignore - undici-specific options
+      headersTimeout: timeout, // Wait for headers as long as the main timeout
+      bodyTimeout: timeout, // Wait for body chunks as long as the main timeout
     });
 
     if (!response.ok || !response.body) {

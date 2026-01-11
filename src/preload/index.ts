@@ -22,6 +22,14 @@ const api = {
       projectPath: string;
       cslPath?: string;
     }) => ipcRenderer.invoke('project:set-csl-path', data),
+    onRebuildProgress: (callback: (progress: {
+      current: number;
+      total: number;
+      status: string;
+      percentage: number;
+    }) => void) => {
+      ipcRenderer.on('project:rebuild-progress', (_event, progress) => callback(progress));
+    },
   },
 
   // PDF & Documents
