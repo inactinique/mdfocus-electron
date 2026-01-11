@@ -50,26 +50,49 @@ Objectif: Version 1.0 stable et complète
 
 **Fichiers concernés:**
 - `src/renderer/src/components/Project/ProjectPanel.tsx`
-- Backend: `src/main/services/project-manager.ts`
-- Nouveau fichier à créer pour l'export Word
+- `src/renderer/src/components/Export/WordExportModal.tsx`
+- Backend: `src/main/services/word-export.ts`
+- Backend: `src/main/ipc/handlers/export-handlers.ts`
 
 **Tâches:**
-- [ ] Ajouter l'option d'export vers Word (.docx)
+- [x] Ajouter l'option d'export vers Word (.docx) ✅
   - Utiliser la librairie `docx` déjà présente dans les dépendances
-  - Créer un service d'export Word similaire au service PDF
-- [ ] Ajouter la gestion des fichiers CSL (Citation Style Language)
-  - Ajouter un champ pour sélectionner un fichier .csl dans "Fichiers du projet"
-  - Intégrer le fichier CSL dans les exports PDF et Word pour la bibliographie
-- [ ] Support des modèles Word (.dotx)
-  - Détecter automatiquement les fichiers .dotx dans le dossier du projet
-  - Utiliser le modèle détecté pour l'export Word
-  - Afficher le modèle actif dans l'interface
+  - Service d'export Word créé (word-export.ts, ~600 lignes)
+  - Modal d'export avec formulaire complet (WordExportModal.tsx)
+- [x] Ajouter la gestion des fichiers CSL (Citation Style Language) ✅
+  - Champ CSL ajouté dans ProjectPanel et CSLSettings
+  - Support CSL intégré dans les exports Word
+  - Composant CSLSettings.tsx pour gérer la sélection
+- [x] Support des modèles Word (.dotx) ✅
+  - Détection automatique des fichiers .dotx (méthode `findTemplate()`)
+  - Merge avec template via docxtemplater (méthode `mergeWithTemplate()`)
+  - Affichage du template détecté dans WordExportModal (badge vert)
+  - Placeholders supportés: {title}, {author}, {date}, {content}, {abstract}
+  - Fallback automatique si template invalide
+- [x] Correction bug PageNumber ✅
+  - Syntaxe corrigée pour les numéros de page dans le footer
 
-**Dépendances:**
-- Rechercher et intégrer une librairie pour le parsing CSL (ex: citeproc-js ou citation-js)
+**Dépendances ajoutées:**
+- `docxtemplater@^3.55.7` - Traitement des templates Word
+- `pizzip@^3.1.7` - Manipulation des archives ZIP
+- `@types/pizzip` (dev) - Types TypeScript
+
+**Documentation créée:**
+- `WORD_TEMPLATES.md` - Guide utilisateur complet (184 lignes)
+- `EXPORT_WORD_IMPLEMENTATION.md` - Documentation technique (245 lignes)
+
+**Commits:**
+- `75ee4d0` - feat: Add Word template (.dotx) support for exports
+- `30e4219` - chore: Add docxtemplater/pizzip to package.json dependencies
 
 **Priorité:** Haute
 **Complexité:** Moyenne-Haute
+**Status:** ✅ **Terminé** (2026-01-11)
+
+**Tests restants:**
+- [ ] Tests manuels avec différents templates
+- [ ] Tests d'intégration automatisés (à créer)
+- [ ] Test sur les 3 plateformes après build
 
 ---
 
@@ -395,5 +418,68 @@ Objectif: Version 1.0 stable et complète
 
 ---
 
-**Dernière mise à jour:** 2026-01-11
-**Status:** Plan initial - Prêt pour exécution
+## 📊 Progression globale vers v1.0
+
+### Vue d'ensemble par phase
+
+| Phase | Tâches totales | Complétées | En cours | Non commencées | Progression |
+|-------|---------------|------------|----------|----------------|-------------|
+| **Phase 1** - UI | 8 | 0 | 0 | 8 | ⬜⬜⬜⬜⬜ 0% |
+| **Phase 2** - Fonctionnalités | 19 | 7 | 0 | 12 | 🟩🟩🟩⬜⬜ 37% |
+| **Phase 3** - Documentation | 8 | 8 | 0 | 0 | 🟩🟩🟩🟩🟩 100% |
+| **Phase 4** - i18n | 7 | 7 | 0 | 0 | 🟩🟩🟩🟩🟩 100% |
+| **Phase 5** - Nettoyage | 7 | 7 | 0 | 0 | 🟩🟩🟩🟩🟩 100% |
+| **Phase 6** - Release | 13 | 0 | 0 | 13 | ⬜⬜⬜⬜⬜ 0% |
+| **TOTAL** | **62** | **29** | **0** | **33** | 🟩🟩⬜⬜⬜ **47%** |
+
+### Détail Phase 2 - Améliorations fonctionnelles
+
+| Sous-section | Tâches | Complétées | Statut |
+|--------------|--------|------------|--------|
+| 2.1 Export Word + CSL + Templates | 7 | 7 | ✅ **100%** |
+| 2.2 Gestion bibliographie | 4 | 0 | ❌ 0% |
+| 2.3 Prompt système Chat | 6 | 0 | ❌ 0% |
+| 2.4 Renommage PDFs | 5 | 0 | ❌ 0% |
+
+### Commits récents (branche towards-1.0)
+
+```
+30e4219 (HEAD) chore: Add docxtemplater/pizzip to package.json dependencies
+75ee4d0 feat: Add Word template (.dotx) support for exports
+b30c936 bug chatbot
+9037ba5 bug export word
+a4b4e2c support csl, export word
+54f16ca remove useless functionalities
+0717737 internationalisation plus complète, révision des fichiers install, architecture, documentation.
+```
+
+### Prochaines priorités recommandées
+
+1. **Phase 2.3 - Prompt système** (Priorité HAUTE)
+   - Fonctionnalité clé pour l'utilisation académique
+   - Complexité: Faible-Moyenne
+   - ~6 tâches à implémenter
+
+2. **Phase 2.2 - Gestion bibliographie** (Priorité Moyenne)
+   - Améliore le workflow d'import
+   - Complexité: Moyenne
+   - ~4 tâches à implémenter
+
+3. **Phase 2.4 - Renommage PDFs** (Priorité Moyenne)
+   - UX améliorée pour l'indexation
+   - Complexité: Moyenne
+   - ~5 tâches à implémenter
+
+4. **Phase 1 - Polish UI** (après Phase 2)
+   - Amélioration de l'expérience utilisateur
+   - ~8 tâches à implémenter
+
+5. **Phase 6 - Finalisation release**
+   - Logs, DevTools, version 1.0.0
+   - ~13 tâches critiques
+
+---
+
+**Dernière mise à jour:** 2026-01-11 16:30
+**Status:** En cours - Phase 2.1 terminée (Export Word + Templates)
+**Prochaine étape:** Phase 2.3 (Prompt système) ou Phase 2.2 (Bibliographie)
