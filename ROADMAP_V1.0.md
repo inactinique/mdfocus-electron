@@ -252,16 +252,24 @@ Objectif: Version 1.0 stable et complète
 - Références dans d'autres composants
 
 **Tâches:**
-- [ ] Supprimer le composant ContextualSuggestions
-- [ ] Supprimer CitationSuggestionsPanel
-- [ ] Supprimer SuggestionsConfigSection
-- [ ] Retirer les références dans ConfigPanel
-- [ ] Nettoyer les imports et types associés
-- [ ] Supprimer les services backend associés si isolés
-- [ ] Vérifier qu'aucune fonctionnalité active ne dépend de ces composants
+- [x] Supprimer le composant ContextualSuggestions
+- [x] Supprimer CitationSuggestionsPanel
+- [x] Supprimer SuggestionsConfigSection
+- [x] Retirer les références dans ConfigPanel
+- [x] Nettoyer les imports et types associés
+- [x] Supprimer les services backend associés si isolés
+- [x] Vérifier qu'aucune fonctionnalité active ne dépend de ces composants
 
 **Priorité:** Faible (à faire avant la release)
 **Complexité:** Faible
+**Status:** ✅ Terminé
+
+**Fichiers modifiés:**
+- Supprimés: `ContextualSuggestions.tsx`, `ContextualSuggestions.css`
+- Supprimés: `CitationSuggestionsPanel.tsx`, `CitationSuggestionsPanel.css`
+- Supprimé: `SuggestionsConfigSection.tsx`
+- Modifiés: `ConfigPanel.tsx`, `EditorPanel.tsx`, `editorStore.ts`
+- Modifiés: `useMenuShortcuts.ts`, `MarkdownEditor.tsx`
 
 ---
 
