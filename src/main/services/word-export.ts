@@ -21,6 +21,10 @@ import {
   PageNumber,
 } from 'docx';
 import { marked } from 'marked';
+// @ts-ignore - No type definitions available
+import Docxtemplater from 'docxtemplater';
+// @ts-ignore - No type definitions available
+import PizZip from 'pizzip';
 
 // MARK: - Types
 
@@ -41,7 +45,7 @@ export interface WordExportOptions {
 }
 
 interface WordExportProgress {
-  stage: 'preparing' | 'parsing' | 'generating' | 'complete';
+  stage: 'preparing' | 'parsing' | 'generating' | 'template' | 'complete';
   message: string;
   progress: number;
 }
@@ -497,7 +501,7 @@ export class WordExportService {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      children: ['Page ', PageNumber.CURRENT],
+                      children: ["Page ", PageNumber.CURRENT],
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
@@ -531,12 +535,38 @@ export class WordExportService {
           `${options.metadata?.title || 'output'}.docx`
         );
 
-      // Generate buffer
-      const buffer = await Packer.toBuffer(doc);
+      // Check if template is provided or exists
+      let finalBuffer: Buffer;
 
-      // If template is provided, we would merge it here
-      // For now, just save the generated document
-      await writeFile(outputPath, buffer);
+      if (options.templatePath && existsSync(options.templatePath)) {
+        onProgress?.({
+          stage: 'template',
+          message: 'Application du modèle Word...',
+          progress: 85,
+        });
+
+        try {
+          // Load template and merge with content
+          finalBuffer = await this.mergeWithTemplate(
+            options.templatePath,
+            {
+              title: options.metadata?.title || '',
+              author: options.metadata?.author || '',
+              date: options.metadata?.date || '',
+              content: options.content,
+              abstract: abstract || '',
+            }
+          );
+        } catch (error) {
+          console.warn('⚠️ Template merge failed, using generated document:', error);
+          finalBuffer = await Packer.toBuffer(doc);
+        }
+      } else {
+        // No template, use generated document
+        finalBuffer = await Packer.toBuffer(doc);
+      }
+
+      await writeFile(outputPath, finalBuffer);
 
       onProgress?.({
         stage: 'complete',
@@ -549,6 +579,59 @@ export class WordExportService {
     } catch (error: any) {
       console.error('❌ Word export failed:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Merge content with a Word template (.dotx)
+   */
+  private async mergeWithTemplate(
+    templatePath: string,
+    data: {
+      title: string;
+      author: string;
+      date: string;
+      content: string;
+      abstract: string;
+    }
+  ): Promise<Buffer> {
+    try {
+      // Read the template file
+      const templateContent = await readFile(templatePath, 'binary');
+
+      // Load template with PizZip
+      const zip = new PizZip(templateContent);
+
+      // Create Docxtemplater instance
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      // Render template with data
+      // The template should contain placeholders like {title}, {author}, {content}, etc.
+      doc.render({
+        title: data.title,
+        author: data.author,
+        date: data.date,
+        content: data.content,
+        abstract: data.abstract,
+      });
+
+      // Get the generated zip
+      const outputZip = doc.getZip();
+
+      // Generate buffer
+      const buffer = outputZip.generate({
+        type: 'nodebuffer',
+        compression: 'DEFLATE',
+      });
+
+      console.log('✅ Template merged successfully');
+      return buffer;
+    } catch (error) {
+      console.error('❌ Template merge error:', error);
+      throw error;
     }
   }
 
