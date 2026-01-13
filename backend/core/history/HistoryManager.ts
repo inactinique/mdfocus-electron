@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, chmodSync } from 'fs';
 import { randomUUID } from 'crypto';
 
 // ============================================================================
@@ -94,6 +94,7 @@ export class HistoryManager {
   private dbPath: string;
   public readonly projectPath: string;
   private currentSessionId: string | null = null;
+  private isOpen: boolean = false;
 
   constructor(projectPath: string) {
     if (!projectPath) {
@@ -109,8 +110,26 @@ export class HistoryManager {
       mkdirSync(mdfocusDir, { recursive: true });
     }
 
+    // S'assurer que le dossier .mdfocus a les bonnes permissions
+    try {
+      chmodSync(mdfocusDir, 0o755); // rwxr-xr-x
+    } catch (error) {
+      console.warn(`⚠️  Could not set permissions on ${mdfocusDir}:`, error);
+    }
+
     // Open database
     this.db = new Database(this.dbPath);
+    this.isOpen = true;
+
+    // S'assurer que le fichier de base de données a les bonnes permissions
+    try {
+      if (existsSync(this.dbPath)) {
+        chmodSync(this.dbPath, 0o644); // rw-r--r--
+      }
+    } catch (error) {
+      console.warn(`⚠️  Could not set permissions on ${this.dbPath}:`, error);
+    }
+
     this.enableForeignKeys();
 
     // Initialize schema
@@ -910,13 +929,26 @@ export class HistoryManager {
   // Utility Methods
   // ==========================================================================
 
+  /**
+   * Check if the database connection is still open
+   */
+  public isDatabaseOpen(): boolean {
+    return this.isOpen;
+  }
+
   close(): void {
+    if (!this.isOpen) {
+      console.log('⚠️  HistoryManager already closed');
+      return;
+    }
+
     // End current session if active
     if (this.currentSessionId) {
       this.endSession();
     }
 
     this.db.close();
+    this.isOpen = false;
     console.log('✅ HistoryManager closed');
   }
 }

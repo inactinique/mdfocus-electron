@@ -12,7 +12,7 @@ Endpoints:
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 import numpy as np
 import uvicorn
 
@@ -27,17 +27,17 @@ class AnalyzeRequest(BaseModel):
     embeddings: List[List[float]] = Field(
         ...,
         description="Liste des embeddings (N x 768)",
-        min_items=5
+        min_length=5
     )
     documents: List[str] = Field(
         ...,
         description="Liste des textes de documents",
-        min_items=5
+        min_length=5
     )
     document_ids: List[str] = Field(
         ...,
         description="Liste des IDs de documents",
-        min_items=5
+        min_length=5
     )
     min_topic_size: Optional[int] = Field(
         5,
@@ -60,7 +60,8 @@ class AnalyzeRequest(BaseModel):
         description="Plage de n-grammes pour mots-clés"
     )
 
-    @validator('embeddings')
+    @field_validator('embeddings')
+    @classmethod
     def validate_embeddings(cls, v):
         """Valide que tous les embeddings ont la même dimension"""
         if not v:
@@ -72,22 +73,27 @@ class AnalyzeRequest(BaseModel):
 
         return v
 
-    @validator('documents', 'document_ids')
-    def validate_same_length(cls, v, values):
-        """Valide que documents et document_ids ont la même longueur que embeddings"""
-        if 'embeddings' in values and len(v) != len(values['embeddings']):
-            raise ValueError(
-                f"Length mismatch: {len(v)} items but {len(values['embeddings'])} embeddings"
-            )
-        return v
-
-    @validator('language')
+    @field_validator('language')
+    @classmethod
     def validate_language(cls, v):
         """Valide que la langue est supportée"""
         allowed = ["french", "english", "multilingual"]
         if v not in allowed:
             raise ValueError(f"Language must be one of {allowed}")
         return v
+
+    @model_validator(mode='after')
+    def validate_same_length(self):
+        """Valide que documents et document_ids ont la même longueur que embeddings"""
+        if len(self.documents) != len(self.embeddings):
+            raise ValueError(
+                f"Length mismatch: {len(self.documents)} documents but {len(self.embeddings)} embeddings"
+            )
+        if len(self.document_ids) != len(self.embeddings):
+            raise ValueError(
+                f"Length mismatch: {len(self.document_ids)} document_ids but {len(self.embeddings)} embeddings"
+            )
+        return self
 
 
 class Topic(BaseModel):

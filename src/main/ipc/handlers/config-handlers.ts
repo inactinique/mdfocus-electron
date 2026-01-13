@@ -51,7 +51,8 @@ export function setupConfigHandlers() {
     try {
       const ollamaClient = pdfService.getOllamaClient();
       if (!ollamaClient) {
-        throw new Error('Ollama client not initialized - load a project first');
+        console.log('⚠️  Ollama client not initialized yet (no project loaded)');
+        return successResponse({ models: [] });
       }
 
       const models = await ollamaClient.listAvailableModels();

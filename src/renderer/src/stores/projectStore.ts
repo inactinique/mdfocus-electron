@@ -227,7 +227,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const recentProjects = await Promise.all(
         recentPaths.map(async (path) => {
           try {
-            const result = await window.electron.project.load(path);
+            // Use getMetadata instead of load to avoid initializing services for each project
+            const result = await window.electron.project.getMetadata(path);
             if (!result.success || !result.project) {
               return null;
             }

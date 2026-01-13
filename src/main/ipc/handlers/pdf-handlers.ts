@@ -20,7 +20,6 @@ export function setupPDFHandlers() {
       console.log('📁 Using project path:', projectPath);
 
       // Initialize PDF service for this project
-      await pdfService.init(projectPath);
 
       const window = BrowserWindow.fromWebContents(event.sender);
 
@@ -73,7 +72,6 @@ export function setupPDFHandlers() {
       // Validate search parameters
       const validatedData = validate(PDFSearchSchema, { query, options });
 
-      await pdfService.init(projectPath);
       const results = await pdfService.search(validatedData.query, validatedData.options);
       return successResponse({ results });
     } catch (error: any) {
@@ -87,7 +85,6 @@ export function setupPDFHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
       await pdfService.deleteDocument(documentId);
       return successResponse();
     } catch (error: any) {
@@ -102,7 +99,6 @@ export function setupPDFHandlers() {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
       pdfService.purgeAllData();
       console.log('📤 IPC Response: pdf:purge - success');
       return successResponse();
@@ -112,12 +108,26 @@ export function setupPDFHandlers() {
     }
   });
 
+  ipcMain.handle('pdf:clean-orphaned-chunks', async () => {
+    console.log('📞 IPC Call: pdf:clean-orphaned-chunks');
+    try {
+      const projectPath = projectManager.getCurrentProjectPath();
+      requireProject(projectPath);
+
+      pdfService.cleanOrphanedChunks();
+      console.log('📤 IPC Response: pdf:clean-orphaned-chunks - success');
+      return successResponse();
+    } catch (error: any) {
+      console.error('❌ pdf:clean-orphaned-chunks error:', error);
+      return errorResponse(error);
+    }
+  });
+
   ipcMain.handle('pdf:get-all', async () => {
     try {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
-      await pdfService.init(projectPath);
       const documents = await pdfService.getAllDocuments();
       return successResponse({ documents });
     } catch (error: any) {
@@ -140,7 +150,6 @@ export function setupPDFHandlers() {
       }
 
       console.log('📁 Using project path:', projectPath);
-      await pdfService.init(projectPath);
       const stats = await pdfService.getStatistics();
       console.log('📤 IPC Response: pdf:get-statistics', stats);
 

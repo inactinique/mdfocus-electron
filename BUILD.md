@@ -246,11 +246,68 @@ npm run build:win
 
 ## Problèmes courants
 
+### Erreur "incompatible architecture" sur macOS
+
+**Symptôme**: L'app ne démarre pas après un build avec une erreur du type:
+```
+mach-o file, but is an incompatible architecture (have 'arm64', need 'x86_64h')
+```
+
+**Cause**: electron-builder compile pour plusieurs architectures (x64 et arm64), ce qui peut polluer vos `node_modules` avec des binaires de la mauvaise architecture.
+
+**Solution automatique**: Le hook `after-pack.js` reconstruit automatiquement les modules natifs après chaque build. Si le problème persiste:
+
+```bash
+# Reconstruire pour votre architecture locale
+npm run rebuild:native
+
+# Ou spécifiquement pour Intel (x64)
+npm run rebuild:x64
+
+# Ou spécifiquement pour Apple Silicon (arm64)
+npm run rebuild:arm64
+```
+
+**Vérification**:
+```bash
+# Vérifier l'architecture du binaire
+file node_modules/better-sqlite3/build/Release/better_sqlite3.node
+# Devrait afficher "x86_64" sur Intel ou "arm64" sur Apple Silicon
+```
+
 ### better-sqlite3 ne compile pas
 
 ```bash
 npm rebuild better-sqlite3 --build-from-source
 ```
+
+### Service Python topic modeling ne démarre pas
+
+**Symptôme 1**: Port déjà utilisé:
+```
+ERROR: [Errno 48] error while attempting to bind on address ('127.0.0.1', 8001): address already in use
+```
+
+**Solution**: Tuer le processus existant:
+```bash
+lsof -ti:8001 | xargs kill -9
+```
+
+**Symptôme 2**: Avertissement urllib3 (résolu):
+```
+urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'
+```
+
+**Cause**: macOS utilise LibreSSL au lieu d'OpenSSL, et urllib3 v2 ne le supporte pas.
+
+**Solution**: Le fichier `requirements.txt` force maintenant l'utilisation d'urllib3 v1.26.x.
+
+**Symptôme 3**: Warnings Pydantic (résolu):
+```
+PydanticDeprecatedSince20: `min_items` is deprecated...
+```
+
+**Solution**: Le code utilise maintenant la syntaxe Pydantic V2 (`min_length`, `field_validator`, `model_validator`).
 
 ### Puppeteer trop lourd
 

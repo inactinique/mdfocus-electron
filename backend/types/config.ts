@@ -36,6 +36,11 @@ export interface RAGConfig {
 
   // Topic modeling
   enableTopicModeling?: boolean;
+
+  // Enhanced search features (Phase 1 improvements)
+  useAdaptiveChunking?: boolean; // Use structure-aware chunking
+  useHNSWIndex?: boolean; // Use HNSW for fast search
+  useHybridSearch?: boolean; // Combine dense (HNSW) + sparse (BM25)
 }
 
 export interface ZoteroConfig {
@@ -63,7 +68,7 @@ export interface AppConfig {
 export const DEFAULT_CONFIG: AppConfig = {
   llm: {
     backend: 'ollama',
-    ollamaURL: 'http://localhost:11434',
+    ollamaURL: 'http://127.0.0.1:11434',
     ollamaEmbeddingModel: 'nomic-embed-text',
     ollamaChatModel: 'gemma2:2b',
   },
@@ -77,6 +82,10 @@ export const DEFAULT_CONFIG: AppConfig = {
       maxLength: 750, // ~750 mots = 2-3 paragraphes
       llmModel: 'gemma2:2b', // Pour abstractif si activé
     },
+    // Enhanced search features (enabled by default)
+    useAdaptiveChunking: true, // Structure-aware chunking
+    useHNSWIndex: true, // Fast approximate search
+    useHybridSearch: true, // Dense + sparse fusion
   },
   editor: {
     fontSize: 14,

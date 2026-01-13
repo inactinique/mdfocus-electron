@@ -11,8 +11,8 @@ export function setupHistoryHandlers() {
     console.log('📞 IPC Call: history:get-sessions');
     try {
       const hm = historyService.getHistoryManager();
-      if (!hm) {
-        return { ...errorResponse('No project open'), sessions: [] };
+      if (!hm || !hm.isDatabaseOpen()) {
+        return { ...errorResponse('No project open or database closed'), sessions: [] };
       }
 
       const sessions = hm.getAllSessions();
@@ -104,8 +104,8 @@ export function setupHistoryHandlers() {
     console.log('📞 IPC Call: history:get-statistics');
     try {
       const hm = historyService.getHistoryManager();
-      if (!hm) {
-        return errorResponse('No project open');
+      if (!hm || !hm.isDatabaseOpen()) {
+        return errorResponse('No project open or database closed');
       }
 
       const statistics = hm.getStatistics();

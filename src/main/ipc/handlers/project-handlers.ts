@@ -29,10 +29,36 @@ export function setupProjectHandlers() {
     try {
       const validatedData = validate(ProjectCreateSchema, data);
       const result = await projectManager.createProject(validatedData);
+
+      // Initialize services if project created successfully
+      if (result.success) {
+        const projectPath = projectManager.getCurrentProjectPath();
+        if (projectPath) {
+          console.log('🔧 Initializing services for new project:', projectPath);
+          await historyService.init(projectPath);
+          await pdfService.init(projectPath);
+          console.log('✅ All services initialized successfully');
+        }
+      }
+
       console.log('📤 IPC Response: project:create', result);
       return result;
     } catch (error: any) {
       console.error('❌ project:create error:', error);
+      return errorResponse(error);
+    }
+  });
+
+  // Get project metadata without initializing services (for recent projects list)
+  ipcMain.handle('project:get-metadata', async (_event, path: string) => {
+    console.log('📞 IPC Call: project:get-metadata', { path });
+    try {
+      // Use loadProject but don't init services - just read metadata
+      const result = await projectManager.loadProject(path);
+      console.log('📤 IPC Response: project:get-metadata', result.success ? 'success' : 'failed');
+      return result;
+    } catch (error: any) {
+      console.error('❌ project:get-metadata error:', error);
       return errorResponse(error);
     }
   });
@@ -42,11 +68,14 @@ export function setupProjectHandlers() {
     try {
       const result = await projectManager.loadProject(path);
 
-      // Initialize history service if project loaded successfully
+      // Initialize services if project loaded successfully
       if (result.success) {
         const projectPath = projectManager.getCurrentProjectPath();
         if (projectPath) {
+          console.log('🔧 Initializing services for project:', projectPath);
           await historyService.init(projectPath);
+          await pdfService.init(projectPath);
+          console.log('✅ All services initialized successfully');
         }
       }
 

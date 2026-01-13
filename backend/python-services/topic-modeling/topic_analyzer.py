@@ -10,6 +10,10 @@ Architecture :
 3. c-TF-IDF pour extraction de mots-clés
 """
 
+import os
+# Désactiver numba pour éviter les problèmes de compilation llvmlite
+os.environ['NUMBA_DISABLE_JIT'] = '1'
+
 from typing import List, Dict, Any, Optional
 import numpy as np
 from bertopic import BERTopic
@@ -49,7 +53,14 @@ class TopicAnalyzer:
             min_df=1,  # Minimum document frequency
         )
 
-        # Initialiser BERTopic avec paramètres optimisés pour CPU
+        # Initialiser BERTopic avec paramètres par défaut
+        # BERTopic créera automatiquement UMAP et HDBSCAN
+        # IMPORTANT: Ne pas importer UMAP/HDBSCAN directement car ils nécessitent numba
+        #
+        # Pour obtenir plus de topics:
+        # 1. Réduire min_topic_size (déjà fait - passé en paramètre)
+        # 2. Utiliser nr_topics pour forcer un nombre de topics après clustering
+        # 3. Si HDBSCAN trouve trop peu de clusters, ajuster min_topic_size côté TypeScript
         self.model = BERTopic(
             embedding_model=None,  # On fournira les embeddings pré-calculés
             vectorizer_model=self.vectorizer,
@@ -214,13 +225,26 @@ class TopicAnalyzer:
 
         try:
             # Fit BERTopic sur les embeddings pré-calculés
+            print(f"Running BERTopic with min_topic_size={self.min_topic_size}, nr_topics={self.nr_topics}")
             topics, probs = self.model.fit_transform(documents, embeddings)
 
             # Vérifier que nous avons trouvé au moins un topic
             unique_topics = set(topics)
             num_topics = len(unique_topics) - (1 if -1 in unique_topics else 0)
+            num_outliers_initial = list(topics).count(-1)
 
-            print(f"Found {num_topics} topics (excluding outliers)")
+            print(f"HDBSCAN clustering results:")
+            print(f"  - Found {num_topics} topics (excluding outliers)")
+            print(f"  - {num_outliers_initial} outliers (-1)")
+            print(f"  - Topic IDs: {sorted([t for t in unique_topics if t != -1])}")
+
+            # Si nr_topics est défini et différent du nombre trouvé, BERTopic a fusionné/réduit
+            if self.nr_topics != "auto" and self.nr_topics is not None:
+                print(f"  - Requested {self.nr_topics} topics, HDBSCAN found {num_topics}")
+                if num_topics < self.nr_topics:
+                    print(f"  ⚠️  WARNING: Cannot create {self.nr_topics} topics from only {num_topics} clusters!")
+                    print(f"  ℹ️  Consider reducing min_topic_size (current: {self.min_topic_size})")
+                    print(f"  ℹ️  Or let HDBSCAN decide by using nr_topics='auto'")
 
             if num_topics == 0:
                 raise ValueError(

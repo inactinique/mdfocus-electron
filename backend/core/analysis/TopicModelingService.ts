@@ -42,6 +42,7 @@ export interface TopicAnalysisResult {
 
 export interface TopicAnalysisOptions {
   minTopicSize?: number;
+  nrTopics?: number | 'auto'; // Nombre de topics souhaités (auto = automatique)
   language?: 'french' | 'english' | 'multilingual';
   nGramRange?: [number, number];
 }
@@ -71,22 +72,19 @@ export class TopicModelingService {
   private serviceURL: string = 'http://127.0.0.1:8001';
   private isStarting: boolean = false;
   private isRunning: boolean = false;
-  private startupTimeout: number = 30000; // 30 secondes
+  private startupTimeout: number = 120000; // 120 secondes (chargement de torch/transformers peut être lent)
   private venvPath?: string;
+  private currentVenvDir?: string; // Chemin du venv actuel pour la détection pip
+  private autoStart: boolean = false; // Désactiver le démarrage automatique par défaut
 
   /**
-   * Retourne le chemin vers le venv dans userData
-   * En production: ~/.config/mdFocus/.venv
-   * En dev: backend/python-services/topic-modeling/.venv
+   * Retourne le chemin vers le venv dans le dossier utilisateur
+   * Production et dev: ~/.mdfocus/python-venv
+   * Cela évite de polluer le dépôt git et centralise les données utilisateur
    */
   private getVenvDir(isProduction: boolean, pythonServicePath: string): string {
-    if (isProduction) {
-      // Venv dans un emplacement writable
-      return path.join(os.homedir(), '.config', 'mdFocus', '.venv');
-    } else {
-      // Venv dans le dossier du service (dev)
-      return path.join(pythonServicePath, '.venv');
-    }
+    // Toujours utiliser le dossier utilisateur (plus propre)
+    return path.join(os.homedir(), '.mdfocus', 'python-venv');
   }
 
   /**
@@ -117,6 +115,49 @@ export class TopicModelingService {
     console.log(`   venv location: ${venvDir}`);
     console.log(`   requirements: ${requirementsPath}`);
 
+    // Vérifier si le venv existe déjà et est valide
+    const venvPython = path.join(venvDir, 'bin', 'python3');
+    const venvActivate = path.join(venvDir, 'bin', 'activate');
+
+    if (fs.existsSync(venvPython) && fs.existsSync(venvActivate)) {
+      console.log('✅ Virtual environment already exists, checking packages...');
+
+      // Vérifier que les packages critiques sont installés
+      try {
+        const checkPackages = spawn(venvPython, ['-c',
+          'import bertopic, fastapi, uvicorn; print("OK")'
+        ]);
+
+        let output = '';
+        checkPackages.stdout?.on('data', (data) => {
+          output += data.toString();
+        });
+
+        const isValid = await new Promise<boolean>((resolve) => {
+          checkPackages.on('exit', (code) => {
+            resolve(code === 0 && output.includes('OK'));
+          });
+          checkPackages.on('error', () => resolve(false));
+        });
+
+        if (isValid) {
+          console.log('✅ All critical packages are installed, skipping setup');
+          console.log('💡 To force reinstallation, delete:', venvDir);
+          return; // Venv est valide, pas besoin de réinstaller
+        } else {
+          console.log('⚠️  Some packages are missing, will reinstall...');
+          fs.rmSync(venvDir, { recursive: true, force: true });
+        }
+      } catch (error) {
+        console.warn('⚠️  Could not verify packages, will reinstall:', error);
+        try {
+          fs.rmSync(venvDir, { recursive: true, force: true });
+        } catch (rmError) {
+          console.warn('⚠️  Could not remove venv:', rmError);
+        }
+      }
+    }
+
     // Créer le répertoire parent si nécessaire
     const parentDir = path.dirname(venvDir);
     try {
@@ -137,10 +178,39 @@ export class TopicModelingService {
 
         console.log('✅ Virtual environment created');
         console.log('📦 Installing Python dependencies...');
+        console.log('⚠️  Note: This may take several minutes on first install');
 
-        // Installer les dépendances
-        const venvPip = path.join(venvDir, 'bin', 'pip3');
-        const installDeps = spawn(venvPip, ['install', '-r', requirementsPath]);
+        // Installer les dépendances avec le script personnalisé
+        // qui saute numba et llvmlite (packages optionnels problématiques)
+        const venvPython = path.join(venvDir, 'bin', 'python3');
+        const pythonServiceDir = path.dirname(requirementsPath);
+        const installScript = path.join(pythonServiceDir, 'install_deps.py');
+
+        // Vérifier que le script existe, sinon utiliser pip directement
+        let installArgs: string[];
+        let installCmd: string;
+
+        if (fs.existsSync(installScript)) {
+          console.log('Using custom installation script (skips numba/llvmlite)');
+          installCmd = venvPython;
+          installArgs = [installScript];
+        } else {
+          console.log('Using standard pip install');
+          const venvPip = path.join(venvDir, 'bin', 'pip3');
+          installCmd = venvPip;
+          installArgs = ['install', '--no-cache-dir', '-r', requirementsPath];
+        }
+
+        const installEnv = {
+          ...process.env,
+          NUMBA_DISABLE_JIT: '1',
+        };
+
+        console.log(`Running: ${installCmd} ${installArgs.join(' ')}`);
+
+        const installDeps = spawn(installCmd, installArgs, {
+          env: installEnv
+        });
 
         installDeps.stdout?.on('data', (data) => {
           console.log(`[pip] ${data.toString().trim()}`);
@@ -172,6 +242,59 @@ export class TopicModelingService {
   }
 
   /**
+   * Tue les processus Python zombies qui occupent le port 8001
+   */
+  private async killZombieProcesses(): Promise<void> {
+    try {
+      console.log('🔍 Checking for zombie Python processes on port 8001...');
+
+      // Trouver les processus qui utilisent le port 8001
+      const { spawn } = await import('child_process');
+      const lsof = spawn('lsof', ['-ti:8001']);
+
+      let pids = '';
+      lsof.stdout?.on('data', (data) => {
+        pids += data.toString();
+      });
+
+      await new Promise<void>((resolve) => {
+        lsof.on('exit', (code) => {
+          if (code === 0 && pids.trim()) {
+            // Des processus utilisent le port
+            const pidList = pids.trim().split('\n').filter(p => p);
+            console.log(`⚠️  Found ${pidList.length} zombie process(es) on port 8001: ${pidList.join(', ')}`);
+
+            // Tuer chaque processus
+            pidList.forEach(pid => {
+              try {
+                process.kill(parseInt(pid), 'SIGTERM');
+                console.log(`✅ Killed process ${pid}`);
+              } catch (err) {
+                console.warn(`⚠️  Could not kill process ${pid}:`, err);
+              }
+            });
+
+            // Attendre un peu pour que les processus se terminent
+            setTimeout(() => resolve(), 500);
+          } else {
+            console.log('✅ No zombie processes found');
+            resolve();
+          }
+        });
+
+        lsof.on('error', () => {
+          // lsof n'est peut-être pas disponible, continuer
+          console.log('⚠️  lsof not available, skipping zombie check');
+          resolve();
+        });
+      });
+    } catch (error) {
+      console.warn('⚠️  Could not check for zombie processes:', error);
+      // Ne pas lancer d'erreur, continuer le démarrage
+    }
+  }
+
+  /**
    * Démarre le service Python en subprocess
    *
    * @throws Error si Python n'est pas disponible ou si le service ne démarre pas
@@ -191,6 +314,9 @@ export class TopicModelingService {
 
     try {
       console.log('🚀 Starting topic modeling service...');
+
+      // Tuer les processus zombies au démarrage
+      await this.killZombieProcesses();
 
       // Déterminer le chemin vers le script Python
       const __filename = fileURLToPath(import.meta.url);
@@ -223,6 +349,9 @@ export class TopicModelingService {
       const venvDir = this.getVenvDir(isProduction, pythonServicePath);
       const requirementsPath = path.join(pythonServicePath, 'requirements.txt');
 
+      // Stocker pour utilisation dans waitForServiceReady
+      this.currentVenvDir = venvDir;
+
       console.log(`📂 Venv path: ${venvDir}`);
 
       // Vérifier que Python est disponible
@@ -240,9 +369,16 @@ export class TopicModelingService {
       console.log(`🐍 Using Python from venv: ${pythonExecutable}`);
 
       // Démarrer le subprocess Python avec le venv
-      this.pythonProcess = spawn(pythonExecutable, ['main.py'], {
+      // -u: mode unbuffered pour voir les logs immédiatement
+      // PYTHONUNBUFFERED: même effet que -u, pour être sûr
+      this.pythonProcess = spawn(pythonExecutable, ['-u', 'main.py'], {
         cwd: pythonServicePath,
         stdio: ['ignore', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          NUMBA_DISABLE_JIT: '1',
+          PYTHONUNBUFFERED: '1',
+        },
       });
 
       // Logger la sortie standard
@@ -352,6 +488,37 @@ export class TopicModelingService {
   }
 
   /**
+   * Vérifie si pip est en train d'installer des dépendances
+   */
+  private async isPipInstalling(venvDir: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const venvPip = path.join(venvDir, 'bin', 'pip');
+
+      // Vérifier si le processus pip est en cours d'exécution
+      const checkPip = spawn('pgrep', ['-f', `${venvPip}.*install`]);
+
+      let found = false;
+      checkPip.stdout?.on('data', () => {
+        found = true;
+      });
+
+      checkPip.on('exit', () => {
+        resolve(found);
+      });
+
+      checkPip.on('error', () => {
+        resolve(false);
+      });
+
+      // Timeout après 2 secondes
+      setTimeout(() => {
+        checkPip.kill();
+        resolve(false);
+      }, 2000);
+    });
+  }
+
+  /**
    * Attend que le service soit prêt en effectuant des health checks
    *
    * @throws Error si le service ne répond pas dans le délai imparti
@@ -359,15 +526,39 @@ export class TopicModelingService {
   private async waitForServiceReady(): Promise<void> {
     const startTime = Date.now();
     const checkInterval = 1000; // Vérifier toutes les 1 seconde
+    let effectiveTimeout = this.startupTimeout;
+    let installationDetected = false;
 
-    while (Date.now() - startTime < this.startupTimeout) {
+    while (Date.now() - startTime < effectiveTimeout) {
       try {
         const isHealthy = await this.isHealthy();
         if (isHealthy) {
+          console.log(`✅ Topic modeling service is healthy (took ${Math.floor((Date.now() - startTime) / 1000)}s)`);
           return;
         }
       } catch (error) {
         // Service pas encore prêt, continuer à attendre
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        if (elapsed % 10 === 0) {
+          console.log(`⏳ Waiting for service... (${elapsed}s elapsed, pythonProcess=${!!this.pythonProcess}, isStarting=${this.isStarting})`);
+        }
+      }
+
+      // Vérifier si pip est en train d'installer (seulement au début et si venvDir est défini)
+      if (!installationDetected && Date.now() - startTime < 5000 && this.currentVenvDir) {
+        const pipIsInstalling = await this.isPipInstalling(this.currentVenvDir);
+        if (pipIsInstalling) {
+          installationDetected = true;
+          effectiveTimeout = 300000; // 5 minutes si installation détectée
+          console.log('📦 Detected pip installation in progress...');
+          console.log(`⏳ Extending timeout to ${effectiveTimeout / 1000}s for dependency installation`);
+        }
+      }
+
+      // Afficher un message de progression toutes les 10 secondes si installation en cours
+      const elapsed = Date.now() - startTime;
+      if (installationDetected && elapsed % 10000 < checkInterval) {
+        console.log(`⏳ Still waiting for Python dependencies to install... (${Math.floor(elapsed / 1000)}s elapsed)`);
       }
 
       // Attendre avant le prochain check
@@ -375,7 +566,7 @@ export class TopicModelingService {
     }
 
     throw new Error(
-      `Topic modeling service did not start within ${this.startupTimeout / 1000}s`
+      `Topic modeling service did not start within ${effectiveTimeout / 1000}s`
     );
   }
 
@@ -452,6 +643,7 @@ export class TopicModelingService {
         documents: documents,
         document_ids: documentIds,
         min_topic_size: options.minTopicSize || 5,
+        nr_topics: options.nrTopics === 'auto' ? null : options.nrTopics || null,
         language: options.language || 'multilingual',
         n_gram_range: options.nGramRange || [1, 3],
       };
@@ -535,5 +727,130 @@ export class TopicModelingService {
       isStarting: this.isStarting,
       serviceURL: this.serviceURL,
     };
+  }
+
+  /**
+   * Vérifie si l'environnement Python est installé et prêt
+   */
+  async checkEnvironmentStatus(): Promise<{
+    installed: boolean;
+    venvPath?: string;
+    pythonVersion?: string;
+    error?: string;
+  }> {
+    try {
+      // Déterminer les chemins
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const isProduction = __filename.includes('app.asar');
+
+      let pythonServicePath: string;
+      if (isProduction) {
+        pythonServicePath = path.join(process.resourcesPath, 'python-services/topic-modeling');
+      } else {
+        const projectRoot = path.join(__dirname, '../../../..');
+        pythonServicePath = path.join(projectRoot, 'backend/python-services/topic-modeling');
+      }
+
+      const venvDir = this.getVenvDir(isProduction, pythonServicePath);
+      const venvExists = await this.checkVenvExists(venvDir);
+
+      if (!venvExists) {
+        return {
+          installed: false,
+          venvPath: venvDir,
+        };
+      }
+
+      // Vérifier la version de Python dans le venv
+      const venvPython = this.getVenvPythonPath(venvDir);
+      const pythonVersion = await new Promise<string>((resolve, reject) => {
+        const checkVersion = spawn(venvPython, ['--version']);
+        let output = '';
+
+        checkVersion.stdout?.on('data', (data) => {
+          output += data.toString();
+        });
+
+        checkVersion.stderr?.on('data', (data) => {
+          output += data.toString();
+        });
+
+        checkVersion.on('exit', (code) => {
+          if (code === 0) {
+            resolve(output.trim());
+          } else {
+            reject(new Error('Failed to get Python version'));
+          }
+        });
+
+        checkVersion.on('error', reject);
+      });
+
+      return {
+        installed: true,
+        venvPath: venvDir,
+        pythonVersion,
+      };
+    } catch (error: any) {
+      return {
+        installed: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Installe ou réinstalle l'environnement Python
+   */
+  async setupEnvironment(onProgress?: (message: string) => void): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      const log = (msg: string) => {
+        console.log(msg);
+        if (onProgress) onProgress(msg);
+      };
+
+      log('🔧 Configuration de l\'environnement Python...');
+
+      // Déterminer les chemins
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const isProduction = __filename.includes('app.asar');
+
+      let pythonServicePath: string;
+      if (isProduction) {
+        pythonServicePath = path.join(process.resourcesPath, 'python-services/topic-modeling');
+      } else {
+        const projectRoot = path.join(__dirname, '../../../..');
+        pythonServicePath = path.join(projectRoot, 'backend/python-services/topic-modeling');
+      }
+
+      const venvDir = this.getVenvDir(isProduction, pythonServicePath);
+      const requirementsPath = path.join(pythonServicePath, 'requirements.txt');
+
+      log(`📂 Venv location: ${venvDir}`);
+      log(`📂 Requirements: ${requirementsPath}`);
+
+      // Vérifier que Python est disponible
+      log('🔍 Vérification de Python...');
+      await this.checkPythonAvailable();
+      log('✅ Python disponible');
+
+      // Installer le venv
+      log('📦 Installation du venv...');
+      await this.setupVenv(venvDir, requirementsPath);
+      log('✅ Environnement Python installé avec succès');
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ Failed to setup environment:', error);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
   }
 }

@@ -16,6 +16,7 @@ import { setupZoteroHandlers } from './handlers/zotero-handlers.js';
 import { setupExportHandlers } from './handlers/export-handlers.js';
 import { setupCorpusHandlers } from './handlers/corpus-handlers.js';
 import { setupHistoryHandlers } from './handlers/history-handlers.js';
+import { setupTopicModelingHandlers } from './handlers/topic-modeling-handlers.js';
 
 /**
  * Setup all IPC handlers
@@ -50,6 +51,7 @@ export function setupIPCHandlers() {
   setupExportHandlers();
   setupCorpusHandlers();
   setupHistoryHandlers();
+  setupTopicModelingHandlers();
 
   console.log('✅ All IPC handlers registered successfully');
 }

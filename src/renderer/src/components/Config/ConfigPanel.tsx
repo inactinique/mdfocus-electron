@@ -7,6 +7,7 @@ import { EditorConfigSection, type EditorConfig } from './EditorConfigSection';
 import { UIConfigSection } from './UIConfigSection';
 import { LanguageConfigSection } from './LanguageConfigSection';
 import { ActionsSection } from './ActionsSection';
+import { TopicModelingSection } from './TopicModelingSection';
 import { ZoteroConfigSection, type ZoteroConfig } from './ZoteroConfigSection';
 import { SuggestionsConfigSection, type SuggestionsConfig } from './SuggestionsConfigSection';
 import { useEditorStore } from '../../stores/editorStore';
@@ -60,7 +61,7 @@ export const ConfigPanel: React.FC = () => {
 
   const [llmConfig, setLLMConfig] = useState<LLMConfig>({
     backend: 'ollama',
-    ollamaURL: 'http://localhost:11434',
+    ollamaURL: 'http://127.0.0.1:11434',
     ollamaEmbeddingModel: 'nomic-embed-text',
     ollamaChatModel: 'gemma2:2b',
   });
@@ -190,7 +191,7 @@ export const ConfigPanel: React.FC = () => {
       });
       setLLMConfig({
         backend: 'ollama',
-        ollamaURL: 'http://localhost:11434',
+        ollamaURL: 'http://127.0.0.1:11434',
         ollamaEmbeddingModel: 'nomic-embed-text',
         ollamaChatModel: 'gemma2:2b',
       });
@@ -270,6 +271,8 @@ export const ConfigPanel: React.FC = () => {
           config={zoteroConfig}
           onChange={setZoteroConfig}
         />
+
+        <TopicModelingSection />
 
         <ActionsSection />
       </div>

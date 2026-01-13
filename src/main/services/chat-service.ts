@@ -170,20 +170,23 @@ class ChatService {
         }
         const searchDuration = Date.now() - searchStart;
 
+        // Filter out results with null documents (orphaned chunks)
+        searchResults = searchResults.filter(r => r.document !== null);
+
         console.log('🔍 [RAG DETAILED DEBUG] Search completed:', {
           queryHash: queryHash,
           resultsCount: searchResults.length,
           searchDuration: `${searchDuration}ms`,
           topSimilarities: searchResults.slice(0, 5).map(r => r.similarity.toFixed(4)),
           chunkIds: searchResults.slice(0, 3).map(r => r.chunk.id),
-          documentTitles: searchResults.slice(0, 3).map(r => r.document.title),
+          documentTitles: searchResults.slice(0, 3).map(r => r.document?.title || 'Unknown'),
         });
 
         if (searchResults.length > 0) {
           console.log(`📚 Using ${searchResults.length} context chunks for RAG`);
           // Log first result for debugging
           console.log('🔍 [RAG DEBUG] First result:', {
-            document: searchResults[0].document.title,
+            document: searchResults[0].document?.title || 'Unknown',
             similarity: searchResults[0].similarity,
             chunkLength: searchResults[0].chunk.content.length
           });
@@ -384,10 +387,10 @@ class ChatService {
         const sources =
           searchResults.length > 0
             ? searchResults.map((r) => ({
-                documentId: r.document.id,
-                documentTitle: r.document.title,
-                author: r.document.author,
-                year: r.document.year,
+                documentId: r.document?.id || '',
+                documentTitle: r.document?.title || 'Unknown',
+                author: r.document?.author || '',
+                year: r.document?.year || 0,
                 pageNumber: r.chunk.pageNumber,
                 similarity: r.similarity,
                 isRelatedDoc: r.isRelatedDoc || false,

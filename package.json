@@ -22,9 +22,12 @@
     "build:renderer": "vite build",
     "build:all": "npm run build && electron-builder",
     "build:linux": "npm run build && electron-builder --linux",
-    "build:mac": "npm run build && electron-builder --mac",
+    "build:mac": "npm run build && npm run rebuild:native && electron-builder --mac",
     "build:win": "npm run build && electron-builder --win",
     "build:dir": "npm run build && electron-builder --dir",
+    "rebuild:native": "npm run rebuild:x64",
+    "rebuild:x64": "electron-rebuild -f -a x64",
+    "rebuild:arm64": "electron-rebuild -f -a arm64",
     "preview": "vite preview",
     "start": "env -u ELECTRON_RUN_AS_NODE npx electron . --no-sandbox",
     "start:prod": "npm run build && electron .",
@@ -34,7 +37,11 @@
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "clean": "rm -rf dist release"
+    "clean": "rm -rf dist release",
+    "postinstall": "electron-builder install-app-deps",
+    "build:mac-intel": "npm run build && npm run rebuild:x64 && electron-builder --mac --x64",
+    "build:mac-arm": "npm run build && npm run rebuild:arm64 && electron-builder --mac --arm64",
+    "build:mac-universal": "npm run build && electron-builder --mac --universal"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
@@ -45,10 +52,12 @@
     "graphology-communities-louvain": "^2.0.2",
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-metrics": "^2.4.0",
+    "hnswlib-node": "^3.0.0",
     "i18next": "^25.7.3",
     "lru-cache": "^11.2.4",
     "lucide-react": "^0.562.0",
     "marked": "^17.0.1",
+    "natural": "^8.1.0",
     "pdfjs-dist": "^4.0.0",
     "puppeteer": "^24.33.1",
     "react": "^18.3.0",
@@ -61,6 +70,7 @@
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^6.22.0",
     "recharts": "^3.6.0",
+    "sqlite3": "^5.1.7",
     "zod": "^4.3.5",
     "zustand": "^4.5.7"
   },
@@ -150,6 +160,7 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
+    "afterPack": "./scripts/after-pack.cjs",
     "win": {
       "target": [
         "nsis"

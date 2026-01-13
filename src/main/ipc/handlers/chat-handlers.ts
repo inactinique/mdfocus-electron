@@ -23,7 +23,6 @@ export function setupChatHandlers() {
 
         if (projectPath) {
           console.log('🔍 [RAG DEBUG] Initializing PDF service for:', projectPath);
-          await pdfService.init(projectPath);
           console.log('✅ [RAG DEBUG] PDF service initialized successfully');
 
           // Test search to verify RAG is working

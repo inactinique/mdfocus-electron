@@ -36,6 +36,7 @@ export const PDFIndexPanel: React.FC = () => {
     totalDocuments: 0,
     totalChunks: 0,
   });
+  const [isCleaning, setIsCleaning] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -192,6 +193,33 @@ export const PDFIndexPanel: React.FC = () => {
     window.dispatchEvent(new CustomEvent('show-methodology-modal', { detail: { feature: 'pdfIndex' } }));
   };
 
+  const handleCleanOrphanedChunks = async () => {
+    if (!window.confirm('Nettoyer les chunks orphelins (sans document parent) ?\n\nCette action supprimera les chunks dont le document a été supprimé.')) {
+      return;
+    }
+
+    setIsCleaning(true);
+    try {
+      const result = await window.electron.pdf.cleanOrphanedChunks();
+
+      if (result.success) {
+        console.log('✅ Orphaned chunks cleaned successfully');
+        alert('✅ Chunks orphelins nettoyés avec succès!');
+      } else {
+        console.error('❌ Failed to clean orphaned chunks:', result.error);
+        alert(`❌ Erreur lors du nettoyage:\n${result.error}`);
+      }
+
+      // Reload statistics
+      await loadStats();
+    } catch (error) {
+      console.error('Failed to clean orphaned chunks:', error);
+      alert('Erreur lors du nettoyage des chunks orphelins');
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
   return (
     <div className="pdf-index-panel">
       {/* Header */}
@@ -220,6 +248,25 @@ export const PDFIndexPanel: React.FC = () => {
             <span className="stat-value">{stats.totalChunks}</span>
             <span className="stat-label">Chunks</span>
           </div>
+        </div>
+        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #444' }}>
+          <button
+            className="config-btn-small"
+            onClick={handleCleanOrphanedChunks}
+            disabled={isCleaning}
+            style={{
+              width: '100%',
+              background: '#3c3c3c',
+              color: '#ffffff',
+              border: '1px solid #555',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: isCleaning ? 'not-allowed' : 'pointer',
+              fontSize: '13px',
+            }}
+          >
+            {isCleaning ? '⏳ Nettoyage en cours...' : '🧹 Nettoyer les chunks orphelins'}
+          </button>
         </div>
       </CollapsibleSection>
 

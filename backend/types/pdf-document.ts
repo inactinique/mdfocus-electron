@@ -62,6 +62,13 @@ export interface DocumentChunk {
   chunkIndex: number;
   startPosition: number;
   endPosition: number;
+  metadata?: ChunkMetadata;
+}
+
+export interface ChunkMetadata {
+  sectionTitle?: string;
+  sectionType?: 'abstract' | 'introduction' | 'methodology' | 'results' | 'discussion' | 'conclusion' | 'references' | 'content';
+  sectionLevel?: number;
 }
 
 export interface ChunkWithEmbedding {
