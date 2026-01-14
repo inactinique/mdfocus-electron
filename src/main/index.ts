@@ -1,3 +1,6 @@
+// Console filter must be imported first to filter logs in production
+import '../shared/console-filter.js';
+
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
