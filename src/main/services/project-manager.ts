@@ -37,8 +37,6 @@ export class ProjectManager {
 
   /**
    * Retourne le chemin du dossier du projet actuellement ouvert
-   * Pour un projet.json: retourne le dossier parent
-   * Pour un dossier notes: retourne le dossier lui-même
    */
   getCurrentProjectPath(): string | null {
     return this.currentProjectPath;
@@ -54,12 +52,11 @@ export class ProjectManager {
   async createProject(data: { name: string; type?: string; path: string; content?: string }) {
     const projectType = data.type || 'article';
 
-    // For notes type, use the path directly (existing folder)
-    // For other types, create a subfolder with the project name
-    const projectPath = projectType === 'notes' ? data.path : path.join(data.path, data.name);
+    // Create a subfolder with the project name
+    const projectPath = path.join(data.path, data.name);
 
-    // Create folder only for non-notes projects
-    if (projectType !== 'notes' && !existsSync(projectPath)) {
+    // Create folder if it doesn't exist
+    if (!existsSync(projectPath)) {
       await mkdir(projectPath, { recursive: true });
     }
 
@@ -73,20 +70,7 @@ export class ProjectManager {
       lastOpenedAt: new Date().toISOString(),
     };
 
-    // For notes type, don't create project.json, just remember the folder
-    if (projectType === 'notes') {
-      // Just add to recent projects (folder path)
-      configManager.addRecentProject(projectPath);
-
-      // Store as current project
-      this.currentProject = project;
-      this.currentProjectPath = projectPath;
-
-      console.log('✅ Notes folder created:', projectPath);
-      return { success: true, path: projectPath, project };
-    }
-
-    // For other project types, create project.json
+    // Create project.json
     const projectFile = path.join(projectPath, 'project.json');
     await writeFile(projectFile, JSON.stringify(project, null, 2));
 
@@ -173,34 +157,7 @@ N'oubliez pas de mentionner les perspectives futures.
 
   async loadProject(projectPath: string) {
     try {
-      // Check if it's a notes folder (directory without project.json)
-      const { stat } = await import('fs/promises');
-      const stats = await stat(projectPath);
-
-      if (stats.isDirectory()) {
-        // It's a notes folder
-        const folderName = path.basename(projectPath);
-        const project: Project = {
-          id: crypto.randomUUID(),
-          name: folderName,
-          type: 'notes',
-          path: projectPath,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          lastOpenedAt: new Date().toISOString(),
-        };
-
-        configManager.addRecentProject(projectPath);
-
-        // Store current project
-        this.currentProject = project;
-        this.currentProjectPath = projectPath; // For notes, it's the folder itself
-
-        console.log('✅ Notes folder loaded:', projectPath);
-        return { success: true, project };
-      }
-
-      // It's a project.json file
+      // Load project.json file
       const content = await readFile(projectPath, 'utf-8');
       const project: Project = JSON.parse(content);
 
@@ -229,7 +186,7 @@ N'oubliez pas de mentionner les perspectives futures.
 
       // Store current project
       this.currentProject = project;
-      this.currentProjectPath = path.dirname(projectPath); // For project.json, use parent folder
+      this.currentProjectPath = path.dirname(projectPath);
 
       console.log('✅ Project loaded:', projectPath);
       console.log('📤 Returning project with bibliography:', {

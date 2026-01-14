@@ -7,10 +7,14 @@ import { ErrorFallback } from './components/ErrorFallback';
 import { useMenuShortcuts } from './hooks/useMenuShortcuts';
 import { useLanguageStore } from './stores/languageStore';
 import { useProjectStore } from './stores/projectStore';
+import { useDensity } from './hooks/useDensity';
 
 function App() {
   // Setup menu shortcuts listeners
   useMenuShortcuts();
+
+  // Initialize UI density from localStorage at startup
+  useDensity();
 
   // Initialiser la langue
   const initializeLanguage = useLanguageStore((state) => state.initializeLanguage);

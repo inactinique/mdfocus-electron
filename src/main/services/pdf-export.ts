@@ -8,7 +8,7 @@ import { tmpdir } from 'os';
 
 export interface ExportOptions {
   projectPath: string;
-  projectType: 'notes' | 'article' | 'book' | 'presentation';
+  projectType: 'article' | 'book' | 'presentation';
   content: string;
   outputPath?: string;
   bibliographyPath?: string;
@@ -64,48 +64,43 @@ interface PandocProgress {
 
 // MARK: - Templates
 
+/**
+ * Get system fonts based on the current platform
+ * Each OS has different default fonts available
+ */
+const getSystemFonts = (): { mainFont: string; sansFont: string; monoFont: string } => {
+  const platform = process.platform;
+
+  switch (platform) {
+    case 'darwin': // macOS
+      return {
+        mainFont: 'Times New Roman',
+        sansFont: 'Helvetica Neue',
+        monoFont: 'Menlo',
+      };
+    case 'win32': // Windows
+      return {
+        mainFont: 'Times New Roman',
+        sansFont: 'Arial',
+        monoFont: 'Consolas',
+      };
+    case 'linux': // Linux
+    default:
+      // DejaVu fonts are commonly available on Linux distributions
+      // They have excellent Unicode coverage including French accents
+      return {
+        mainFont: 'DejaVu Serif',
+        sansFont: 'DejaVu Sans',
+        monoFont: 'DejaVu Sans Mono',
+      };
+  }
+};
+
 const getLatexTemplate = (projectType: string): string => {
-  // Use Latin Modern fonts - they're guaranteed to be available with TeXLive on all platforms
-  // These fonts have excellent Unicode coverage including French accents
-  const mainFont = 'Latin Modern Roman';
-  const sansFont = 'Latin Modern Sans';
-  const monoFont = 'Latin Modern Mono';
+  // Get platform-appropriate system fonts
+  const { mainFont, sansFont, monoFont } = getSystemFonts();
 
   switch (projectType) {
-    case 'notes':
-      return `\\documentclass[12pt,a4paper]{article}
-\\usepackage{fontspec}
-\\usepackage{polyglossia}
-\\setmainlanguage{french}
-\\usepackage{geometry}
-\\geometry{margin=2.5cm}
-\\usepackage{hyperref}
-\\usepackage{graphicx}
-\\usepackage{fancyhdr}
-
-% Fonts - Latin Modern (guaranteed availability)
-\\setmainfont{${mainFont}}[Ligatures=TeX]
-\\setsansfont{${sansFont}}[Ligatures=TeX]
-\\setmonofont{${monoFont}}[Scale=0.9]
-
-% Header/Footer
-\\pagestyle{fancy}
-\\fancyhf{}
-\\rhead{\\thepage}
-\\lhead{$title$}
-
-\\title{$title$}
-\\author{$author$}
-\\date{$date$}
-
-\\begin{document}
-
-\\maketitle
-
-$body$
-
-\\end{document}`;
-
     case 'article':
       return `\\documentclass[12pt,a4paper]{article}
 \\usepackage{fontspec}
@@ -120,7 +115,7 @@ $body$
 % Disable section numbering
 \\setcounter{secnumdepth}{0}
 
-% Fonts - Latin Modern (guaranteed availability)
+% Fonts - platform-specific system fonts
 \\setmainfont{${mainFont}}[Ligatures=TeX]
 \\setsansfont{${sansFont}}[Ligatures=TeX]
 \\setmonofont{${monoFont}}[Scale=0.9]
@@ -190,7 +185,7 @@ $body$
 % Disable section numbering
 \\setcounter{secnumdepth}{0}
 
-% Fonts - Latin Modern (guaranteed availability)
+% Fonts - platform-specific system fonts
 \\setmainfont{${mainFont}}[Ligatures=TeX]
 \\setsansfont{${sansFont}}[Ligatures=TeX]
 \\setmonofont{${monoFont}}[Scale=0.9]
@@ -251,7 +246,7 @@ $body$
 \\usepackage{polyglossia}
 \\setmainlanguage{french}
 
-% Fonts - Latin Modern (guaranteed availability)
+% Fonts - platform-specific system fonts
 \\setmainfont{${mainFont}}
 \\setsansfont{${sansFont}}
 \\setmonofont{${monoFont}}
@@ -399,7 +394,8 @@ $body$
 \\end{document}`;
 
     default:
-      return getLatexTemplate('notes');
+      // Default to article template
+      return getLatexTemplate('article');
   }
 };
 

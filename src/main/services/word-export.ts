@@ -32,7 +32,7 @@ import PizZip from 'pizzip';
 
 export interface WordExportOptions {
   projectPath: string;
-  projectType: 'notes' | 'article' | 'book' | 'presentation';
+  projectType: 'article' | 'book' | 'presentation';
   content: string;
   outputPath?: string;
   bibliographyPath?: string;

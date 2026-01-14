@@ -81,13 +81,8 @@ export const ZoteroImport: React.FC = () => {
       let projectJsonPath: string | undefined;
 
       if (currentProject) {
-        // currentProject.path is always the folder path for all project types
         targetDirectory = currentProject.path;
-
-        // For non-notes projects, the project.json is at path/project.json
-        if (currentProject.type !== 'notes') {
-          projectJsonPath = `${currentProject.path}/project.json`;
-        }
+        projectJsonPath = `${currentProject.path}/project.json`;
       }
 
       console.log('🔍 Zotero import - Project paths:', {
@@ -113,8 +108,8 @@ export const ZoteroImport: React.FC = () => {
         // Get the actual count of loaded citations
         const citationCount = useBibliographyStore.getState().citations.length;
 
-        // If we have a project (non-notes), save the bibliography source configuration
-        if (projectJsonPath && currentProject?.type !== 'notes') {
+        // If we have a project, save the bibliography source configuration
+        if (projectJsonPath && currentProject) {
           // Get just the filename for relative path
           const bibFileName = syncResult.bibtexPath.split('/').pop() || 'bibliography.bib';
 

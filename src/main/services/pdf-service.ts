@@ -60,7 +60,7 @@ class PDFService {
    * Initialise le PDF Service pour un projet spécifique
    * @param projectPath Chemin absolu vers le dossier du projet
    * @param onRebuildProgress Callback optionnel pour la progression du rebuild
-   * @throws Error si projectPath n'est pas fourni ou si c'est un projet "notes"
+   * @throws Error si projectPath n'est pas fourni
    */
   async init(
     projectPath: string,

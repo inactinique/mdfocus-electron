@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { FilePlus, FolderOpen, X, FileDown, FileType } from 'lucide-react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useEditorStore } from '../../stores/editorStore';
-import { FileTree } from '../FileTree/FileTree';
 import { CollapsibleSection } from '../common/CollapsibleSection';
 import { PDFExportModal } from '../Export/PDFExportModal';
 import { WordExportModal } from '../Export/WordExportModal';
@@ -28,7 +27,7 @@ export const ProjectPanel: React.FC = () => {
   const [showPDFExportModal, setShowPDFExportModal] = useState(false);
   const [showWordExportModal, setShowWordExportModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectType, setNewProjectType] = useState<'article' | 'book' | 'presentation' | 'notes'>('article');
+  const [newProjectType, setNewProjectType] = useState<'article' | 'book' | 'presentation'>('article');
   const [newProjectPath, setNewProjectPath] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -37,15 +36,12 @@ export const ProjectPanel: React.FC = () => {
   }, [loadRecentProjects]);
 
   const handleCreateProject = async () => {
-    // For notes, use folder name as project name
-    const projectName = newProjectType === 'notes'
-      ? newProjectPath.split('/').filter(Boolean).pop() || 'Notes'
-      : newProjectName;
-
-    if ((newProjectType !== 'notes' && !newProjectName) || !newProjectPath) {
+    if (!newProjectName || !newProjectPath) {
       alert(t('project.fillAllFields'));
       return;
     }
+
+    const projectName = newProjectName;
 
     setIsCreating(true);
     try {
@@ -97,12 +93,7 @@ export const ProjectPanel: React.FC = () => {
 
   const handleLoadRecentProject = async (project: any) => {
     try {
-      // For non-notes projects, construct path to project.json
-      // For notes projects, use the path directly (folder path)
-      const projectPath = project.type === 'notes'
-        ? project.path
-        : `${project.path}/project.json`;
-
+      const projectPath = `${project.path}/project.json`;
       await loadProject(projectPath);
     } catch (error: any) {
       console.error('Failed to load recent project:', error);
@@ -112,11 +103,7 @@ export const ProjectPanel: React.FC = () => {
 
   const handleRemoveRecentProject = async (project: any) => {
     try {
-      // Construct the path that was stored in recent projects
-      const projectPath = project.type === 'notes'
-        ? project.path
-        : `${project.path}/project.json`;
-
+      const projectPath = `${project.path}/project.json`;
       await window.electron.project.removeRecent(projectPath);
       await loadRecentProjects();
     } catch (error: any) {
@@ -132,8 +119,6 @@ export const ProjectPanel: React.FC = () => {
         return t('project.types.book');
       case 'presentation':
         return t('project.types.presentation');
-      case 'notes':
-        return t('project.types.notes');
       default:
         return type;
     }
@@ -209,13 +194,6 @@ export const ProjectPanel: React.FC = () => {
               </div>
             </CollapsibleSection>
 
-            {/* File Tree for Notes projects */}
-            {currentProject.type === 'notes' && (
-              <CollapsibleSection title={t('project.projectFiles')} defaultExpanded={true}>
-                <FileTree rootPath={currentProject.path} onFileSelect={handleFileSelect} />
-              </CollapsibleSection>
-            )}
-
             {/* File list for Article and Book projects */}
             {(currentProject.type === 'article' || currentProject.type === 'book') && (
               <CollapsibleSection title={t('project.projectFiles')} defaultExpanded={true}>
@@ -262,7 +240,7 @@ export const ProjectPanel: React.FC = () => {
               </>
             )}
 
-            {/* Project Settings - CSL for articles, books, and presentations */}
+            {/* Project Settings - CSL */}
             {(currentProject.type === 'article' || currentProject.type === 'book' || currentProject.type === 'presentation') && (
               <CollapsibleSection title={t('project.settings')} defaultExpanded={false}>
                 <CSLSettings
@@ -340,42 +318,35 @@ export const ProjectPanel: React.FC = () => {
                 onChange={(e) => setNewProjectType(e.target.value as any)}
               >
                 <option value="article">{t('project.types.article')}</option>
-                <option value="book">{t('project.types.book')}</option>
+                {/* Book type hidden for v1.0 - needs more testing */}
+                {/* <option value="book">{t('project.types.book')}</option> */}
                 <option value="presentation">{t('project.types.presentation')}</option>
-                <option value="notes">{t('project.types.notesExisting')}</option>
               </select>
             </div>
 
-            {newProjectType !== 'notes' && (
-              <div className="form-field">
-                <label>{t('project.projectName')}</label>
-                <input
-                  type="text"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="Mon article"
-                  autoFocus
-                />
-              </div>
-            )}
+            <div className="form-field">
+              <label>{t('project.projectName')}</label>
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="Mon article"
+                autoFocus
+              />
+            </div>
 
             <div className="form-field">
-              <label>{newProjectType === 'notes' ? t('project.notesFolder') : t('project.projectLocation')}</label>
+              <label>{t('project.projectLocation')}</label>
               <div className="path-selector">
                 <input
                   type="text"
                   value={newProjectPath}
                   onChange={(e) => setNewProjectPath(e.target.value)}
-                  placeholder={newProjectType === 'notes' ? '/chemin/vers/mes-notes' : '/chemin/vers/dossier'}
+                  placeholder="/chemin/vers/dossier"
                   readOnly
                 />
                 <button onClick={handleSelectPath}>{t('actions.browse')}</button>
               </div>
-              {newProjectType === 'notes' && (
-                <small style={{ display: 'block', marginTop: '0.5rem', color: '#888', fontSize: '0.75rem' }}>
-                  {t('project.notesFolderHelp')}
-                </small>
-              )}
             </div>
 
             <div className="form-actions">
@@ -389,7 +360,7 @@ export const ProjectPanel: React.FC = () => {
               <button
                 className="btn-submit"
                 onClick={handleCreateProject}
-                disabled={isCreating || (newProjectType !== 'notes' && !newProjectName) || !newProjectPath}
+                disabled={isCreating || !newProjectName || !newProjectPath}
               >
                 {isCreating ? t('project.creating') : t('actions.create')}
               </button>
