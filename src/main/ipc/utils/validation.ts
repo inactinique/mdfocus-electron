@@ -91,7 +91,7 @@ export const ZoteroSyncSchema = z.object({
 // Export schemas
 export const PDFExportSchema = z.object({
   projectPath: z.string().min(1),
-  projectType: z.enum(['notes', 'article', 'book', 'presentation']),
+  projectType: z.enum(['article', 'book', 'presentation']),
   content: z.string().min(1),
   outputPath: z.string().optional(),
   bibliographyPath: z.string().optional(),

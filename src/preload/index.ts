@@ -124,7 +124,7 @@ const api = {
     checkDependencies: () => ipcRenderer.invoke('pdf-export:check-dependencies'),
     export: (options: {
       projectPath: string;
-      projectType: 'notes' | 'article' | 'book' | 'presentation';
+      projectType: 'article' | 'book' | 'presentation';
       content: string;
       outputPath?: string;
       bibliographyPath?: string;
@@ -145,7 +145,7 @@ const api = {
   wordExport: {
     export: (options: {
       projectPath: string;
-      projectType: 'notes' | 'article' | 'book' | 'presentation';
+      projectType: 'article' | 'book' | 'presentation';
       content: string;
       outputPath?: string;
       bibliographyPath?: string;

@@ -153,5 +153,17 @@ export function setupProjectHandlers() {
     }
   });
 
+  ipcMain.handle('project:set-csl-path', async (_event, data: { projectPath: string; cslPath?: string }) => {
+    console.log('📞 IPC Call: project:set-csl-path', data);
+    try {
+      const result = await projectManager.setCSLPath(data);
+      console.log('📤 IPC Response: project:set-csl-path', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ project:set-csl-path error:', error);
+      return errorResponse(error);
+    }
+  });
+
   console.log('✅ Project handlers registered');
 }

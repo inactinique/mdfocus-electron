@@ -60,7 +60,7 @@ class PDFService {
    * Initialise le PDF Service pour un projet spécifique
    * @param projectPath Chemin absolu vers le dossier du projet
    * @param onRebuildProgress Callback optionnel pour la progression du rebuild
-   * @throws Error si projectPath n'est pas fourni ou si c'est un projet "notes"
+   * @throws Error si projectPath n'est pas fourni
    */
   async init(
     projectPath: string,
@@ -367,10 +367,14 @@ class PDFService {
   async buildKnowledgeGraph(options?: any) {
     this.ensureInitialized();
 
+    // Récupérer le seuil de similarité depuis la configuration utilisateur
+    const ragConfig = configManager.get('rag');
+    const defaultThreshold = ragConfig?.explorationSimilarityThreshold ?? 0.7;
+
     const graphBuilder = new KnowledgeGraphBuilder(this.vectorStore!);
     const graph = await graphBuilder.buildGraph({
       includeSimilarityEdges: options?.includeSimilarityEdges !== false,
-      similarityThreshold: options?.similarityThreshold || 0.7,
+      similarityThreshold: options?.similarityThreshold ?? defaultThreshold,
       includeAuthorNodes: options?.includeAuthorNodes || false,
       computeLayout: options?.computeLayout !== false,
     });

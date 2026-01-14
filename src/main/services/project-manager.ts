@@ -1,7 +1,8 @@
 // @ts-nocheck
-import { writeFile, readFile, mkdir } from 'fs/promises';
+import { writeFile, readFile, mkdir, copyFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { dirname, basename, join } from 'path';
 import crypto from 'crypto';
 import { configManager } from './config-manager.js';
 
@@ -36,8 +37,6 @@ export class ProjectManager {
 
   /**
    * Retourne le chemin du dossier du projet actuellement ouvert
-   * Pour un projet.json: retourne le dossier parent
-   * Pour un dossier notes: retourne le dossier lui-même
    */
   getCurrentProjectPath(): string | null {
     return this.currentProjectPath;
@@ -53,12 +52,11 @@ export class ProjectManager {
   async createProject(data: { name: string; type?: string; path: string; content?: string }) {
     const projectType = data.type || 'article';
 
-    // For notes type, use the path directly (existing folder)
-    // For other types, create a subfolder with the project name
-    const projectPath = projectType === 'notes' ? data.path : path.join(data.path, data.name);
+    // Create a subfolder with the project name
+    const projectPath = path.join(data.path, data.name);
 
-    // Create folder only for non-notes projects
-    if (projectType !== 'notes' && !existsSync(projectPath)) {
+    // Create folder if it doesn't exist
+    if (!existsSync(projectPath)) {
       await mkdir(projectPath, { recursive: true });
     }
 
@@ -72,20 +70,7 @@ export class ProjectManager {
       lastOpenedAt: new Date().toISOString(),
     };
 
-    // For notes type, don't create project.json, just remember the folder
-    if (projectType === 'notes') {
-      // Just add to recent projects (folder path)
-      configManager.addRecentProject(projectPath);
-
-      // Store as current project
-      this.currentProject = project;
-      this.currentProjectPath = projectPath;
-
-      console.log('✅ Notes folder created:', projectPath);
-      return { success: true, path: projectPath, project };
-    }
-
-    // For other project types, create project.json
+    // Create project.json
     const projectFile = path.join(projectPath, 'project.json');
     await writeFile(projectFile, JSON.stringify(project, null, 2));
 
@@ -172,34 +157,7 @@ N'oubliez pas de mentionner les perspectives futures.
 
   async loadProject(projectPath: string) {
     try {
-      // Check if it's a notes folder (directory without project.json)
-      const { stat } = await import('fs/promises');
-      const stats = await stat(projectPath);
-
-      if (stats.isDirectory()) {
-        // It's a notes folder
-        const folderName = path.basename(projectPath);
-        const project: Project = {
-          id: crypto.randomUUID(),
-          name: folderName,
-          type: 'notes',
-          path: projectPath,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          lastOpenedAt: new Date().toISOString(),
-        };
-
-        configManager.addRecentProject(projectPath);
-
-        // Store current project
-        this.currentProject = project;
-        this.currentProjectPath = projectPath; // For notes, it's the folder itself
-
-        console.log('✅ Notes folder loaded:', projectPath);
-        return { success: true, project };
-      }
-
-      // It's a project.json file
+      // Load project.json file
       const content = await readFile(projectPath, 'utf-8');
       const project: Project = JSON.parse(content);
 
@@ -228,7 +186,7 @@ N'oubliez pas de mentionner les perspectives futures.
 
       // Store current project
       this.currentProject = project;
-      this.currentProjectPath = path.dirname(projectPath); // For project.json, use parent folder
+      this.currentProjectPath = path.dirname(projectPath);
 
       console.log('✅ Project loaded:', projectPath);
       console.log('📤 Returning project with bibliography:', {
@@ -322,21 +280,58 @@ N'oubliez pas de mentionner les perspectives futures.
   async setCSLPath(data: {
     projectPath: string;
     cslPath?: string;
-  }) {
+  }): Promise<{ success: boolean; cslPath?: string; error?: string }> {
     try {
+      console.log('📝 setCSLPath called with:', data);
+
+      // Validate projectPath
+      if (!data.projectPath) {
+        throw new Error('Project path is required');
+      }
+
+      if (!existsSync(data.projectPath)) {
+        throw new Error(`Project file not found: ${data.projectPath}`);
+      }
+
       const projectContent = await readFile(data.projectPath, 'utf-8');
       const project: Project = JSON.parse(projectContent);
+      const projectDir = dirname(data.projectPath);
 
-      project.cslPath = data.cslPath;
+      let finalCslPath = data.cslPath;
+
+      // If a CSL file is provided, copy it to project if it's external
+      if (data.cslPath && existsSync(data.cslPath)) {
+        const cslFileName = basename(data.cslPath);
+        const projectCslPath = join(projectDir, cslFileName);
+
+        // Check if CSL file is outside the project directory
+        if (!data.cslPath.startsWith(projectDir)) {
+          console.log('📋 Copying CSL file to project directory...');
+          console.log('   Source:', data.cslPath);
+          console.log('   Destination:', projectCslPath);
+
+          try {
+            await copyFile(data.cslPath, projectCslPath);
+            finalCslPath = projectCslPath;
+            console.log('✅ CSL file copied successfully');
+          } catch (copyError: any) {
+            console.error('❌ Failed to copy CSL file:', copyError);
+            // Fall back to using the original path
+            finalCslPath = data.cslPath;
+          }
+        }
+      }
+
+      project.cslPath = finalCslPath;
       project.updatedAt = new Date().toISOString();
 
       await writeFile(data.projectPath, JSON.stringify(project, null, 2));
 
-      console.log('✅ CSL path configured:', data.cslPath);
-      return { success: true };
-    } catch (error) {
+      console.log('✅ CSL path configured:', finalCslPath);
+      return { success: true, cslPath: finalCslPath };
+    } catch (error: any) {
       console.error('❌ Failed to set CSL path:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Unknown error' };
     }
   }
 }

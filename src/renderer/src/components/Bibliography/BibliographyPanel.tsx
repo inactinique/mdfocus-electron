@@ -76,8 +76,8 @@ export const BibliographyPanel: React.FC = () => {
         total = result.total;
       }
 
-      // If we have a project (non-notes), save the bibliography source configuration
-      if (currentProject && currentProject.type !== 'notes') {
+      // If we have a project, save the bibliography source configuration
+      if (currentProject) {
         // Copy the .bib file to the project directory
         const bibFileName = sourcePath.split('/').pop() || 'bibliography.bib';
         const targetPath = `${currentProject.path}/${bibFileName}`;
