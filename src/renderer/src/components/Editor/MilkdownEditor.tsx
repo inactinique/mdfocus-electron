@@ -1,15 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Editor, rootCtx, defaultValueCtx, editorViewCtx } from '@milkdown/kit/core';
-import { Milkdown, MilkdownProvider, useEditor, useInstance } from '@milkdown/react';
-import { commonmark } from '@milkdown/kit/preset/commonmark';
-import { gfm } from '@milkdown/kit/preset/gfm';
-import { history } from '@milkdown/plugin-history';
-import { clipboard } from '@milkdown/plugin-clipboard';
-import { listener, listenerCtx } from '@milkdown/plugin-listener';
-import { cursor } from '@milkdown/plugin-cursor';
-import { indent } from '@milkdown/plugin-indent';
+import { Crepe } from '@milkdown/crepe';
+import { editorViewCtx } from '@milkdown/kit/core';
 import { useEditorStore } from '../../stores/editorStore';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
+import '@milkdown/crepe/theme/common/style.css';
+import '@milkdown/crepe/theme/nord-dark.css';
 import './MilkdownEditor.css';
 
 // Citation autocomplete component
@@ -31,7 +26,7 @@ const CitationAutocomplete: React.FC<{
       citation.title.toLowerCase().includes(searchText) ||
       citation.year.includes(searchText)
     );
-  }).slice(0, 10); // Limit to 10 results
+  }).slice(0, 10);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -87,10 +82,13 @@ const CitationAutocomplete: React.FC<{
   );
 };
 
-const MilkdownEditorInner: React.FC = () => {
-  const { content, setContent, settings } = useEditorStore();
+export const MilkdownEditor: React.FC = () => {
+  const { content, filePath, setContent, settings } = useEditorStore();
   const editorContainerRef = useRef<HTMLDivElement>(null);
-  const [loading, getEditor] = useInstance();
+  const crepeRef = useRef<Crepe | null>(null);
+  const isInternalUpdate = useRef(false);
+  const contentRef = useRef(content); // Store content in ref to avoid re-renders
+  const [isEditorReady, setIsEditorReady] = useState(false);
 
   // Citation autocomplete state
   const [showCitationMenu, setShowCitationMenu] = useState(false);
@@ -98,76 +96,109 @@ const MilkdownEditorInner: React.FC = () => {
   const [citationMenuPosition, setCitationMenuPosition] = useState({ top: 0, left: 0 });
   const citationStartPos = useRef<number | null>(null);
 
-  // Store editor reference
-  const editorRef = useRef<Editor | null>(null);
-
-  useEditor((root) =>
-    Editor.make()
-      .config((ctx) => {
-        ctx.set(rootCtx, root);
-        ctx.set(defaultValueCtx, content);
-
-        // Configure listener for content changes
-        ctx.get(listenerCtx)
-          .markdownUpdated((_ctx, markdown, prevMarkdown) => {
-            if (markdown !== prevMarkdown) {
-              setContent(markdown);
-            }
-          });
-      })
-      .use(commonmark)
-      .use(gfm)
-      .use(history)
-      .use(clipboard)
-      .use(listener)
-      .use(cursor)
-      .use(indent)
-  );
-
-  // Store editor reference for external access
+  // Keep contentRef in sync for when we need to create a new editor
   useEffect(() => {
-    if (!loading) {
-      const editor = getEditor();
-      if (editor) {
-        editorRef.current = editor;
-        useEditorStore.setState({ milkdownEditor: editor });
-      }
+    contentRef.current = content;
+  }, [content]);
+
+  // Safe editor action wrapper
+  const safeEditorAction = useCallback((action: (ctx: Parameters<Parameters<NonNullable<typeof crepeRef.current>['editor']['action']>[0]>[0]) => void) => {
+    const crepe = crepeRef.current;
+    if (!crepe?.editor || !isEditorReady) return false;
+
+    try {
+      crepe.editor.action(action);
+      return true;
+    } catch (error) {
+      console.warn('[MilkdownEditor] Editor action failed:', error);
+      return false;
     }
-  }, [loading, getEditor]);
+  }, [isEditorReady]);
+
+  // Initialize Crepe editor - recreate only when filePath changes
+  useEffect(() => {
+    if (!editorContainerRef.current) return;
+
+    setIsEditorReady(false);
+
+    // Destroy existing editor if any
+    if (crepeRef.current) {
+      console.log('[MilkdownEditor] Destroying old editor for new file');
+      crepeRef.current.destroy();
+      crepeRef.current = null;
+    }
+
+    console.log('[MilkdownEditor] Initializing Crepe editor for file:', filePath);
+
+    // Use contentRef.current to get the latest content without adding it as dependency
+    const crepe = new Crepe({
+      root: editorContainerRef.current,
+      defaultValue: contentRef.current || '# Bienvenue\n\nCommencez à écrire...',
+      featureConfigs: {
+        [Crepe.Feature.Placeholder]: {
+          text: 'Commencez à écrire...',
+        },
+      },
+    });
+
+    crepe.on((listener) => {
+      listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
+        if (markdown !== prevMarkdown) {
+          isInternalUpdate.current = true;
+          setContent(markdown);
+          // Reset after a short delay to allow state to settle
+          setTimeout(() => {
+            isInternalUpdate.current = false;
+          }, 50);
+        }
+      });
+    });
+
+    crepe.create().then(() => {
+      console.log('[MilkdownEditor] Crepe editor created successfully');
+      crepeRef.current = crepe;
+      // Store the editor for external access
+      useEditorStore.setState({ milkdownEditor: crepe.editor });
+      // Mark editor as ready after a short delay to ensure context is fully initialized
+      setTimeout(() => {
+        setIsEditorReady(true);
+        console.log('[MilkdownEditor] Editor is now ready');
+      }, 100);
+    }).catch((err) => {
+      console.error('[MilkdownEditor] Failed to create editor:', err);
+    });
+
+    return () => {
+      console.log('[MilkdownEditor] Destroying Crepe editor on unmount');
+      setIsEditorReady(false);
+      crepe.destroy();
+      crepeRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filePath, setContent]); // Only recreate when filePath changes, NOT when content changes
 
   // Handle IPC text insertion from bibliography panel
   useEffect(() => {
     const handler = (text: string) => {
-      if (!loading) {
-        const editor = getEditor();
-        if (editor) {
-          editor.action((ctx) => {
-            const view = ctx.get(editorViewCtx);
-            const { state } = view;
-            const { tr, selection } = state;
-            tr.insertText(text, selection.from, selection.to);
-            view.dispatch(tr);
-            view.focus();
-          });
-        }
-      }
+      safeEditorAction((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        const { state } = view;
+        const { tr, selection } = state;
+        tr.insertText(text, selection.from, selection.to);
+        view.dispatch(tr);
+        view.focus();
+      });
     };
 
     window.electron.editor.onInsertText(handler);
-
-    // Note: The IPC listener doesn't provide an unsubscribe mechanism
-    // This is a known limitation of the current preload API
-  }, [loading, getEditor]);
+  }, [safeEditorAction]);
 
   // Handle citation autocomplete detection
   useEffect(() => {
-    if (loading) return;
-
-    const editor = getEditor();
-    if (!editor) return;
-
     const handleKeyUp = () => {
-      editor.action((ctx) => {
+      if (!isEditorReady) return;
+
+      safeEditorAction((ctx) => {
         const view = ctx.get(editorViewCtx);
         const { state } = view;
         const { selection } = state;
@@ -181,11 +212,9 @@ const MilkdownEditorInner: React.FC = () => {
         const citationMatch = textBefore.match(/\[@([a-zA-Z0-9_-]*)$/);
 
         if (citationMatch) {
-          // Show autocomplete
           const query = citationMatch[1] || '';
           setCitationQuery(query);
 
-          // Calculate position for menu
           const coords = view.coordsAtPos(pos);
           const editorRect = editorContainerRef.current?.getBoundingClientRect();
           if (editorRect) {
@@ -204,31 +233,27 @@ const MilkdownEditorInner: React.FC = () => {
       });
     };
 
-    // Listen for input events
-    const editorElement = editorContainerRef.current?.querySelector('.milkdown');
-    if (editorElement) {
-      editorElement.addEventListener('keyup', handleKeyUp);
+    const container = editorContainerRef.current;
+    if (container) {
+      container.addEventListener('keyup', handleKeyUp);
       return () => {
-        editorElement.removeEventListener('keyup', handleKeyUp);
+        container.removeEventListener('keyup', handleKeyUp);
       };
     }
-  }, [loading, getEditor]);
+  }, [isEditorReady, safeEditorAction]);
 
   // Handle citation selection
   const handleCitationSelect = useCallback((citationId: string) => {
-    if (loading) return;
+    if (citationStartPos.current === null) return;
 
-    const editor = getEditor();
-    if (!editor || citationStartPos.current === null) return;
-
-    editor.action((ctx) => {
+    const startPos = citationStartPos.current;
+    safeEditorAction((ctx) => {
       const view = ctx.get(editorViewCtx);
       const { state } = view;
       const { selection } = state;
 
-      // Replace from "[@" to current position with full citation
       const tr = state.tr.replaceWith(
-        citationStartPos.current!,
+        startPos,
         selection.from,
         state.schema.text(`[@${citationId}]`)
       );
@@ -239,37 +264,30 @@ const MilkdownEditorInner: React.FC = () => {
 
     setShowCitationMenu(false);
     citationStartPos.current = null;
-  }, [loading, getEditor]);
+  }, [safeEditorAction]);
 
-  // Apply settings
+  // Apply font settings via CSS custom properties
   useEffect(() => {
-    const editorElement = editorContainerRef.current?.querySelector('.milkdown') as HTMLElement;
-    if (editorElement) {
-      // Font size
-      editorElement.style.fontSize = `${settings.fontSize}px`;
+    const container = editorContainerRef.current;
+    if (container) {
+      container.style.setProperty('--editor-font-size', `${settings.fontSize}px`);
 
-      // Font family
       const fontFamilyMap: Record<string, string> = {
-        system: "'SF Mono', 'Monaco', 'Consolas', 'Ubuntu Mono', monospace",
+        system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         jetbrains: "'JetBrains Mono', 'Consolas', monospace",
         fira: "'Fira Code', 'Consolas', monospace",
         source: "'Source Code Pro', 'Consolas', monospace",
         cascadia: "'Cascadia Code', 'Consolas', monospace",
       };
-      editorElement.style.fontFamily = fontFamilyMap[settings.fontFamily] || fontFamilyMap.system;
-
-      // Word wrap
-      editorElement.style.overflowWrap = settings.wordWrap ? 'break-word' : 'normal';
-      editorElement.style.whiteSpace = settings.wordWrap ? 'pre-wrap' : 'pre';
+      container.style.setProperty('--editor-font-family', fontFamilyMap[settings.fontFamily] || fontFamilyMap.system);
     }
-  }, [settings.fontSize, settings.fontFamily, settings.wordWrap]);
+  }, [settings.fontSize, settings.fontFamily]);
 
   return (
     <div
       ref={editorContainerRef}
       className={`milkdown-editor-container ${settings.theme === 'dark' ? 'milkdown-dark' : 'milkdown-light'}`}
     >
-      <Milkdown />
       {showCitationMenu && (
         <CitationAutocomplete
           query={citationQuery}
@@ -279,13 +297,5 @@ const MilkdownEditorInner: React.FC = () => {
         />
       )}
     </div>
-  );
-};
-
-export const MilkdownEditor: React.FC = () => {
-  return (
-    <MilkdownProvider>
-      <MilkdownEditorInner />
-    </MilkdownProvider>
   );
 };

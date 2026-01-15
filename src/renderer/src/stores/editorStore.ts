@@ -197,8 +197,62 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   insertFormatting: (type: 'bold' | 'italic' | 'link' | 'citation' | 'table' | 'footnote' | 'blockquote') => {
     logger.store('Editor', 'insertFormatting called', { type });
     const { content } = get();
-    let textToInsert = '';
+    const editor = get().milkdownEditor;
 
+    // Special handling for footnotes - insert reference AND definition
+    if (type === 'footnote') {
+      // Find the highest footnote number in the document
+      const footnoteRefs = content.match(/\[\^(\d+)\]/g) || [];
+      const numbers = footnoteRefs.map(ref => {
+        const match = ref.match(/\[\^(\d+)\]/);
+        return match ? parseInt(match[1], 10) : 0;
+      });
+      const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+
+      const reference = `[^${nextNumber}]`;
+      const definition = `\n\n[^${nextNumber}]: `;
+
+      if (editor) {
+        try {
+          editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const { state } = view;
+
+            // Insert the reference at cursor position
+            let tr = state.tr.insertText(reference, state.selection.from, state.selection.to);
+            view.dispatch(tr);
+
+            // Get the updated state and insert definition at the end
+            const newState = view.state;
+            const docEnd = newState.doc.content.size;
+            tr = newState.tr.insertText(definition, docEnd);
+
+            // Move cursor to the end (after definition marker) so user can type
+            const newCursorPos = docEnd + definition.length;
+            tr = tr.setSelection(newState.selection.constructor.near(tr.doc.resolve(newCursorPos)));
+
+            view.dispatch(tr);
+            view.focus();
+          });
+          set({ isDirty: true });
+          logger.store('Editor', 'Footnote inserted', { number: nextNumber });
+          return;
+        } catch (error) {
+          logger.error('Editor', 'Failed to insert footnote at cursor');
+          // Fallback below
+        }
+      }
+
+      // Fallback: append to content
+      set({
+        content: content + reference + definition,
+        isDirty: true,
+      });
+      return;
+    }
+
+    // Regular formatting
+    let textToInsert = '';
     switch (type) {
       case 'bold':
         textToInsert = '**texte en gras**';
@@ -215,19 +269,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       case 'table':
         textToInsert = '\n| Colonne 1 | Colonne 2 |\n|-----------|----------|\n| Cellule 1 | Cellule 2 |\n';
         break;
-      case 'footnote':
-        // Count existing footnotes to get the next number
-        const footnoteMatches = content.match(/\[\^(\d+)\]/g) || [];
-        const nextNumber = footnoteMatches.length + 1;
-        textToInsert = `[^${nextNumber}]`;
-        break;
       case 'blockquote':
         textToInsert = '\n> Citation ou bloc de texte important\n> Continuation de la citation\n';
         break;
     }
 
     // Try to insert at cursor position using Milkdown editor
-    const editor = get().milkdownEditor;
     if (editor) {
       try {
         editor.action((ctx) => {

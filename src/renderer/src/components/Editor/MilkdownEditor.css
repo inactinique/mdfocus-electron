@@ -1,316 +1,81 @@
-/* MilkdownEditor.css - Styles WYSIWYG pour Milkdown */
+/* MilkdownEditor.css - Styles WYSIWYG pour Milkdown Crepe */
 
 .milkdown-editor-container {
   width: 100%;
   height: 100%;
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: auto;
+  --editor-font-size: 14px;
+  --editor-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.milkdown-editor-container .milkdown {
-  width: 100%;
-  height: 100%;
-  padding: var(--spacing-md);
-  outline: none;
+/* Override Crepe's default styles for dark theme */
+.milkdown-dark,
+.milkdown-dark .milkdown,
+.milkdown-dark milkdown-toolbar,
+.milkdown-dark .crepe {
+  --crepe-color-background: #1e1e1e !important;
+  --crepe-color-foreground: #e0e0e0 !important;
+  --crepe-color-solid: #e0e0e0 !important;
+  --crepe-color-secondary: #888888 !important;
+  --crepe-color-surface: #2d2d2d !important;
+  --crepe-color-border: #3d3d3d !important;
+  --crepe-color-primary: #007acc !important;
+  --crepe-color-inline-code: #2d2d2d !important;
+  --crepe-color-hover: rgba(255, 255, 255, 0.1) !important;
+  --crepe-color-selected: rgba(0, 122, 204, 0.3) !important;
+  background-color: #1e1e1e !important;
+  color: #e0e0e0 !important;
+}
+
+/* Force dark background on all editor elements */
+.milkdown-dark .ProseMirror,
+.milkdown-dark [data-milkdown-root],
+.milkdown-dark .editor {
+  background-color: #1e1e1e !important;
+  color: #e0e0e0 !important;
+}
+
+/* Override Crepe's default styles for light theme */
+.milkdown-light {
+  --crepe-color-background: #ffffff;
+  --crepe-color-foreground: #1e1e1e;
+  --crepe-color-solid: #1e1e1e;
+  --crepe-color-secondary: #666;
+  --crepe-color-surface: #f5f5f5;
+  --crepe-color-border: #e0e0e0;
+  --crepe-color-primary: #007acc;
+  --crepe-color-inline-code: #f0f0f0;
+  background-color: #ffffff;
+  color: #1e1e1e;
+}
+
+/* Apply custom font settings */
+.milkdown-editor-container .milkdown,
+.milkdown-editor-container .ProseMirror {
+  font-size: var(--editor-font-size) !important;
+  font-family: var(--editor-font-family) !important;
   line-height: 1.7;
 }
 
-/* Dark theme */
-.milkdown-dark {
-  background-color: var(--bg-app);
-  color: var(--text-primary);
+/* Make editor fill container */
+.milkdown-editor-container .milkdown {
+  min-height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
-.milkdown-dark .milkdown {
-  background-color: var(--bg-app);
-  color: var(--text-primary);
+.milkdown-editor-container .ProseMirror {
+  min-height: 100%;
+  outline: none;
 }
 
-/* Light theme */
-.milkdown-light {
-  background-color: #ffffff;
-  color: #1e1e1e;
-}
-
-.milkdown-light .milkdown {
-  background-color: #ffffff;
-  color: #1e1e1e;
-}
-
-/* ============================================
-   Typography - Headers
-   ============================================ */
-
-.milkdown-editor-container h1 {
-  font-size: 2em;
-  font-weight: 700;
-  margin: 0.67em 0 0.5em 0;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.milkdown-editor-container h2 {
-  font-size: 1.5em;
-  font-weight: 600;
-  margin: 0.83em 0 0.5em 0;
-  padding-bottom: 0.2em;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.milkdown-editor-container h3 {
-  font-size: 1.25em;
-  font-weight: 600;
-  margin: 1em 0 0.5em 0;
-}
-
-.milkdown-editor-container h4 {
-  font-size: 1em;
-  font-weight: 600;
-  margin: 1em 0 0.5em 0;
-}
-
-.milkdown-editor-container h5,
-.milkdown-editor-container h6 {
-  font-size: 0.875em;
-  font-weight: 600;
-  margin: 1em 0 0.5em 0;
-  color: var(--text-secondary);
-}
-
-/* ============================================
-   Typography - Inline formatting
-   ============================================ */
-
-.milkdown-editor-container strong {
-  font-weight: 700;
-}
-
-.milkdown-editor-container em {
-  font-style: italic;
-}
-
-.milkdown-editor-container del {
-  text-decoration: line-through;
-  color: var(--text-secondary);
-}
-
-.milkdown-editor-container a {
-  color: var(--color-accent);
-  text-decoration: none;
-}
-
-.milkdown-editor-container a:hover {
-  text-decoration: underline;
-}
-
-/* ============================================
-   Code blocks
-   ============================================ */
-
-.milkdown-editor-container code {
-  font-family: 'SF Mono', 'Monaco', 'Consolas', 'Ubuntu Mono', monospace;
-  background-color: var(--code-bg, rgba(0, 0, 0, 0.1));
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 0.9em;
-}
-
-.milkdown-dark code {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.milkdown-light code {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.milkdown-editor-container pre {
-  background-color: var(--bg-panel, #1e1e1e);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  overflow-x: auto;
-  margin: var(--spacing-md) 0;
-}
-
-.milkdown-editor-container pre code {
-  background-color: transparent;
-  padding: 0;
-  border-radius: 0;
-}
-
-/* ============================================
-   Blockquotes
-   ============================================ */
-
-.milkdown-editor-container blockquote {
-  border-left: 4px solid var(--color-accent);
-  margin: var(--spacing-md) 0;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background-color: var(--bg-panel, rgba(0, 0, 0, 0.05));
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.milkdown-editor-container blockquote p {
-  margin: 0;
-}
-
-/* ============================================
-   Lists
-   ============================================ */
-
-.milkdown-editor-container ul,
-.milkdown-editor-container ol {
-  padding-left: 2em;
-  margin: var(--spacing-sm) 0;
-}
-
-.milkdown-editor-container li {
-  margin: var(--spacing-xs) 0;
-}
-
-.milkdown-editor-container li > p {
-  margin: 0;
-}
-
-/* Task lists (GFM) */
-.milkdown-editor-container ul.contains-task-list {
-  list-style: none;
-  padding-left: 1.5em;
-}
-
-.milkdown-editor-container li.task-list-item {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-xs);
-}
-
-.milkdown-editor-container li.task-list-item input[type="checkbox"] {
-  margin-top: 0.3em;
-  accent-color: var(--color-accent);
-}
-
-/* ============================================
-   Tables (GFM)
-   ============================================ */
-
-.milkdown-editor-container table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: var(--spacing-md) 0;
-  font-size: 0.95em;
-}
-
-.milkdown-editor-container th,
-.milkdown-editor-container td {
-  border: 1px solid var(--border-color);
-  padding: var(--spacing-sm) var(--spacing-md);
-  text-align: left;
-}
-
-.milkdown-editor-container th {
-  background-color: var(--bg-panel, rgba(0, 0, 0, 0.1));
-  font-weight: 600;
-}
-
-.milkdown-dark th {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.milkdown-light th {
-  background-color: rgba(0, 0, 0, 0.03);
-}
-
-.milkdown-editor-container tr:nth-child(even) {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.milkdown-dark tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
-/* ============================================
-   Horizontal rule
-   ============================================ */
-
-.milkdown-editor-container hr {
-  border: none;
-  border-top: 1px solid var(--border-color);
-  margin: var(--spacing-lg) 0;
-}
-
-/* ============================================
-   Images
-   ============================================ */
-
-.milkdown-editor-container img {
-  max-width: 100%;
-  height: auto;
-  border-radius: var(--radius-sm);
-  margin: var(--spacing-sm) 0;
-}
-
-/* ============================================
-   Footnotes (GFM)
-   ============================================ */
-
-/* Footnote reference [^1] */
-.milkdown-editor-container sup {
-  font-size: 0.75em;
-  vertical-align: super;
-}
-
-.milkdown-editor-container sup a {
-  color: var(--color-accent);
-  text-decoration: none;
-  padding: 0 2px;
-}
-
-.milkdown-editor-container sup a:hover {
-  text-decoration: underline;
-}
-
-/* Footnote definition section */
-.milkdown-editor-container .footnotes {
-  margin-top: var(--spacing-xl);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--border-color);
-  font-size: 0.9em;
-  color: var(--text-secondary);
-}
-
-.milkdown-editor-container .footnotes ol {
-  padding-left: 1.5em;
-}
-
-.milkdown-editor-container .footnotes li {
-  margin: var(--spacing-sm) 0;
-}
-
-.milkdown-editor-container .footnotes .footnote-backref {
-  color: var(--color-accent);
-  text-decoration: none;
-  margin-left: var(--spacing-xs);
-}
-
-/* ============================================
-   Citations - Custom styling for [@citekey]
-   ============================================ */
-
-/* Style citations in the text */
-.milkdown-editor-container .citation,
-.milkdown-editor-container [data-citation] {
-  background-color: var(--color-accent);
-  color: var(--text-on-accent, #ffffff);
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  font-size: 0.9em;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.milkdown-editor-container .citation:hover,
-.milkdown-editor-container [data-citation]:hover {
-  opacity: 0.9;
+.milkdown-editor-container .ProseMirror:focus {
+  outline: none;
 }
 
 /* ============================================
@@ -321,8 +86,8 @@
   position: absolute;
   z-index: 1000;
   background-color: var(--bg-card, #2d2d2d);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color, #3d3d3d);
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   max-height: 300px;
   overflow-y: auto;
@@ -331,8 +96,8 @@
 }
 
 .citation-autocomplete-empty {
-  padding: var(--spacing-md);
-  color: var(--text-secondary);
+  padding: 12px 16px;
+  color: var(--text-secondary, #888);
   font-size: 0.9em;
   text-align: center;
 }
@@ -343,10 +108,10 @@
   align-items: flex-start;
   gap: 2px;
   width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 8px 16px;
   border: none;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--text-primary, #e0e0e0);
   text-align: left;
   cursor: pointer;
   transition: background-color 0.15s;
@@ -357,23 +122,23 @@
 }
 
 .citation-autocomplete-item:not(:last-child) {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color, #3d3d3d);
 }
 
 .citation-autocomplete-item .citation-key {
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent, #007acc);
   font-size: 0.95em;
 }
 
 .citation-autocomplete-item .citation-info {
   font-size: 0.85em;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #888);
 }
 
 .citation-autocomplete-item .citation-title {
   font-size: 0.8em;
-  color: var(--text-tertiary, var(--text-secondary));
+  color: var(--text-tertiary, #666);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -381,74 +146,56 @@
 }
 
 /* ============================================
-   Paragraphs
+   Custom styles for specific elements
    ============================================ */
 
-.milkdown-editor-container p {
-  margin: var(--spacing-sm) 0;
+/* Headers - make them stand out more in dark theme */
+.milkdown-dark h1,
+.milkdown-dark h2,
+.milkdown-dark h3,
+.milkdown-dark h4,
+.milkdown-dark h5,
+.milkdown-dark h6 {
+  color: var(--text-primary, #e0e0e0);
 }
 
-.milkdown-editor-container p:first-child {
-  margin-top: 0;
+/* Links */
+.milkdown-editor-container a {
+  color: var(--color-accent, #007acc);
 }
 
-/* ============================================
-   Selection
-   ============================================ */
+/* Code blocks */
+.milkdown-dark pre {
+  background-color: var(--bg-panel, #2d2d2d) !important;
+}
 
+.milkdown-dark code {
+  background-color: var(--bg-panel, #2d2d2d) !important;
+}
+
+/* Blockquotes */
+.milkdown-editor-container blockquote {
+  border-left-color: var(--color-accent, #007acc) !important;
+}
+
+/* Tables */
+.milkdown-editor-container table {
+  border-color: var(--border-color, #3d3d3d);
+}
+
+.milkdown-editor-container th,
+.milkdown-editor-container td {
+  border-color: var(--border-color, #3d3d3d);
+}
+
+.milkdown-dark th {
+  background-color: var(--bg-panel, #2d2d2d);
+}
+
+/* Selection */
 .milkdown-editor-container ::selection {
-  background-color: var(--color-accent);
-  color: var(--text-on-accent, #ffffff);
-}
-
-/* ============================================
-   ProseMirror specific styles
-   ============================================ */
-
-.milkdown-editor-container .ProseMirror {
-  outline: none;
-  min-height: 100%;
-}
-
-.milkdown-editor-container .ProseMirror-selectednode {
-  outline: 2px solid var(--color-accent);
-}
-
-/* Placeholder for empty editor */
-.milkdown-editor-container .ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  color: var(--text-secondary);
-  opacity: 0.5;
-  pointer-events: none;
-  float: left;
-  height: 0;
-}
-
-/* Gap cursor */
-.milkdown-editor-container .ProseMirror-gapcursor {
-  display: none;
-  pointer-events: none;
-  position: absolute;
-}
-
-.milkdown-editor-container .ProseMirror-gapcursor:after {
-  content: "";
-  display: block;
-  position: absolute;
-  top: -2px;
-  width: 20px;
-  border-top: 1px solid var(--text-primary);
-  animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
-}
-
-@keyframes ProseMirror-cursor-blink {
-  to {
-    visibility: hidden;
-  }
-}
-
-.milkdown-editor-container .ProseMirror-focused .ProseMirror-gapcursor {
-  display: block;
+  background-color: var(--color-accent, #007acc);
+  color: white;
 }
 
 /* ============================================
@@ -465,10 +212,278 @@
 }
 
 .milkdown-editor-container::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb, rgba(255, 255, 255, 0.2));
+  background-color: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
 }
 
 .milkdown-editor-container::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover, rgba(255, 255, 255, 0.3));
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   Crepe Toolbar Styling for Dark Theme
+   ============================================ */
+
+/* Main toolbar container */
+.milkdown-dark milkdown-toolbar,
+.milkdown-dark .milkdown-toolbar {
+  background-color: #2d2d2d !important;
+  border-bottom: 1px solid #3d3d3d !important;
+}
+
+/* Toolbar buttons */
+.milkdown-dark milkdown-toolbar button,
+.milkdown-dark .milkdown-toolbar button {
+  color: #e0e0e0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.milkdown-dark milkdown-toolbar button:hover,
+.milkdown-dark .milkdown-toolbar button:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.milkdown-dark milkdown-toolbar button[data-active="true"],
+.milkdown-dark .milkdown-toolbar button[data-active="true"],
+.milkdown-dark milkdown-toolbar button.active,
+.milkdown-dark .milkdown-toolbar button.active {
+  background-color: #007acc !important;
+  color: white !important;
+}
+
+/* Toolbar separators/dividers */
+.milkdown-dark milkdown-toolbar [role="separator"],
+.milkdown-dark .milkdown-toolbar .separator {
+  background-color: #3d3d3d !important;
+}
+
+/* Dropdown menus in toolbar */
+.milkdown-dark [data-radix-popper-content-wrapper],
+.milkdown-dark [role="listbox"],
+.milkdown-dark [role="menu"] {
+  background-color: #2d2d2d !important;
+  border: 1px solid #3d3d3d !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.milkdown-dark [role="option"],
+.milkdown-dark [role="menuitem"] {
+  color: #e0e0e0 !important;
+}
+
+.milkdown-dark [role="option"]:hover,
+.milkdown-dark [role="menuitem"]:hover,
+.milkdown-dark [role="option"][data-highlighted],
+.milkdown-dark [role="menuitem"][data-highlighted] {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Input fields in toolbar (like link input) */
+.milkdown-dark milkdown-toolbar input,
+.milkdown-dark .milkdown-toolbar input {
+  background-color: #1e1e1e !important;
+  border: 1px solid #3d3d3d !important;
+  color: #e0e0e0 !important;
+}
+
+.milkdown-dark milkdown-toolbar input:focus,
+.milkdown-dark .milkdown-toolbar input:focus {
+  border-color: #007acc !important;
+  outline: none !important;
+}
+
+/* Slash menu (command palette) */
+.milkdown-dark .crepe-slash-menu,
+.milkdown-dark [data-crepe-slash-menu] {
+  background-color: #2d2d2d !important;
+  border: 1px solid #3d3d3d !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.milkdown-dark .crepe-slash-menu-item,
+.milkdown-dark [data-crepe-slash-menu] button {
+  color: #e0e0e0 !important;
+}
+
+.milkdown-dark .crepe-slash-menu-item:hover,
+.milkdown-dark [data-crepe-slash-menu] button:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Block handle (drag handle) */
+.milkdown-dark .crepe-block-handle,
+.milkdown-dark [data-crepe-block-handle] {
+  color: #888 !important;
+}
+
+.milkdown-dark .crepe-block-handle:hover,
+.milkdown-dark [data-crepe-block-handle]:hover {
+  color: #e0e0e0 !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Link tooltip/popup */
+.milkdown-dark .crepe-link-tooltip,
+.milkdown-dark [data-crepe-link-tooltip] {
+  background-color: #2d2d2d !important;
+  border: 1px solid #3d3d3d !important;
+  color: #e0e0e0 !important;
+}
+
+/* Image toolbar */
+.milkdown-dark .crepe-image-toolbar,
+.milkdown-dark [data-crepe-image-toolbar] {
+  background-color: #2d2d2d !important;
+  border: 1px solid #3d3d3d !important;
+}
+
+/* Table cell menu */
+.milkdown-dark .crepe-table-menu,
+.milkdown-dark [data-crepe-table-menu] {
+  background-color: #2d2d2d !important;
+  border: 1px solid #3d3d3d !important;
+}
+
+/* ============================================
+   Footnote Styling - WYSIWYG
+   ============================================ */
+
+/* Footnote reference (inline) - e.g., [^1] */
+.milkdown-editor-container [data-type="footnote_reference"],
+.milkdown-editor-container .footnote-reference,
+.milkdown-editor-container sup[data-footnote-ref] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #007acc;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin: 0 2px;
+  min-width: 16px;
+  height: 16px;
+  cursor: pointer;
+  vertical-align: super;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.milkdown-editor-container [data-type="footnote_reference"]:hover,
+.milkdown-editor-container .footnote-reference:hover,
+.milkdown-editor-container sup[data-footnote-ref]:hover {
+  background-color: #005a9e;
+}
+
+/* Light theme footnote reference */
+.milkdown-light [data-type="footnote_reference"],
+.milkdown-light .footnote-reference,
+.milkdown-light sup[data-footnote-ref] {
+  background-color: #0066cc;
+}
+
+.milkdown-light [data-type="footnote_reference"]:hover,
+.milkdown-light .footnote-reference:hover,
+.milkdown-light sup[data-footnote-ref]:hover {
+  background-color: #004c99;
+}
+
+/* Footnote definition block - e.g., [^1]: Definition text */
+.milkdown-editor-container [data-type="footnote_definition"],
+.milkdown-editor-container .footnote-definition {
+  display: block;
+  margin: 1em 0;
+  padding: 12px 16px;
+  padding-left: 40px;
+  background-color: rgba(0, 122, 204, 0.1);
+  border-left: 3px solid #007acc;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.95em;
+  position: relative;
+}
+
+/* Footnote definition number badge */
+.milkdown-editor-container [data-type="footnote_definition"]::before,
+.milkdown-editor-container .footnote-definition::before {
+  content: attr(data-label);
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #007acc;
+  border-radius: 4px;
+  padding: 1px 5px;
+  min-width: 16px;
+  height: 16px;
+}
+
+/* Dark theme footnote definition */
+.milkdown-dark [data-type="footnote_definition"],
+.milkdown-dark .footnote-definition {
+  background-color: rgba(0, 122, 204, 0.15);
+  color: #e0e0e0;
+}
+
+/* Light theme footnote definition */
+.milkdown-light [data-type="footnote_definition"],
+.milkdown-light .footnote-definition {
+  background-color: rgba(0, 102, 204, 0.08);
+  color: #1e1e1e;
+}
+
+/* Footnotes section separator */
+.milkdown-editor-container .footnotes-sep,
+.milkdown-editor-container hr.footnotes-sep {
+  margin: 2em 0 1em;
+  border: none;
+  border-top: 2px dashed rgba(0, 122, 204, 0.4);
+}
+
+/* Footnotes list at bottom */
+.milkdown-editor-container .footnotes,
+.milkdown-editor-container section.footnotes {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--border-color, #3d3d3d);
+  font-size: 0.9em;
+}
+
+.milkdown-editor-container .footnotes::before,
+.milkdown-editor-container section.footnotes::before {
+  content: "Notes de bas de page";
+  display: block;
+  font-weight: 600;
+  color: var(--text-secondary, #888);
+  margin-bottom: 0.5em;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Individual footnote item in list */
+.milkdown-editor-container .footnotes li,
+.milkdown-editor-container .footnote-item {
+  margin: 0.5em 0;
+  padding-left: 0.5em;
+}
+
+/* Back reference link */
+.milkdown-editor-container .footnote-backref,
+.milkdown-editor-container a[data-footnote-backref] {
+  color: #007acc;
+  text-decoration: none;
+  font-size: 0.85em;
+  margin-left: 0.5em;
+}
+
+.milkdown-editor-container .footnote-backref:hover,
+.milkdown-editor-container a[data-footnote-backref]:hover {
+  text-decoration: underline;
 }

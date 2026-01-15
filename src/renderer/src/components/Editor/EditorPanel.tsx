@@ -1,9 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, FolderOpen, Save, Link, BookOpen, Table, Superscript, Quote, CheckCircle } from 'lucide-react';
-// import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { FileText, FolderOpen, Save, CheckCircle, BookOpen, Superscript } from 'lucide-react';
 import { MilkdownEditor } from './MilkdownEditor';
-// import { MarkdownPreview } from './MarkdownPreview';
 import { DocumentStats } from './DocumentStats';
 import { useEditorStore } from '../../stores/editorStore';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
@@ -73,39 +71,15 @@ export const EditorPanel: React.FC = () => {
     }
   };
 
-  const handleBold = () => {
-    logger.component('EditorPanel', 'handleBold clicked');
-    insertFormatting('bold');
-  };
-
-  const handleItalic = () => {
-    logger.component('EditorPanel', 'handleItalic clicked');
-    insertFormatting('italic');
-  };
-
-  const handleLink = () => {
-    logger.component('EditorPanel', 'handleLink clicked');
-    insertFormatting('link');
-  };
-
+  // Academic-specific buttons (not in Crepe toolbar)
   const handleCitation = () => {
     logger.component('EditorPanel', 'handleCitation clicked');
     insertFormatting('citation');
   };
 
-  const handleTable = () => {
-    logger.component('EditorPanel', 'handleTable clicked');
-    insertFormatting('table');
-  };
-
   const handleFootnote = () => {
     logger.component('EditorPanel', 'handleFootnote clicked');
     insertFormatting('footnote');
-  };
-
-  const handleBlockQuote = () => {
-    logger.component('EditorPanel', 'handleBlockQuote clicked');
-    insertFormatting('blockquote');
   };
 
   const handleCheckCitations = () => {
@@ -122,14 +96,14 @@ export const EditorPanel: React.FC = () => {
     const duplicateCitations = citedKeys.filter((key, index) => citedKeys.indexOf(key) !== index);
 
     if (missingCitations.length === 0 && duplicateCitations.length === 0) {
-      alert('✅ Toutes les citations sont valides !');
+      alert('Toutes les citations sont valides !');
     } else {
       let message = '';
       if (missingCitations.length > 0) {
-        message += `❌ Citations manquantes dans la bibliographie:\n${missingCitations.join(', ')}\n\n`;
+        message += `Citations manquantes dans la bibliographie:\n${missingCitations.join(', ')}\n\n`;
       }
       if (duplicateCitations.length > 0) {
-        message += `⚠️ Citations en double:\n${[...new Set(duplicateCitations)].join(', ')}`;
+        message += `Citations en double:\n${[...new Set(duplicateCitations)].join(', ')}`;
       }
       alert(message);
     }
@@ -137,64 +111,37 @@ export const EditorPanel: React.FC = () => {
 
   return (
     <div className="editor-panel">
-      {/* Toolbar */}
+      {/* Toolbar - File operations and academic-specific buttons */}
       <div className="editor-toolbar">
+        {/* File operations */}
         <div className="toolbar-section">
           <button className="toolbar-btn" onClick={handleNewFile} title={t('toolbar.newFile')}>
-            <FileText size={20} strokeWidth={1} />
+            <FileText size={18} strokeWidth={1.5} />
           </button>
           <button className="toolbar-btn" onClick={handleOpenFile} title={t('toolbar.open')}>
-            <FolderOpen size={20} strokeWidth={1} />
+            <FolderOpen size={18} strokeWidth={1.5} />
           </button>
           <button className="toolbar-btn" onClick={handleSaveFile} title={t('toolbar.save')}>
-            <Save size={20} strokeWidth={1} />
+            <Save size={18} strokeWidth={1.5} />
           </button>
         </div>
 
+        {/* Academic tools - citation and footnote */}
         <div className="toolbar-section">
-          <button className="toolbar-btn" onClick={handleBold} title={t('toolbar.bold')}>
-            <strong>B</strong>
-          </button>
-          <button className="toolbar-btn" onClick={handleItalic} title={t('toolbar.italic')}>
-            <em>I</em>
-          </button>
-          <button className="toolbar-btn" onClick={handleLink} title={t('toolbar.link')}>
-            <Link size={20} strokeWidth={1} />
-          </button>
           <button className="toolbar-btn" onClick={handleCitation} title={t('toolbar.citation')}>
-            <BookOpen size={20} strokeWidth={1} />
+            <BookOpen size={18} strokeWidth={1.5} />
           </button>
-          <button className="toolbar-btn" onClick={handleTable} title={t('toolbar.table')}>
-            <Table size={20} strokeWidth={1} />
-          </button>
-        </div>
-
-        <div className="toolbar-section">
           <button className="toolbar-btn" onClick={handleFootnote} title={t('toolbar.footnote')}>
-            <Superscript size={20} strokeWidth={1} />
-          </button>
-          <button className="toolbar-btn" onClick={handleBlockQuote} title={t('toolbar.blockquote')}>
-            <Quote size={20} strokeWidth={1} />
+            <Superscript size={18} strokeWidth={1.5} />
           </button>
         </div>
 
+        {/* Validation */}
         <div className="toolbar-section">
           <button className="toolbar-btn" onClick={handleCheckCitations} title={t('toolbar.checkCitations')}>
-            <CheckCircle size={20} strokeWidth={1} />
+            <CheckCircle size={18} strokeWidth={1.5} />
           </button>
         </div>
-
-        {/* Preview button - disabled
-        <div className="toolbar-section">
-          <button
-            className={`toolbar-btn ${showPreview ? 'active' : ''}`}
-            onClick={togglePreview}
-            title="Afficher/Masquer l'aperçu"
-          >
-            <Eye size={20} strokeWidth={1} />
-          </button>
-        </div>
-        */}
       </div>
 
       {/* Editor content */}

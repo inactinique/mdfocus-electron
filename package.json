@@ -44,6 +44,7 @@
     "build:mac-universal": "npm run build && electron-builder --mac --universal"
   },
   "dependencies": {
+    "@milkdown/crepe": "^7.18.0",
     "@milkdown/kit": "^7.18.0",
     "@milkdown/plugin-clipboard": "^7.18.0",
     "@milkdown/plugin-cursor": "^7.18.0",
