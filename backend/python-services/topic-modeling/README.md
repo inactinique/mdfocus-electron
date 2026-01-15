@@ -1,4 +1,4 @@
-# mdFocus - Topic Modeling Service
+# ClioDesk - Topic Modeling Service
 
 Service Python pour l'analyse de topics avec BERTopic. Ce service reçoit des embeddings pré-calculés depuis Electron/Ollama et retourne les topics identifiés.
 
@@ -191,4 +191,4 @@ Le service est conçu pour être lancé comme subprocess depuis Electron via `To
 
 ## Licence
 
-Voir le fichier LICENSE du projet mdFocus.
+Voir le fichier LICENSE du projet ClioDesk.

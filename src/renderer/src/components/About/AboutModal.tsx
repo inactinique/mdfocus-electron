@@ -18,7 +18,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     <div className="about-modal" onClick={onClose}>
       <div className="about-content" onClick={(e) => e.stopPropagation()}>
         <div className="about-header">
-          <h3>About mdFocus</h3>
+          <h3>About ClioDesk</h3>
           <button className="close-btn" onClick={onClose}>
             <X size={20} />
           </button>
@@ -29,7 +29,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               <strong>Licence:</strong> AGPL{' '}
               <button
                 className="about-link"
-                onClick={() => openExternalLink('https://github.com/inactinique/mdfocus-electron')}
+                onClick={() => openExternalLink('https://github.com/inactinique/cliodesk')}
               >
                 GitHub Repository <ExternalLink size={14} />
               </button>

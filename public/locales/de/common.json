@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "mdFocus"
+    "name": "ClioDesk"
   },
   "actions": {
     "save": "Speichern",
@@ -150,7 +150,7 @@
     "projectFiles": "Projektdateien",
     "appearance": "Darstellung",
     "removeFromRecent": "Aus letzten Projekten entfernen",
-    "dialogTitle": "mdFocus-Projekt",
+    "dialogTitle": "ClioDesk-Projekt",
     "allFiles": "Alle Dateien",
     "name": "Name",
     "type": "Typ",

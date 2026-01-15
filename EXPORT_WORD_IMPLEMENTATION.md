@@ -2,7 +2,7 @@
 
 ## 📋 Résumé des modifications
 
-Ce document décrit l'implémentation complète du support des modèles Word (.dotx) pour l'export de documents dans mdFocus.
+Ce document décrit l'implémentation complète du support des modèles Word (.dotx) pour l'export de documents dans ClioDesk.
 
 ## ✅ Tâches complétées
 
@@ -216,7 +216,7 @@ describe('Word Export with Templates', () => {
 ### Améliorations futures possibles
 
 1. **Sélecteur de template** : Permettre de choisir parmi plusieurs templates
-2. **Éditeur de template** : Interface pour créer/éditer des templates directement dans mdFocus
+2. **Éditeur de template** : Interface pour créer/éditer des templates directement dans ClioDesk
 3. **Prévisualisation** : Aperçu du document avant export
 4. **Templates par défaut** : Templates pré-configurés pour différents types de documents
 5. **Validation** : Vérifier les placeholders avant export

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "mdFocus"
+    "name": "ClioDesk"
   },
   "actions": {
     "save": "Save",
@@ -159,7 +159,7 @@
     "projectFiles": "Project files",
     "appearance": "Appearance",
     "removeFromRecent": "Remove from recent projects",
-    "dialogTitle": "mdFocus Project",
+    "dialogTitle": "ClioDesk Project",
     "allFiles": "All files",
     "name": "Name",
     "type": "Type",

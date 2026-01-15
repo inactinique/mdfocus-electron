@@ -1,6 +1,6 @@
-# Architecture Technique - mdFocus
+# Architecture Technique - ClioDesk
 
-Ce document décrit l'architecture et le fonctionnement du système RAG (Retrieval-Augmented Generation) de mdFocus, un assistant d'écriture académique pour historiens et chercheurs en sciences humaines.
+Ce document décrit l'architecture et le fonctionnement du système RAG (Retrieval-Augmented Generation) de ClioDesk, un assistant d'écriture académique pour historiens et chercheurs en sciences humaines.
 
 ## Table des matières
 
@@ -16,7 +16,7 @@ Ce document décrit l'architecture et le fonctionnement du système RAG (Retriev
 
 ## Vue d'ensemble
 
-mdFocus est une application Electron qui combine :
+ClioDesk est une application Electron qui combine :
 - **Frontend** : Interface React/TypeScript avec Monaco Editor
 - **Backend** : Services Node.js/TypeScript pour l'indexation et la recherche
 - **Services Python** : Topic modeling et analyse textométrique
@@ -36,7 +36,7 @@ mdFocus est une application Electron qui combine :
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    mdFocus Electron App                      │
+│                    ClioDesk Electron App                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │

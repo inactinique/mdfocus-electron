@@ -303,14 +303,14 @@ export function createApplicationMenu(mainWindow: BrowserWindow): Menu {
           label: t('documentation'),
           click: async () => {
             const { shell } = await import('electron');
-            await shell.openExternal('https://github.com/yourusername/mdfocus-electron');
+            await shell.openExternal('https://github.com/inactinique/cliodesk');
           },
         },
         {
           label: t('reportIssue'),
           click: async () => {
             const { shell } = await import('electron');
-            await shell.openExternal('https://github.com/yourusername/mdfocus-electron/issues');
+            await shell.openExternal('https://github.com/inactinique/cliodesk/issues');
           },
         },
         { type: 'separator' as const },

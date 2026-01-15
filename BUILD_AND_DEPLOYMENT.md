@@ -1,6 +1,6 @@
-# Guide de Build et Déploiement - mdFocus
+# Guide de Build et Déploiement - ClioDesk
 
-Ce document explique comment compiler, packager et déployer mdFocus pour différentes plateformes.
+Ce document explique comment compiler, packager et déployer ClioDesk pour différentes plateformes.
 
 ## Table des matières
 
@@ -183,17 +183,17 @@ Crée un dossier exécutable non packagé dans `release/`.
 ### Structure de build
 
 ```
-mdfocus-electron/
+cliodesk/
 ├── dist/                    # Code compilé
 │   ├── src/
 │   │   ├── main/           # Main process JS
 │   │   ├── preload/        # Preload script JS
 │   │   └── renderer/       # React build
 ├── release/                # Installeurs
-│   ├── mdFocus-1.0.0.AppImage
-│   ├── mdFocus-1.0.0.dmg
-│   ├── mdFocus-1.0.0.deb
-│   └── mdFocus Setup 1.0.0.exe
+│   ├── ClioDesk-1.0.0.AppImage
+│   ├── ClioDesk-1.0.0.dmg
+│   ├── ClioDesk-1.0.0.deb
+│   └── ClioDesk Setup 1.0.0.exe
 └── build/                  # Assets pour packaging
     ├── icon.png
     ├── icon.icns
@@ -234,40 +234,40 @@ Windows ne peut builder que pour Windows.
 **AppImage (recommandé):**
 ```bash
 # Télécharger depuis GitHub Releases
-wget https://github.com/your-org/mdfocus-electron/releases/latest/download/mdFocus-1.0.0.AppImage
+wget https://github.com/inactinique/cliodesk/releases/latest/download/ClioDesk-1.0.0.AppImage
 
 # Rendre exécutable
-chmod +x mdFocus-1.0.0.AppImage
+chmod +x ClioDesk-1.0.0.AppImage
 
 # Lancer
-./mdFocus-1.0.0.AppImage
+./ClioDesk-1.0.0.AppImage
 ```
 
 **Debian/Ubuntu (.deb):**
 ```bash
-sudo dpkg -i mdFocus-1.0.0.deb
+sudo dpkg -i ClioDesk-1.0.0.deb
 sudo apt-get install -f  # Corriger les dépendances si nécessaire
-mdfocus
+cliodesk
 ```
 
 ### macOS
 
 1. Télécharger le fichier DMG depuis GitHub Releases
 2. Double-cliquer pour monter l'image disque
-3. Glisser mdFocus vers le dossier Applications
+3. Glisser ClioDesk vers le dossier Applications
 4. Lancer depuis Launchpad ou Applications
 
 **Première ouverture:**
 Si macOS affiche "app cannot be opened because it is from an unidentified developer":
 ```bash
-xattr -cr /Applications/mdFocus.app
+xattr -cr /Applications/ClioDesk.app
 ```
 
 Ou: Clic droit → Ouvrir → Confirmer
 
 ### Windows
 
-1. Télécharger `mdFocus-Setup-1.0.0.exe` depuis GitHub Releases
+1. Télécharger `ClioDesk-Setup-1.0.0.exe` depuis GitHub Releases
 2. Double-cliquer sur l'installeur
 3. Suivre l'assistant d'installation
 4. Lancer depuis le menu Démarrer ou le raccourci bureau
@@ -278,7 +278,7 @@ Ou: Clic droit → Ouvrir → Confirmer
 
 ### 1. Vérifier Ollama
 
-Au premier lancement, mdFocus vérifie automatiquement la connexion Ollama.
+Au premier lancement, ClioDesk vérifie automatiquement la connexion Ollama.
 
 **Si Ollama n'est pas détecté:**
 
@@ -319,7 +319,7 @@ Pour synchroniser avec Zotero:
    - Permissions: Read library, Write library
    - Copier la clé générée
 
-2. **Configurer dans mdFocus:**
+2. **Configurer dans ClioDesk:**
    - Settings → Zotero Integration
    - User ID: votre user ID Zotero (visible dans l'URL de votre bibliothèque)
    - API Key: coller la clé
@@ -472,20 +472,20 @@ ollama serve
 
 **Emplacements:**
 
-- Linux: `~/.config/mdFocus/logs/`
-- macOS: `~/Library/Logs/mdFocus/`
-- Windows: `%APPDATA%\mdFocus\logs\`
+- Linux: `~/.config/ClioDesk/logs/`
+- macOS: `~/Library/Logs/ClioDesk/`
+- Windows: `%APPDATA%\ClioDesk\logs\`
 
 **Consulter les logs:**
 ```bash
 # Linux
-cat ~/.config/mdFocus/logs/main.log
+cat ~/.config/ClioDesk/logs/main.log
 
 # macOS
-cat ~/Library/Logs/mdFocus/main.log
+cat ~/Library/Logs/ClioDesk/main.log
 
 # Windows
-type %APPDATA%\mdFocus\logs\main.log
+type %APPDATA%\ClioDesk\logs\main.log
 ```
 
 ---
@@ -552,7 +552,7 @@ Dans `package.json`:
     "publish": {
       "provider": "github",
       "owner": "your-org",
-      "repo": "mdfocus-electron"
+      "repo": "cliodesk"
     }
   }
 }
@@ -613,7 +613,7 @@ Dans `package.json`:
 
 Toutes les données restent **locales**:
 - PDFs et documents: stockés dans le dossier du projet
-- Embeddings et index: SQLite local (`.mdfocus/vectors.db`)
+- Embeddings et index: SQLite local (`.cliodesk/vectors.db`)
 - LLM et modèles: Ollama local
 
 **Aucune donnée n'est envoyée à des serveurs externes** (sauf si Zotero API est configuré pour la synchronisation).

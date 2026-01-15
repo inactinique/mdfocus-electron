@@ -2,23 +2,23 @@
 
 ## 📝 Vue d'ensemble
 
-mdFocus supporte l'utilisation de modèles Word personnalisés (fichiers `.dotx`) pour l'export de vos documents. Cette fonctionnalité vous permet d'appliquer votre propre mise en forme, styles et structure à vos exports Word.
+ClioDesk supporte l'utilisation de modèles Word personnalisés (fichiers `.dotx`) pour l'export de vos documents. Cette fonctionnalité vous permet d'appliquer votre propre mise en forme, styles et structure à vos exports Word.
 
 ## 🚀 Utilisation basique
 
 ### 1. Détection automatique
 
-Pour utiliser un modèle Word, placez simplement un fichier `.dotx` dans le dossier de votre projet mdFocus :
+Pour utiliser un modèle Word, placez simplement un fichier `.dotx` dans le dossier de votre projet ClioDesk :
 
 ```
 mon_projet/
-├── .mdfocus/
+├── .cliodesk/
 ├── document.md
 ├── bibliography.bib
 └── mon_modele.dotx  ← Votre modèle Word
 ```
 
-mdFocus détectera automatiquement le modèle et vous informera lors de l'export.
+ClioDesk détectera automatiquement le modèle et vous informera lors de l'export.
 
 ### 2. Export avec modèle
 
@@ -33,7 +33,7 @@ Le document généré utilisera les styles et la mise en forme de votre modèle.
 
 ## 📋 Création d'un modèle avec placeholders
 
-mdFocus utilise `docxtemplater` pour fusionner votre contenu avec le modèle. Vous pouvez créer un modèle avec des placeholders pour un contrôle précis :
+ClioDesk utilise `docxtemplater` pour fusionner votre contenu avec le modèle. Vous pouvez créer un modèle avec des placeholders pour un contrôle précis :
 
 ### Placeholders disponibles
 
@@ -73,7 +73,7 @@ Enregistrez ce document au format `.dotx` (Fichier → Enregistrer en tant que m
 
 ### Styles automatiques
 
-Si votre modèle contient des styles nommés, mdFocus les appliquera automatiquement :
+Si votre modèle contient des styles nommés, ClioDesk les appliquera automatiquement :
 
 - **Titre 1** → `Heading1` ou `Titre 1`
 - **Titre 2** → `Heading2` ou `Titre 2`
@@ -89,11 +89,11 @@ Votre modèle peut inclure :
 - ✅ Numérotation de pages
 - ✅ Logo ou image institutionnelle
 
-**Note** : Si votre modèle n'a pas d'en-tête/pied de page, mdFocus utilisera ceux par défaut (titre dans l'en-tête, numéro de page dans le pied de page).
+**Note** : Si votre modèle n'a pas d'en-tête/pied de page, ClioDesk utilisera ceux par défaut (titre dans l'en-tête, numéro de page dans le pied de page).
 
 ## 🔧 Comportement en cas d'erreur
 
-Si le modèle ne peut pas être chargé (fichier corrompu, placeholders incorrects, etc.), mdFocus :
+Si le modèle ne peut pas être chargé (fichier corrompu, placeholders incorrects, etc.), ClioDesk :
 1. ⚠️ Affichera un avertissement dans les logs
 2. 🔄 Basculera automatiquement vers la génération standard
 3. ✅ Créera quand même votre document (sans appliquer le modèle)
@@ -128,7 +128,7 @@ Incluez dans votre modèle :
 
 ### Plusieurs modèles
 
-Si vous avez plusieurs fichiers `.dotx` dans votre projet, mdFocus utilisera le **premier trouvé** (ordre alphabétique).
+Si vous avez plusieurs fichiers `.dotx` dans votre projet, ClioDesk utilisera le **premier trouvé** (ordre alphabétique).
 
 **Recommandation** : N'utilisez qu'un seul modèle par projet.
 
@@ -150,8 +150,8 @@ Copiez le modèle approprié dans votre projet avant l'export.
 ### Le modèle n'est pas détecté
 
 - ✅ Vérifiez que le fichier a bien l'extension `.dotx` (pas `.docx`)
-- ✅ Assurez-vous que le fichier est dans le **dossier racine** du projet (pas dans `.mdfocus/`)
-- ✅ Redémarrez mdFocus si nécessaire
+- ✅ Assurez-vous que le fichier est dans le **dossier racine** du projet (pas dans `.cliodesk/`)
+- ✅ Redémarrez ClioDesk si nécessaire
 
 ### Le contenu n'apparaît pas
 
@@ -174,7 +174,7 @@ Si vous utilisez des placeholders :
 ## 🆘 Support
 
 En cas de problème :
-1. Consultez les logs de mdFocus (Panneau Journal)
+1. Consultez les logs de ClioDesk (Panneau Journal)
 2. Vérifiez que votre modèle s'ouvre correctement dans Word
 3. Essayez d'exporter sans modèle pour vérifier que le problème vient du modèle
 

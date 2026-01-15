@@ -393,7 +393,7 @@ export class WordExportService {
     outputPath: string,
     onProgress?: (progress: WordExportProgress) => void
   ): Promise<{ success: boolean; outputPath?: string; error?: string }> {
-    const tempDir = join(tmpdir(), `mdfocus-word-export-${Date.now()}`);
+    const tempDir = join(tmpdir(), `cliodesk-word-export-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
 
     try {
@@ -709,7 +709,7 @@ export class WordExportService {
 
       // Create document
       const doc = new Document({
-        creator: options.metadata?.author || 'mdFocus',
+        creator: options.metadata?.author || 'ClioDesk',
         title: options.metadata?.title || 'Document',
         description: abstract || '',
         sections,

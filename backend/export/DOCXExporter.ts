@@ -46,7 +46,7 @@ export class DOCXExporter {
     // Créer le document DOCX
     const doc = new Document({
       title: options?.title,
-      creator: options?.author || 'mdFocus',
+      creator: options?.author || 'ClioDesk',
       sections: [
         {
           properties: {},

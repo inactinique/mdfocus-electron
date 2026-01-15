@@ -10,7 +10,7 @@ import { readdir, stat, chmod, access, constants } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 
-async function findMdfocusDirs(startPath) {
+async function findCliodeskDirs(startPath) {
   const results = [];
 
   try {
@@ -25,14 +25,14 @@ async function findMdfocusDirs(startPath) {
       }
 
       if (entry.isDirectory()) {
-        if (entry.name === '.mdfocus') {
+        if (entry.name === '.cliodesk') {
           results.push(fullPath);
         } else {
           // Recursively search (max depth 3 to avoid deep traversal)
           const depth = fullPath.split('/').length - startPath.split('/').length;
           if (depth < 3) {
             try {
-              const subResults = await findMdfocusDirs(fullPath);
+              const subResults = await findCliodeskDirs(fullPath);
               results.push(...subResults);
             } catch (err) {
               // Permission denied or other error, skip
@@ -48,20 +48,20 @@ async function findMdfocusDirs(startPath) {
   return results;
 }
 
-async function fixPermissions(mdfocusDir) {
-  console.log(`\n🔍 Checking: ${mdfocusDir}`);
+async function fixPermissions(cliodeskDir) {
+  console.log(`\n🔍 Checking: ${cliodeskDir}`);
 
   try {
     // Fix directory permissions
-    await chmod(mdfocusDir, 0o755);
-    console.log(`✅ Fixed directory permissions: ${mdfocusDir}`);
+    await chmod(cliodeskDir, 0o755);
+    console.log(`✅ Fixed directory permissions: ${cliodeskDir}`);
 
     // Find and fix database files
-    const entries = await readdir(mdfocusDir);
+    const entries = await readdir(cliodeskDir);
 
     for (const entry of entries) {
       if (entry.endsWith('.db') || entry.endsWith('.db-journal') || entry.endsWith('.db-wal')) {
-        const dbPath = join(mdfocusDir, entry);
+        const dbPath = join(cliodeskDir, entry);
 
         try {
           // Check if file is readable/writable
@@ -75,7 +75,7 @@ async function fixPermissions(mdfocusDir) {
       }
     }
   } catch (err) {
-    console.error(`❌ Error fixing permissions for ${mdfocusDir}:`, err.message);
+    console.error(`❌ Error fixing permissions for ${cliodeskDir}:`, err.message);
   }
 }
 
@@ -91,18 +91,18 @@ async function main() {
     console.log('No path specified, searching in home directory...');
   }
 
-  console.log(`🔍 Searching for .mdfocus directories in: ${searchPath}\n`);
+  console.log(`🔍 Searching for .cliodesk directories in: ${searchPath}\n`);
 
-  const mdfocusDirs = await findMdfocusDirs(searchPath);
+  const cliodeskDirs = await findCliodeskDirs(searchPath);
 
-  if (mdfocusDirs.length === 0) {
-    console.log('No .mdfocus directories found.');
+  if (cliodeskDirs.length === 0) {
+    console.log('No .cliodesk directories found.');
     return;
   }
 
-  console.log(`Found ${mdfocusDirs.length} .mdfocus directories:\n`);
+  console.log(`Found ${cliodeskDirs.length} .cliodesk directories:\n`);
 
-  for (const dir of mdfocusDirs) {
+  for (const dir of cliodeskDirs) {
     await fixPermissions(dir);
   }
 

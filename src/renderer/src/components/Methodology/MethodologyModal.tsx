@@ -146,9 +146,9 @@ export const MethodologyModal: React.FC<Props> = ({ isOpen, onClose, initialFeat
         <div className="modal-content">
           {viewMode === 'overview' && (
             <div className="overview">
-              <h2>Bienvenue dans mdFocus</h2>
+              <h2>Bienvenue dans ClioDesk</h2>
               <p className="intro">
-                mdFocus est un outil d'écriture académique assistée par IA, conçu pour les
+                ClioDesk est un outil d'écriture académique assistée par IA, conçu pour les
                 chercheurs en sciences humaines. Ce guide vous aide à comprendre les capacités,
                 limitations et bonnes pratiques de chaque fonctionnalité.
               </p>

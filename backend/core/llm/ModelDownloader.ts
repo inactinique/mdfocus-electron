@@ -182,7 +182,7 @@ export class ModelDownloader {
       const response = await fetch(url, {
         signal: this.abortController.signal,
         headers: {
-          'User-Agent': 'mdFocus/1.0',
+          'User-Agent': 'ClioDesk/1.0',
         },
       });
 

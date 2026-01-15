@@ -123,7 +123,7 @@ export const WordExportModal: React.FC<WordExportModalProps> = ({ isOpen, onClos
         templatePath: templatePath || undefined,
         metadata: {
           title,
-          author: author || 'mdFocus',
+          author: author || 'ClioDesk',
           date: new Date().toLocaleDateString('fr-FR'),
         },
       });

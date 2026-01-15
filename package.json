@@ -1,12 +1,12 @@
 {
-  "name": "mdfocus-electron",
+  "name": "cliodesk",
   "version": "0.1.0",
   "type": "module",
   "description": "Assistant d'écriture pour historiens avec RAG et intégration Zotero/Tropy",
   "main": "dist/src/main/index.js",
   "author": {
-    "name": "mdFocus Team",
-    "email": "contact@mdfocus.dev"
+    "name": "ClioDesk Team",
+    "email": "contact@cliodesk.dev"
   },
   "license": "MIT",
   "scripts": {
@@ -104,8 +104,8 @@
     "vitest": "^4.0.16"
   },
   "build": {
-    "appId": "com.mdfocus.app",
-    "productName": "mdFocus",
+    "appId": "com.cliodesk.app",
+    "productName": "ClioDesk",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -145,14 +145,14 @@
       ],
       "category": "Office",
       "icon": "build/icon.png",
-      "executableName": "mdfocus-electron",
+      "executableName": "cliodesk",
       "description": "Assistant d'écriture pour historiens avec RAG et intégration Zotero/Tropy",
       "desktop": {
-        "Name": "mdFocus",
+        "Name": "ClioDesk",
         "Comment": "Assistant d'écriture pour historiens avec RAG et intégration Zotero/Tropy",
         "Categories": "Office;TextEditor;",
         "MimeType": "text/markdown;",
-        "StartupWMClass": "mdFocus"
+        "StartupWMClass": "ClioDesk"
       },
       "executableArgs": [
         "--no-sandbox",

@@ -1,4 +1,4 @@
-# Installation de mdFocus
+# Installation de ClioDesk
 
 ## Installation rapide (Linux)
 
@@ -7,18 +7,18 @@
 1. Téléchargez le fichier `.AppImage` depuis les releases
 2. Rendez-le exécutable:
    ```bash
-   chmod +x mdFocus-*.AppImage
+   chmod +x ClioDesk-*.AppImage
    ```
 3. Pour l'installer dans le menu d'applications avec l'icône:
    ```bash
-   ./scripts/install-desktop.sh /chemin/vers/mdFocus-*.AppImage
+   ./scripts/install-desktop.sh /chemin/vers/ClioDesk-*.AppImage
    ```
 4. Lancez l'application depuis votre menu ou en double-cliquant sur l'AppImage
 
 ### Via .deb (Debian/Ubuntu)
 
 ```bash
-sudo dpkg -i mdfocus-electron_*.deb
+sudo dpkg -i cliodesk_*.deb
 sudo apt-get install -f  # Installer les dépendances manquantes si nécessaire
 ```
 
@@ -27,16 +27,16 @@ L'icône et le lanceur seront automatiquement installés.
 ## Désinstallation
 
 ### AppImage
-Pour retirer mdFocus du menu d'applications:
+Pour retirer ClioDesk du menu d'applications:
 ```bash
-rm ~/.local/share/applications/mdfocus-electron.desktop
-rm -rf ~/.local/share/icons/hicolor/*/apps/mdfocus-electron.png
+rm ~/.local/share/applications/cliodesk.desktop
+rm -rf ~/.local/share/icons/hicolor/*/apps/cliodesk.png
 update-desktop-database ~/.local/share/applications/
 ```
 
 ### .deb
 ```bash
-sudo apt remove mdfocus-electron
+sudo apt remove cliodesk
 ```
 
 ## Problèmes connus
@@ -49,7 +49,7 @@ Si l'icône n'apparaît pas dans votre barre des tâches ou menu:
 
 ### Dépendances requises
 
-mdFocus nécessite:
+ClioDesk nécessite:
 - **Pandoc** (pour l'export PDF): `sudo apt install pandoc`
 - **XeLaTeX** (pour l'export PDF): `sudo apt install texlive-xetex texlive-fonts-recommended texlive-lang-french`
 

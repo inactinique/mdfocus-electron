@@ -102,19 +102,19 @@ export class HistoryManager {
     }
 
     this.projectPath = projectPath;
-    this.dbPath = path.join(projectPath, '.mdfocus', 'history.db');
+    this.dbPath = path.join(projectPath, '.cliodesk', 'history.db');
 
-    // Create .mdfocus directory if needed
-    const mdfocusDir = path.join(projectPath, '.mdfocus');
-    if (!existsSync(mdfocusDir)) {
-      mkdirSync(mdfocusDir, { recursive: true });
+    // Create .cliodesk directory if needed
+    const cliodeskDir = path.join(projectPath, '.cliodesk');
+    if (!existsSync(cliodeskDir)) {
+      mkdirSync(cliodeskDir, { recursive: true });
     }
 
-    // S'assurer que le dossier .mdfocus a les bonnes permissions
+    // S'assurer que le dossier .cliodesk a les bonnes permissions
     try {
-      chmodSync(mdfocusDir, 0o755); // rwxr-xr-x
+      chmodSync(cliodeskDir, 0o755); // rwxr-xr-x
     } catch (error) {
-      console.warn(`⚠️  Could not set permissions on ${mdfocusDir}:`, error);
+      console.warn(`⚠️  Could not set permissions on ${cliodeskDir}:`, error);
     }
 
     // Open database
