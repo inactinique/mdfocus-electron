@@ -31,7 +31,9 @@
       "success": "Datenbank erfolgreich bereinigt",
       "error": "Fehler bei der Bereinigung",
       "cancelledNoMatch": "Bereinigung abgebrochen (falscher Bestätigungstext)",
-      "cancelled": "Bereinigung abgebrochen"
+      "cancelled": "Bereinigung abgebrochen",
+      "warning": "⚠️ Diese Aktion ist unwiderruflich!",
+      "inProgress": "Bereinigung läuft..."
     },
     "rebuildIndexes": {
       "title": "Indizes neu aufbauen",
@@ -58,6 +60,20 @@
       "title": "Daten importieren",
       "description": "Importiert Konfiguration aus einem früheren Export.",
       "button": "Importieren"
+    },
+    "databaseInfo": {
+      "title": "Datenbankinformationen",
+      "documentsIndexed": "Indexierte Dokumente",
+      "chunksStored": "Gespeicherte Chunks",
+      "path": "Pfad",
+      "loading": "Laden..."
+    },
+    "copyPath": {
+      "button": "Pfad kopieren",
+      "success": "Pfad in die Zwischenablage kopiert!"
+    },
+    "openFolder": {
+      "button": "Ordner öffnen"
     }
   },
   "settings": {
@@ -126,7 +142,16 @@
     "publisher": "Verlag:",
     "booktitle": "Buchtitel:",
     "insertCitation": "Zitat einfügen",
-    "indexPDFButton": "PDF indizieren"
+    "indexPDFButton": "PDF indizieren",
+    "indexed": "Indexiert",
+    "notIndexed": "Nicht indexiert",
+    "indexing": "Indexierung...",
+    "alreadyIndexed": "Dieses PDF ist bereits indexiert: {{title}}",
+    "indexAllPDFs": "Alle PDFs indexieren",
+    "noPDFsToIndex": "Keine PDFs zum Indexieren in der Bibliographie",
+    "confirmIndexAll": "{{count}} PDFs aus der Bibliographie indexieren?",
+    "indexAllComplete": "Indexierung abgeschlossen: {{indexed}} indexiert, {{skipped}} übersprungen, {{errors}} Fehler",
+    "indexingProgress": "Indexierung {{current}}/{{total}}"
   },
   "project": {
     "title": "Projekt",
@@ -374,5 +399,80 @@
     "providerOllamaDesc": "Verwendet ausschließlich Ollama für die Generierung (erfordert laufendes Ollama)",
     "providerEmbeddedDesc": "Verwendet das eingebettete Qwen-Modell (erfordert Download in den Einstellungen)",
     "notDownloaded": "nicht heruntergeladen"
+  },
+  "beamer": {
+    "title": "Beamer-Konfiguration",
+    "appearance": "Erscheinungsbild",
+    "mainTheme": "Hauptthema",
+    "colorTheme": "Farbthema",
+    "fontTheme": "Schriftthema",
+    "aspectRatio": "Seitenverhältnis",
+    "titlePage": "Titelseite",
+    "institution": "Institution (optional)",
+    "institutionPlaceholder": "Universität...",
+    "logo": "Logo (relativer Pfad, optional)",
+    "logoPlaceholder": "logo.png",
+    "toc": "Inhaltsverzeichnis",
+    "showToc": "Inhaltsverzeichnis am Anfang anzeigen",
+    "tocBeforeSection": "TOC vor jedem Abschnitt anzeigen",
+    "numberSectionsInToc": "Abschnitte im TOC nummerieren",
+    "numbering": "Nummerierung",
+    "showFrameNumber": "Foliennummern anzeigen",
+    "numberingStyle": "Nummerierungsstil",
+    "numberingWithTotal": "Mit Gesamtzahl (z.B. 5/20)",
+    "numberingSimple": "Einfach (z.B. 5)",
+    "numberingNone": "Keine",
+    "numberSections": "Abschnitte nummerieren",
+    "footer": "Fußzeile",
+    "showAuthor": "Autor anzeigen",
+    "showTitle": "Titel anzeigen",
+    "showDate": "Datum anzeigen",
+    "advanced": "Erweiterte Optionen",
+    "showNavigation": "Navigationssymbole anzeigen",
+    "showNotes": "Präsentationsnotizen im PDF einschließen",
+    "incrementalLists": "Inkrementelle Listen (Elemente erscheinen nacheinander)",
+    "overlays": "Overlays und Animationen aktivieren",
+    "saving": "Speichern...",
+    "saveError": "Fehler beim Speichern der Konfiguration",
+    "guide": "Konfigurationsanleitung",
+    "guideThemes": "Themen",
+    "guideThemesDesc1": "Madrid, Berlin, Copenhagen: Professionell mit Seitenleiste",
+    "guideThemesDesc2": "Singapore, Montpellier: Minimalistisch und elegant",
+    "guideThemesDesc3": "CambridgeUS, Berkeley: Klassischer akademischer Stil",
+    "guideThemesDesc4": "Warsaw: Modern mit Farbverläufen",
+    "guideLogo": "Logo und Bilder",
+    "guideLogoDesc1": "Platzieren Sie Ihre Bilder im Projektordner",
+    "guideLogoDesc2": "Verwenden Sie relative Pfade",
+    "guideLogoDesc3": "Unterstützte Formate: PNG, JPG, PDF",
+    "guideToc": "Inhaltsverzeichnis",
+    "guideTocDesc1": "TOC am Anfang: Übersichtsseite aller Abschnitte",
+    "guideTocDesc2": "TOC vor jedem Abschnitt: Planerinnerung bei jedem neuen Abschnitt",
+    "guideTocDesc3": "Optionale Abschnittsnummerierung",
+    "guideAdvanced": "Erweiterte Optionen",
+    "guideAdvancedDesc1": "Inkrementelle Listen: Elemente erscheinen einzeln während der Präsentation",
+    "guideAdvancedDesc2": "Overlays: Aktiviert \\pause-Befehle und Animationen",
+    "guideAdvancedDesc3": "Notizen: Verwenden Sie ::: notes ... ::: Syntax für Präsentatornotizen"
+  },
+  "pdfIndex": {
+    "unknownAuthor": "Unbekannter Autor",
+    "bibtexKey": "BibTeX-Schlüssel",
+    "pages": "Seiten",
+    "chunks": "Chunks",
+    "indexedAt": "Indexiert am",
+    "delete": "Löschen",
+    "title": "Indexierte PDFs",
+    "statistics": "Statistiken",
+    "documents": "Dokumente",
+    "addPDF": "PDF hinzufügen",
+    "dropzone": "PDFs hierher ziehen oder + klicken zum Hinzufügen",
+    "noDocuments": "Keine Dokumente",
+    "cleanOrphanedChunks": "Verwaiste Chunks bereinigen",
+    "cleaning": "Bereinigung läuft...",
+    "cleanSuccess": "Verwaiste Chunks erfolgreich bereinigt!",
+    "cleanError": "Fehler bei der Bereinigung",
+    "noProjectOpen": "Kein Projekt geöffnet. Bitte öffnen oder erstellen Sie zuerst ein Projekt.",
+    "indexingError": "Indexierungsfehler",
+    "deleteConfirm": "Dieses Dokument und alle seine Chunks löschen?",
+    "cleanOrphanedConfirm": "Verwaiste Chunks (ohne übergeordnetes Dokument) bereinigen?\n\nDiese Aktion entfernt Chunks, deren Dokument gelöscht wurde."
   }
 }

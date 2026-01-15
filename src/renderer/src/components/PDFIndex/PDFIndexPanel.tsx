@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PDFList } from './PDFList';
 import { IndexingProgress } from './IndexingProgress';
 import { CollapsibleSection } from '../common/CollapsibleSection';
@@ -27,6 +28,7 @@ interface IndexingState {
 }
 
 export const PDFIndexPanel: React.FC = () => {
+  const { t } = useTranslation('common');
   const { currentProject } = useProjectStore();
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
   const [indexingState, setIndexingState] = useState<IndexingState>({
@@ -85,7 +87,7 @@ export const PDFIndexPanel: React.FC = () => {
   const handleAddPDF = async () => {
     // Check if a project is open BEFORE opening file dialog
     if (!currentProject) {
-      alert('Aucun projet ouvert. Veuillez d\'abord ouvrir ou créer un projet.');
+      alert(t('pdfIndex.noProjectOpen'));
       return;
     }
 
@@ -136,12 +138,12 @@ export const PDFIndexPanel: React.FC = () => {
 
       // Check if indexing failed
       if (result && !result.success) {
-        const errorMessage = result.error || 'Erreur inconnue';
+        const errorMessage = result.error || t('pdfIndex.indexingError');
         alert(errorMessage);
         setIndexingState({
           isIndexing: false,
           progress: 0,
-          stage: 'Erreur',
+          stage: t('pdfIndex.indexingError'),
         });
         return;
       }
@@ -156,18 +158,18 @@ export const PDFIndexPanel: React.FC = () => {
       });
     } catch (error) {
       console.error('Indexing failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      alert(`Erreur lors de l'indexation: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : t('pdfIndex.indexingError');
+      alert(`${t('pdfIndex.indexingError')}: ${errorMessage}`);
       setIndexingState({
         isIndexing: false,
         progress: 0,
-        stage: 'Erreur',
+        stage: t('pdfIndex.indexingError'),
       });
     }
   };
 
   const handleDeletePDF = async (documentId: string) => {
-    if (!window.confirm('Supprimer ce document et tous ses chunks ?')) {
+    if (!window.confirm(t('pdfIndex.deleteConfirm'))) {
       return;
     }
 
@@ -191,7 +193,7 @@ export const PDFIndexPanel: React.FC = () => {
 
     // Check if a project is open BEFORE processing dropped files
     if (!currentProject) {
-      alert('Aucun projet ouvert. Veuillez d\'abord ouvrir ou créer un projet.');
+      alert(t('pdfIndex.noProjectOpen'));
       return;
     }
 
@@ -209,7 +211,7 @@ export const PDFIndexPanel: React.FC = () => {
   };
 
   const handleCleanOrphanedChunks = async () => {
-    if (!window.confirm('Nettoyer les chunks orphelins (sans document parent) ?\n\nCette action supprimera les chunks dont le document a été supprimé.')) {
+    if (!window.confirm(t('pdfIndex.cleanOrphanedConfirm'))) {
       return;
     }
 
@@ -219,17 +221,17 @@ export const PDFIndexPanel: React.FC = () => {
 
       if (result.success) {
         console.log('✅ Orphaned chunks cleaned successfully');
-        alert('✅ Chunks orphelins nettoyés avec succès!');
+        alert(`✅ ${t('pdfIndex.cleanSuccess')}`);
       } else {
         console.error('❌ Failed to clean orphaned chunks:', result.error);
-        alert(`❌ Erreur lors du nettoyage:\n${result.error}`);
+        alert(`❌ ${t('pdfIndex.cleanError')}:\n${result.error}`);
       }
 
       // Reload statistics
       await loadStats();
     } catch (error) {
       console.error('Failed to clean orphaned chunks:', error);
-      alert('Erreur lors du nettoyage des chunks orphelins');
+      alert(t('pdfIndex.cleanError'));
     } finally {
       setIsCleaning(false);
     }
@@ -240,28 +242,28 @@ export const PDFIndexPanel: React.FC = () => {
       {/* Header */}
       <div className="pdf-header">
         <div className="header-title">
-          <h3>PDFs Indexés</h3>
+          <h3>{t('pdfIndex.title')}</h3>
           <HelperTooltip
-            content="Indexation vectorielle de vos PDFs pour recherche sémantique. Vérifiez toujours la qualité de l'extraction de texte."
+            content={t('pdfIndex.dropzone')}
             onLearnMore={handleLearnMore}
           />
         </div>
-        <button className="toolbar-btn" onClick={handleAddPDF} title="Ajouter PDF">
+        <button className="toolbar-btn" onClick={handleAddPDF} title={t('pdfIndex.addPDF')}>
           <Plus size={20} strokeWidth={1} />
         </button>
       </div>
 
       {/* Stats */}
-      <CollapsibleSection title="Statistiques" defaultExpanded={false}>
+      <CollapsibleSection title={t('pdfIndex.statistics')} defaultExpanded={false}>
         <div className="pdf-stats">
           <div className="stat-item">
             <span className="stat-value">{stats.totalDocuments}</span>
-            <span className="stat-label">Documents</span>
+            <span className="stat-label">{t('pdfIndex.documents')}</span>
           </div>
           <div className="stat-divider">|</div>
           <div className="stat-item">
             <span className="stat-value">{stats.totalChunks}</span>
-            <span className="stat-label">Chunks</span>
+            <span className="stat-label">{t('pdfIndex.chunks')}</span>
           </div>
         </div>
         <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #444' }}>
@@ -280,7 +282,7 @@ export const PDFIndexPanel: React.FC = () => {
               fontSize: '13px',
             }}
           >
-            {isCleaning ? '⏳ Nettoyage en cours...' : '🧹 Nettoyer les chunks orphelins'}
+            {isCleaning ? `⏳ ${t('pdfIndex.cleaning')}` : `🧹 ${t('pdfIndex.cleanOrphanedChunks')}`}
           </button>
         </div>
       </CollapsibleSection>
@@ -295,7 +297,7 @@ export const PDFIndexPanel: React.FC = () => {
       )}
 
       {/* Document List */}
-      <CollapsibleSection title="Documents" defaultExpanded={true}>
+      <CollapsibleSection title={t('pdfIndex.documents')} defaultExpanded={true}>
         <div
           className="pdf-content"
           onDragOver={handleDragOver}
@@ -304,12 +306,8 @@ export const PDFIndexPanel: React.FC = () => {
           {documents.length === 0 ? (
             <div className="pdf-empty">
               <div className="empty-icon">📂</div>
-              <h4>Aucun document</h4>
-              <p>
-                Glissez-déposez des PDFs ici
-                <br />
-                ou cliquez sur + pour en ajouter
-              </p>
+              <h4>{t('pdfIndex.noDocuments')}</h4>
+              <p>{t('pdfIndex.dropzone')}</p>
             </div>
           ) : (
             <PDFList documents={documents} onDelete={handleDeletePDF} />

@@ -31,7 +31,9 @@
       "success": "Base de données purgée avec succès",
       "error": "Erreur lors de la purge",
       "cancelledNoMatch": "Purge annulée (texte de confirmation incorrect)",
-      "cancelled": "Purge annulée"
+      "cancelled": "Purge annulée",
+      "warning": "⚠️ Cette action est irréversible !",
+      "inProgress": "Purge en cours..."
     },
     "rebuildIndexes": {
       "title": "Reconstruire les index",
@@ -58,6 +60,20 @@
       "title": "Importer les données",
       "description": "Importe une configuration depuis un export précédent.",
       "button": "Importer"
+    },
+    "databaseInfo": {
+      "title": "Informations base de données",
+      "documentsIndexed": "Documents indexés",
+      "chunksStored": "Chunks stockés",
+      "path": "Chemin",
+      "loading": "Chargement..."
+    },
+    "copyPath": {
+      "button": "Copier le chemin",
+      "success": "Chemin copié dans le presse-papiers !"
+    },
+    "openFolder": {
+      "button": "Ouvrir le dossier"
     }
   },
   "settings": {
@@ -384,12 +400,79 @@
     "providerEmbeddedDesc": "Utilise le modèle embarqué Qwen (nécessite le téléchargement dans les paramètres)",
     "notDownloaded": "non téléchargé"
   },
+  "beamer": {
+    "title": "Configuration Beamer",
+    "appearance": "Apparence",
+    "mainTheme": "Thème principal",
+    "colorTheme": "Thème de couleur",
+    "fontTheme": "Thème de police",
+    "aspectRatio": "Format d'écran",
+    "titlePage": "Page de titre",
+    "institution": "Institution (optionnel)",
+    "institutionPlaceholder": "Université de...",
+    "logo": "Logo (chemin relatif, optionnel)",
+    "logoPlaceholder": "logo.png",
+    "toc": "Table des matières",
+    "showToc": "Afficher la table des matières au début",
+    "tocBeforeSection": "Afficher la TOC avant chaque section",
+    "numberSectionsInToc": "Numéroter les sections dans la TOC",
+    "numbering": "Numérotation",
+    "showFrameNumber": "Afficher les numéros de slides",
+    "numberingStyle": "Style de numérotation",
+    "numberingWithTotal": "Avec total (ex: 5/20)",
+    "numberingSimple": "Simple (ex: 5)",
+    "numberingNone": "Aucun",
+    "numberSections": "Numéroter les sections",
+    "footer": "Pied de page",
+    "showAuthor": "Afficher l'auteur",
+    "showTitle": "Afficher le titre",
+    "showDate": "Afficher la date",
+    "advanced": "Options avancées",
+    "showNavigation": "Afficher les symboles de navigation",
+    "showNotes": "Inclure les notes de présentation dans le PDF",
+    "incrementalLists": "Listes incrémentales (apparition progressive des items)",
+    "overlays": "Activer les overlays et animations",
+    "saving": "Sauvegarde...",
+    "saveError": "Erreur lors de la sauvegarde de la configuration",
+    "guide": "Guide de configuration",
+    "guideThemes": "Thèmes",
+    "guideThemesDesc1": "Madrid, Berlin, Copenhagen : Professionnels avec barre latérale",
+    "guideThemesDesc2": "Singapore, Montpellier : Minimalistes et élégants",
+    "guideThemesDesc3": "CambridgeUS, Berkeley : Style académique classique",
+    "guideThemesDesc4": "Warsaw : Moderne avec gradients",
+    "guideLogo": "Logo et images",
+    "guideLogoDesc1": "Placez vos images dans le dossier du projet",
+    "guideLogoDesc2": "Utilisez des chemins relatifs",
+    "guideLogoDesc3": "Formats supportés : PNG, JPG, PDF",
+    "guideToc": "Table des matières",
+    "guideTocDesc1": "TOC au début : Une page récapitulative de toutes les sections",
+    "guideTocDesc2": "TOC avant chaque section : Rappel du plan à chaque nouvelle section",
+    "guideTocDesc3": "Numérotation optionnelle des sections",
+    "guideAdvanced": "Options avancées",
+    "guideAdvancedDesc1": "Listes incrémentales : Les items apparaissent un par un lors de la présentation",
+    "guideAdvancedDesc2": "Overlays : Active les commandes \\pause et les animations",
+    "guideAdvancedDesc3": "Notes : Syntaxe ::: notes ... ::: pour notes de présentateur"
+  },
   "pdfIndex": {
     "unknownAuthor": "Auteur inconnu",
     "bibtexKey": "Clé BibTeX",
     "pages": "Pages",
     "chunks": "Chunks",
     "indexedAt": "Indexé le",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "title": "PDFs indexés",
+    "statistics": "Statistiques",
+    "documents": "Documents",
+    "addPDF": "Ajouter PDF",
+    "dropzone": "Glissez-déposez des PDFs ici ou cliquez sur + pour en ajouter",
+    "noDocuments": "Aucun document",
+    "cleanOrphanedChunks": "Nettoyer les chunks orphelins",
+    "cleaning": "Nettoyage en cours...",
+    "cleanSuccess": "Chunks orphelins nettoyés avec succès !",
+    "cleanError": "Erreur lors du nettoyage",
+    "noProjectOpen": "Aucun projet ouvert. Veuillez d'abord ouvrir ou créer un projet.",
+    "indexingError": "Erreur lors de l'indexation",
+    "deleteConfirm": "Supprimer ce document et tous ses chunks ?",
+    "cleanOrphanedConfirm": "Nettoyer les chunks orphelins (sans document parent) ?\n\nCette action supprimera les chunks dont le document a été supprimé."
   }
 }
