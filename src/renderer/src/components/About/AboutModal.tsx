@@ -29,7 +29,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               <strong>Licence:</strong> AGPL{' '}
               <button
                 className="about-link"
-                onClick={() => openExternalLink('https://github.com/fxmusic/mdfocus-electron')}
+                onClick={() => openExternalLink('https://github.com/inactinique/mdfocus-electron')}
               >
                 GitHub Repository <ExternalLink size={14} />
               </button>
