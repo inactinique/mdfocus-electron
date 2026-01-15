@@ -10,6 +10,7 @@ import { PDFExportModal } from '../Export/PDFExportModal';
 import { CorpusExplorerPanel } from '../Corpus/CorpusExplorerPanel';
 import { JournalPanel } from '../Journal/JournalPanel';
 import { MethodologyModal } from '../Methodology/MethodologyModal';
+import { AboutModal } from '../About/AboutModal';
 import { logger } from '../../utils/logger';
 import './MainLayout.css';
 
@@ -33,6 +34,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMethodologyModal, setShowMethodologyModal] = useState(false);
   const [methodologyInitialFeature, setMethodologyInitialFeature] = useState<string | undefined>(undefined);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   const handleLeftViewChange = (view: LeftPanelView) => {
     logger.component('MainLayout', 'Left tab clicked', { view });
@@ -86,16 +88,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       setShowMethodologyModal(true);
     };
 
+    const handleShowAbout = () => {
+      setShowAboutModal(true);
+    };
+
     window.addEventListener('switch-panel', handleSwitchPanel);
     window.addEventListener('show-pdf-export-dialog', handleShowPDFExport);
     window.addEventListener('show-settings-modal', handleShowSettings);
     window.addEventListener('show-methodology-modal', handleShowMethodology);
+    window.addEventListener('show-about-dialog', handleShowAbout);
 
     return () => {
       window.removeEventListener('switch-panel', handleSwitchPanel);
       window.removeEventListener('show-pdf-export-dialog', handleShowPDFExport);
       window.removeEventListener('show-settings-modal', handleShowSettings);
       window.removeEventListener('show-methodology-modal', handleShowMethodology);
+      window.removeEventListener('show-about-dialog', handleShowAbout);
     };
   }, []);
 
@@ -217,6 +225,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         }}
         initialFeature={methodologyInitialFeature}
       />
+
+      {/* About Modal */}
+      <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />
     </div>
   );
 };

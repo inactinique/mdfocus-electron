@@ -1,7 +1,7 @@
 /**
  * Filesystem and Dialog IPC handlers
  */
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog, shell } from 'electron';
 import { successResponse, errorResponse } from '../utils/error-handler.js';
 
 export function setupFilesystemHandlers() {
@@ -120,6 +120,19 @@ export function setupFilesystemHandlers() {
       filePath: result.filePath,
     });
     return result;
+  });
+
+  // Shell handlers
+  ipcMain.handle('shell:open-external', async (_event, url: string) => {
+    console.log('📞 IPC Call: shell:open-external', { url });
+    try {
+      await shell.openExternal(url);
+      console.log('📤 IPC Response: shell:open-external - success');
+      return successResponse();
+    } catch (error: any) {
+      console.error('❌ shell:open-external error:', error);
+      return errorResponse(error);
+    }
   });
 
   console.log('✅ Filesystem handlers registered');

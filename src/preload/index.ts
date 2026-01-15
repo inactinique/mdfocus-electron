@@ -302,6 +302,11 @@ const api = {
       ipcRenderer.send(channel, ...args);
     },
   },
+
+  // Shell
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
+  },
 };
 
 // Exposer l'API au renderer via window.electron
