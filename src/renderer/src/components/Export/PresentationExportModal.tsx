@@ -95,7 +95,7 @@ export const PresentationExportModal: React.FC<PresentationExportModalProps> = (
         outputPath: outputPath,
         metadata: {
           title,
-          author: author || 'mdFocus',
+          author: author || 'ClioDesk',
           date: new Date().toLocaleDateString('fr-FR'),
         },
         config,

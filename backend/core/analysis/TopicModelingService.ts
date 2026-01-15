@@ -79,12 +79,12 @@ export class TopicModelingService {
 
   /**
    * Retourne le chemin vers le venv dans le dossier utilisateur
-   * Production et dev: ~/.mdfocus/python-venv
+   * Production et dev: ~/.cliodesk/python-venv
    * Cela évite de polluer le dépôt git et centralise les données utilisateur
    */
   private getVenvDir(isProduction: boolean, pythonServicePath: string): string {
     // Toujours utiliser le dossier utilisateur (plus propre)
-    return path.join(os.homedir(), '.mdfocus', 'python-venv');
+    return path.join(os.homedir(), '.cliodesk', 'python-venv');
   }
 
   /**

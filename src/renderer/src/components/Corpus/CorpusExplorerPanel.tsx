@@ -392,7 +392,7 @@ export const CorpusExplorerPanel: React.FC = () => {
     let gexf = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     gexf += `<gexf xmlns="http://www.gexf.net/1.2draft" version="1.2">\n`;
     gexf += `  <meta lastmodifieddate="${new Date().toISOString().split('T')[0]}">\n`;
-    gexf += `    <creator>mdFocus</creator>\n`;
+    gexf += `    <creator>ClioDesk</creator>\n`;
     gexf += `    <description>Knowledge Graph Export</description>\n`;
     gexf += `  </meta>\n`;
     gexf += `  <graph mode="static" defaultedgetype="directed">\n`;

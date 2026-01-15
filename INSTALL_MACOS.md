@@ -1,12 +1,12 @@
-# Guide d'installation - mdFocus pour macOS
+# Guide d'installation - ClioDesk pour macOS
 
-Ce guide vous accompagne dans l'installation complète de mdFocus sur macOS, depuis les prérequis jusqu'au premier lancement.
+Ce guide vous accompagne dans l'installation complète de ClioDesk sur macOS, depuis les prérequis jusqu'au premier lancement.
 
 ## Table des matières
 
 - [Prérequis système](#prérequis-système)
 - [Installation des dépendances](#installation-des-dépendances)
-- [Installation de mdFocus](#installation-de-mdfocus)
+- [Installation de ClioDesk](#installation-de-cliodesk)
 - [Configuration initiale](#configuration-initiale)
 - [Vérification de l'installation](#vérification-de-linstallation)
 - [Dépannage](#dépannage)
@@ -32,7 +32,7 @@ Suivez les instructions affichées pour ajouter Homebrew à votre PATH.
 
 ### 2. Node.js et npm
 
-mdFocus nécessite Node.js 20+ et npm 10+.
+ClioDesk nécessite Node.js 20+ et npm 10+.
 
 ```bash
 # Installer Node.js via Homebrew
@@ -57,7 +57,7 @@ nvm alias default 20
 
 ### 3. Python 3
 
-mdFocus utilise Python pour certains services (topic modeling). Python 3.11+ est requis.
+ClioDesk utilise Python pour certains services (topic modeling). Python 3.11+ est requis.
 
 ```bash
 # Vérifier si Python 3 est installé
@@ -67,11 +67,11 @@ python3 --version
 brew install python@3.11
 ```
 
-**Note :** L'environnement virtuel Python (venv) sera créé automatiquement par mdFocus au premier lancement.
+**Note :** L'environnement virtuel Python (venv) sera créé automatiquement par ClioDesk au premier lancement.
 
 ### 4. Pandoc et LaTeX (pour l'export PDF)
 
-mdFocus nécessite Pandoc et XeLaTeX pour exporter les documents en PDF.
+ClioDesk nécessite Pandoc et XeLaTeX pour exporter les documents en PDF.
 
 ```bash
 # Installer Pandoc
@@ -153,20 +153,20 @@ ollama list
 # gemma2:2b
 ```
 
-## Installation de mdFocus
+## Installation de ClioDesk
 
 ### Option A : Installation depuis les binaires (utilisateur)
 
 Si une version packagée est disponible :
 
 1. **Télécharger le DMG**
-   - Rendez-vous sur [GitHub Releases](https://github.com/votre-org/mdfocus-electron/releases)
-   - Téléchargez `mdFocus-0.1.0-mac.dmg` (ou la dernière version)
+   - Rendez-vous sur [GitHub Releases](https://github.com/votre-org/cliodesk/releases)
+   - Téléchargez `ClioDesk-0.1.0-mac.dmg` (ou la dernière version)
 
 2. **Installer l'application**
    ```bash
    # Double-cliquer sur le DMG téléchargé
-   # Glisser l'icône mdFocus vers le dossier Applications
+   # Glisser l'icône ClioDesk vers le dossier Applications
    ```
 
 3. **Autoriser l'application (première ouverture)**
@@ -177,12 +177,12 @@ Si une version packagée est disponible :
    # Système → Confidentialité et sécurité → Ouvrir quand même
 
    # Méthode 2 : Via le terminal
-   xattr -cr /Applications/mdFocus.app
+   xattr -cr /Applications/ClioDesk.app
    ```
 
-4. **Lancer mdFocus**
+4. **Lancer ClioDesk**
    - Depuis Launchpad
-   - Ou depuis Applications → mdFocus
+   - Ou depuis Applications → ClioDesk
 
 ### Option B : Installation depuis les sources (développeur)
 
@@ -190,8 +190,8 @@ Pour contribuer au projet ou exécuter la version de développement :
 
 1. **Cloner le dépôt**
    ```bash
-   git clone https://github.com/votre-org/mdfocus-electron.git
-   cd mdfocus-electron
+   git clone https://github.com/votre-org/cliodesk.git
+   cd cliodesk
    ```
 
 2. **Installer les dépendances npm**
@@ -228,16 +228,16 @@ Pour contribuer au projet ou exécuter la version de développement :
    # Build pour macOS
    npm run build:mac
 
-   # Le DMG sera dans : release/mdFocus-0.1.0-mac.dmg
+   # Le DMG sera dans : release/ClioDesk-0.1.0-mac.dmg
    ```
 
 ## Configuration initiale
 
-Au premier lancement de mdFocus :
+Au premier lancement de ClioDesk :
 
 ### 1. Vérification d'Ollama
 
-mdFocus vérifie automatiquement la connexion à Ollama (http://localhost:11434).
+ClioDesk vérifie automatiquement la connexion à Ollama (http://localhost:11434).
 
 **Si la connexion échoue :**
 - Assurez-vous qu'Ollama est démarré : `brew services start ollama`
@@ -257,10 +257,10 @@ mdFocus vérifie automatiquement la connexion à Ollama (http://localhost:11434)
 ### 3. Créer votre premier projet
 
 1. **Nouveau Projet** → Choisir un dossier
-2. mdFocus crée la structure :
+2. ClioDesk crée la structure :
    ```
    mon-projet/
-   ├── .mdfocus/
+   ├── .cliodesk/
    │   └── vectors.db          # Base de données vectorielle
    ├── src/
    │   ├── images/             # Images du projet
@@ -275,7 +275,7 @@ Si vous utilisez Zotero :
 
 1. Obtenir votre API Key : [https://www.zotero.org/settings/keys/new](https://www.zotero.org/settings/keys/new)
    - Permissions : "Read library" et "Write library"
-2. Dans mdFocus : **Settings** → **Zotero Integration**
+2. Dans ClioDesk : **Settings** → **Zotero Integration**
 3. Entrer votre User ID et API Key
 4. **Test Connection**
 
@@ -306,7 +306,7 @@ Si vous utilisez Zotero :
    xelatex --version  # TeX Live 2020+ ou supérieur
    ```
 
-5. **Tester mdFocus**
+5. **Tester ClioDesk**
    - Créer un nouveau projet
    - Importer un PDF dans `src/pdfs/`
    - Indexer le PDF via l'interface
@@ -318,7 +318,7 @@ En mode développement, les logs sont affichés dans la console. En production :
 
 ```bash
 # Logs de l'application
-tail -f ~/Library/Logs/mdFocus/main.log
+tail -f ~/Library/Logs/ClioDesk/main.log
 ```
 
 ## Dépannage
@@ -326,7 +326,7 @@ tail -f ~/Library/Logs/mdFocus/main.log
 ### Problème : "App can't be opened because it is from an unidentified developer"
 
 ```bash
-xattr -cr /Applications/mdFocus.app
+xattr -cr /Applications/ClioDesk.app
 ```
 
 Puis relancez l'application.
@@ -350,7 +350,7 @@ ollama serve
 Cela signifie que le module natif n'a pas été compilé pour votre architecture.
 
 ```bash
-cd /path/to/mdfocus-electron
+cd /path/to/cliodesk
 rm -rf node_modules/better-sqlite3/build
 npx electron-rebuild -f -w better-sqlite3
 npm start
@@ -392,40 +392,40 @@ lsof -i :11434
 # Option 2 : Configurer Ollama sur un autre port
 OLLAMA_HOST=127.0.0.1:11435 ollama serve
 
-# Puis dans mdFocus Settings → LLM → URL : http://localhost:11435
+# Puis dans ClioDesk Settings → LLM → URL : http://localhost:11435
 ```
 
 ### Obtenir de l'aide
 
 - **Documentation** : [README.md](README.md)
-- **Issues** : [GitHub Issues](https://github.com/votre-org/mdfocus-electron/issues)
-- **Logs** : `~/Library/Logs/mdFocus/`
+- **Issues** : [GitHub Issues](https://github.com/votre-org/cliodesk/issues)
+- **Logs** : `~/Library/Logs/ClioDesk/`
 
 ## Désinstallation
 
-Pour désinstaller complètement mdFocus :
+Pour désinstaller complètement ClioDesk :
 
 ```bash
 # Supprimer l'application
-rm -rf /Applications/mdFocus.app
+rm -rf /Applications/ClioDesk.app
 
 # Supprimer les données utilisateur
-rm -rf ~/Library/Application\ Support/mdfocus-electron
-rm -rf ~/.config/mdfocus-electron
+rm -rf ~/Library/Application\ Support/cliodesk
+rm -rf ~/.config/cliodesk
 
 # Supprimer les logs
-rm -rf ~/Library/Logs/mdFocus
+rm -rf ~/Library/Logs/ClioDesk
 
 # (Optionnel) Désinstaller Ollama
 brew uninstall ollama
 rm -rf ~/.ollama
 ```
 
-**Note :** Vos projets mdFocus (fichiers .md, PDFs, .mdfocus/) ne sont pas supprimés automatiquement.
+**Note :** Vos projets ClioDesk (fichiers .md, PDFs, .cliodesk/) ne sont pas supprimés automatiquement.
 
 ## Prochaines étapes
 
-Une fois mdFocus installé :
+Une fois ClioDesk installé :
 1. Consultez le [README.md](README.md) pour comprendre l'architecture
 2. Lisez le [DEPLOYMENT.md](DEPLOYMENT.md) pour le workflow utilisateur
 3. Explorez les [exemples de projets](examples/) (si disponibles)

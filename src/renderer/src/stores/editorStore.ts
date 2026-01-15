@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import type { Editor } from '@milkdown/kit/core';
+import { editorViewCtx } from '@milkdown/kit/core';
 import { logger } from '../utils/logger';
 
 // MARK: - Types
@@ -25,6 +27,9 @@ interface EditorState {
   // Preview
   showPreview: boolean;
 
+  // Milkdown editor reference
+  milkdownEditor: Editor | null;
+
   // Actions
   setContent: (content: string) => void;
   loadFile: (filePath: string) => Promise<void>;
@@ -35,10 +40,12 @@ interface EditorState {
 
   updateSettings: (settings: Partial<EditorSettings>) => void;
   togglePreview: () => void;
+  toggleStats: () => void;
 
   insertText: (text: string) => void;
   insertCitation: (citationKey: string) => void;
   insertFormatting: (type: 'bold' | 'italic' | 'link' | 'citation' | 'table' | 'footnote' | 'blockquote') => void;
+  insertTextAtCursor: (text: string) => void;
 }
 
 // MARK: - Default settings
@@ -61,6 +68,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isDirty: false,
   settings: DEFAULT_SETTINGS,
   showPreview: false,
+  milkdownEditor: null,
 
   setContent: (content: string) => {
     set({
@@ -156,6 +164,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }));
   },
 
+  toggleStats: () => {
+    // Stats are always visible in the new editor, this is a no-op for compatibility
+    logger.store('Editor', 'toggleStats called (no-op)');
+  },
+
   insertText: (text: string) => {
     set((state) => ({
       content: state.content + text,
@@ -184,8 +197,62 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   insertFormatting: (type: 'bold' | 'italic' | 'link' | 'citation' | 'table' | 'footnote' | 'blockquote') => {
     logger.store('Editor', 'insertFormatting called', { type });
     const { content } = get();
-    let textToInsert = '';
+    const editor = get().milkdownEditor;
 
+    // Special handling for footnotes - insert reference AND definition
+    if (type === 'footnote') {
+      // Find the highest footnote number in the document
+      const footnoteRefs = content.match(/\[\^(\d+)\]/g) || [];
+      const numbers = footnoteRefs.map(ref => {
+        const match = ref.match(/\[\^(\d+)\]/);
+        return match ? parseInt(match[1], 10) : 0;
+      });
+      const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+
+      const reference = `[^${nextNumber}]`;
+      const definition = `\n\n[^${nextNumber}]: `;
+
+      if (editor) {
+        try {
+          editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            const { state } = view;
+
+            // Insert the reference at cursor position
+            let tr = state.tr.insertText(reference, state.selection.from, state.selection.to);
+            view.dispatch(tr);
+
+            // Get the updated state and insert definition at the end
+            const newState = view.state;
+            const docEnd = newState.doc.content.size;
+            tr = newState.tr.insertText(definition, docEnd);
+
+            // Move cursor to the end (after definition marker) so user can type
+            const newCursorPos = docEnd + definition.length;
+            tr = tr.setSelection(newState.selection.constructor.near(tr.doc.resolve(newCursorPos)));
+
+            view.dispatch(tr);
+            view.focus();
+          });
+          set({ isDirty: true });
+          logger.store('Editor', 'Footnote inserted', { number: nextNumber });
+          return;
+        } catch (error) {
+          logger.error('Editor', 'Failed to insert footnote at cursor');
+          // Fallback below
+        }
+      }
+
+      // Fallback: append to content
+      set({
+        content: content + reference + definition,
+        isDirty: true,
+      });
+      return;
+    }
+
+    // Regular formatting
+    let textToInsert = '';
     switch (type) {
       case 'bold':
         textToInsert = '**texte en gras**';
@@ -202,20 +269,57 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       case 'table':
         textToInsert = '\n| Colonne 1 | Colonne 2 |\n|-----------|----------|\n| Cellule 1 | Cellule 2 |\n';
         break;
-      case 'footnote':
-        // Count existing footnotes to get the next number
-        const footnoteMatches = content.match(/\[\^(\d+)\]/g) || [];
-        const nextNumber = footnoteMatches.length + 1;
-        textToInsert = `[^${nextNumber}]`;
-        break;
       case 'blockquote':
         textToInsert = '\n> Citation ou bloc de texte important\n> Continuation de la citation\n';
         break;
     }
 
-    set({
-      content: content + textToInsert,
-      isDirty: true,
-    });
+    // Try to insert at cursor position using Milkdown editor
+    if (editor) {
+      try {
+        editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          const { state } = view;
+          const { tr, selection } = state;
+          tr.insertText(textToInsert, selection.from, selection.to);
+          view.dispatch(tr);
+          view.focus();
+        });
+        set({ isDirty: true });
+      } catch (error) {
+        // Fallback: append to content
+        logger.error('Editor', 'Failed to insert at cursor, appending to content');
+        set({
+          content: content + textToInsert,
+          isDirty: true,
+        });
+      }
+    } else {
+      // No Milkdown editor, append to content
+      set({
+        content: content + textToInsert,
+        isDirty: true,
+      });
+    }
+  },
+
+  insertTextAtCursor: (text: string) => {
+    logger.store('Editor', 'insertTextAtCursor called', { text });
+    const editor = get().milkdownEditor;
+    if (editor) {
+      try {
+        editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          const { state } = view;
+          const { tr, selection } = state;
+          tr.insertText(text, selection.from, selection.to);
+          view.dispatch(tr);
+          view.focus();
+        });
+        set({ isDirty: true });
+      } catch (error) {
+        logger.error('Editor', 'Failed to insert text at cursor');
+      }
+    }
   },
 }));

@@ -75,7 +75,7 @@
         "Associez systématiquement PDFs et entrées bib lors de l'indexation",
         "Validez votre .bib avant import (syntaxe correcte)"
       ],
-      "academicContext": "BibTeX est le standard de facto en milieu académique. mdFocus s'intègre dans votre workflow existant (Zotero → BibTeX → mdFocus) sans le remplacer."
+      "academicContext": "BibTeX est le standard de facto en milieu académique. ClioDesk s'intègre dans votre workflow existant (Zotero → BibTeX → ClioDesk) sans le remplacer."
     },
     "corpus": {
       "title": "Exploration de Corpus",
@@ -114,7 +114,7 @@
         "Export formaté pour annexes académiques (Markdown, LaTeX, JSON)"
       ],
       "limitations": [
-        "Ne capture que les actions dans mdFocus (pas vos notes externes)",
+        "Ne capture que les actions dans ClioDesk (pas vos notes externes)",
         "Pas de synchronisation cloud (données locales uniquement)",
         "L'export LaTeX nécessite post-traitement manuel",
         "Taille de la base peut croître significativement sur longs projets",
@@ -164,11 +164,11 @@
     },
     {
       "question": "Mes données sont-elles envoyées sur internet ?",
-      "answer": "Non si vous utilisez Ollama en local. mdFocus fonctionne entièrement hors ligne avec des modèles locaux. Vos PDFs, notes et conversations restent sur votre machine. Si vous configurez une API externe (OpenAI, Anthropic), alors oui, les requêtes sont envoyées.",
+      "answer": "Non si vous utilisez Ollama en local. ClioDesk fonctionne entièrement hors ligne avec des modèles locaux. Vos PDFs, notes et conversations restent sur votre machine. Si vous configurez une API externe (OpenAI, Anthropic), alors oui, les requêtes sont envoyées.",
       "category": "confidentialité"
     },
     {
-      "question": "Comment citer l'usage de mdFocus dans mes travaux ?",
+      "question": "Comment citer l'usage de ClioDesk dans mes travaux ?",
       "answer": "Documentez votre méthodologie dans une section dédiée. Exportez le journal de recherche et incluez-le en annexe. Mentionnez clairement : (1) quels documents ont été indexés, (2) quels modèles IA utilisés, (3) comment vous avez vérifié les informations. Transparence méthodologique est essentielle.",
       "category": "académique"
     },
@@ -188,8 +188,8 @@
       "category": "méthodologie"
     },
     {
-      "question": "Puis-je collaborer avec d'autres chercheurs sur mdFocus ?",
-      "answer": "Pas de collaboration en temps réel intégrée. Mais vous pouvez : 1) Partager vos fichiers .md via Git, 2) Exporter/importer les PDFs et .bib, 3) Partager les exports du journal. Pour vrais projets collaboratifs, combinez mdFocus (travail individuel) + Overleaf/Google Docs (écriture collaborative).",
+      "question": "Puis-je collaborer avec d'autres chercheurs sur ClioDesk ?",
+      "answer": "Pas de collaboration en temps réel intégrée. Mais vous pouvez : 1) Partager vos fichiers .md via Git, 2) Exporter/importer les PDFs et .bib, 3) Partager les exports du journal. Pour vrais projets collaboratifs, combinez ClioDesk (travail individuel) + Overleaf/Google Docs (écriture collaborative).",
       "category": "workflow"
     },
     {
@@ -205,7 +205,7 @@
     "LLM": "Large Language Model : Modèle d'IA entraîné sur d'énormes corpus de texte (GPT, Llama, Mistral, etc.). Capacité de comprendre et générer du texte.",
     "Ollama": "Plateforme pour exécuter des LLMs localement sur votre machine, sans dépendre d'APIs cloud. Open-source et gratuit.",
     "Topic Modeling": "Technique statistique (LDA, NMF) pour découvrir des thèmes latents dans un corpus. Distant reading.",
-    "Vector Store": "Base de données optimisée pour stocker et chercher des vecteurs (embeddings). SQLite + extension vectorielle dans mdFocus.",
+    "Vector Store": "Base de données optimisée pour stocker et chercher des vecteurs (embeddings). SQLite + extension vectorielle dans ClioDesk.",
     "BibTeX": "Format de fichier texte pour gérer des bibliographies. Standard LaTeX, supporté par Zotero, JabRef, Mendeley.",
     "Markdown": "Langage de balisage léger pour formater du texte (# titres, **gras**, etc.). Interopérable et pérenne.",
     "Similarity Score": "Score de 0 à 1 indiquant la proximité sémantique entre une requête et un document. Plus proche de 1 = plus pertinent."

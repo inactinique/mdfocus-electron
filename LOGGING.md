@@ -1,8 +1,8 @@
-# Système de Logging - mdFocus
+# Système de Logging - ClioDesk
 
 ## Vue d'ensemble
 
-mdFocus utilise un système de logging centralisé qui filtre automatiquement les logs selon l'environnement (développement vs production).
+ClioDesk utilise un système de logging centralisé qui filtre automatiquement les logs selon l'environnement (développement vs production).
 
 ## Comportement par défaut
 
@@ -15,28 +15,28 @@ En production, seuls les `console.warn` et `console.error` sont affichés pour r
 
 ## Activer les logs de debug en production
 
-### Méthode 1 : Variable d'environnement MDFOCUS_DEBUG
+### Méthode 1 : Variable d'environnement CLIODESK_DEBUG
 
 ```bash
 # macOS / Linux
-MDFOCUS_DEBUG=1 /path/to/mdFocus.app/Contents/MacOS/mdFocus
+CLIODESK_DEBUG=1 /path/to/ClioDesk.app/Contents/MacOS/ClioDesk
 
 # Windows
-set MDFOCUS_DEBUG=1
-"C:\Program Files\mdFocus\mdFocus.exe"
+set CLIODESK_DEBUG=1
+"C:\Program Files\ClioDesk\ClioDesk.exe"
 ```
 
-### Méthode 2 : Variable d'environnement MDFOCUS_LOG_LEVEL
+### Méthode 2 : Variable d'environnement CLIODESK_LOG_LEVEL
 
 ```bash
 # Niveaux disponibles : debug, info, warn, error
-MDFOCUS_LOG_LEVEL=debug /path/to/mdFocus
+CLIODESK_LOG_LEVEL=debug /path/to/ClioDesk
 ```
 
 ### Méthode 3 : Variable DEBUG standard
 
 ```bash
-DEBUG=1 /path/to/mdFocus
+DEBUG=1 /path/to/ClioDesk
 ```
 
 ## DevTools en production
@@ -47,11 +47,11 @@ Pour les activer, utilisez les mêmes variables d'environnement :
 
 ```bash
 # macOS / Linux
-MDFOCUS_DEBUG=1 /path/to/mdFocus.app/Contents/MacOS/mdFocus
+CLIODESK_DEBUG=1 /path/to/ClioDesk.app/Contents/MacOS/ClioDesk
 
 # Windows
-set MDFOCUS_DEBUG=1
-"C:\Program Files\mdFocus\mdFocus.exe"
+set CLIODESK_DEBUG=1
+"C:\Program Files\ClioDesk\ClioDesk.exe"
 ```
 
 Cela active à la fois :

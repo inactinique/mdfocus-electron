@@ -1,5 +1,5 @@
 /**
- * Centralized Logger for mdFocus
+ * Centralized Logger for ClioDesk
  *
  * Provides a unified logging system with:
  * - Log levels (debug, info, warn, error)
@@ -14,8 +14,8 @@
  *   logger.error('MyContext', 'Error message', error);
  *
  * Environment variables:
- *   MDFOCUS_LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error' (default: 'warn' in prod, 'debug' in dev)
- *   MDFOCUS_DEBUG: '1' to enable debug logs in production
+ *   SCRIPTORIUM_LOG_LEVEL: 'debug' | 'info' | 'warn' | 'error' (default: 'warn' in prod, 'debug' in dev)
+ *   SCRIPTORIUM_DEBUG: '1' to enable debug logs in production
  */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -92,8 +92,8 @@ class Logger {
   }
 
   private getEnvLogLevel(): LogLevel | null {
-    if (typeof process !== 'undefined' && process.env.MDFOCUS_LOG_LEVEL) {
-      const level = process.env.MDFOCUS_LOG_LEVEL.toLowerCase() as LogLevel;
+    if (typeof process !== 'undefined' && process.env.SCRIPTORIUM_LOG_LEVEL) {
+      const level = process.env.SCRIPTORIUM_LOG_LEVEL.toLowerCase() as LogLevel;
       if (level in LOG_LEVELS) {
         return level;
       }
@@ -103,7 +103,7 @@ class Logger {
 
   private isDebugEnabled(): boolean {
     if (typeof process !== 'undefined') {
-      return process.env.MDFOCUS_DEBUG === '1' || process.env.DEBUG === '1';
+      return process.env.SCRIPTORIUM_DEBUG === '1' || process.env.DEBUG === '1';
     }
     return false;
   }

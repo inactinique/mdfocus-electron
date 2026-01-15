@@ -1,4 +1,4 @@
-# mdFocus Electron - Assistant d'écriture pour historiens
+# ClioDesk Electron - Assistant d'écriture pour historiens
 
 Application desktop multi-plateforme (Electron + React + TypeScript) pour assister les historiens dans l'écriture d'articles et de livres, avec RAG (Retrieval-Augmented Generation) et intégrations Zotero/Tropy.
 
@@ -42,7 +42,7 @@ Créer un assistant d'écriture qui permet aux historiens de :
 ## 🏗️ Architecture
 
 ```
-mdfocus-electron/
+cliodesk/
 ├── src/
 │   ├── main/              # Electron Main Process
 │   │   ├── index.ts       # Entry point
@@ -124,8 +124,8 @@ Pour des instructions complètes d'installation avec gestion des dépendances sy
 
 ```bash
 # Cloner le dépôt
-git clone https://github.com/votre-org/mdfocus-electron.git
-cd mdfocus-electron
+git clone https://github.com/votre-org/cliodesk.git
+cd cliodesk
 
 # Installer les dépendances npm
 npm install
@@ -286,7 +286,7 @@ Gestion de la configuration avec electron-store.
 
 ## 📝 Port depuis Swift
 
-Le projet réécrit mdFocus (Swift/macOS) en Electron multi-plateforme.
+Le projet réécrit ClioDesk (Swift/macOS) en Electron multi-plateforme.
 
 **Fichiers portés:**
 - ✅ `VectorStore.swift` (586 lignes) → `VectorStore.ts`
@@ -339,8 +339,8 @@ Le projet réécrit mdFocus (Swift/macOS) en Electron multi-plateforme.
 
 ## 🔗 Liens
 
-- **Dépôt original:** `/home/inactinique/GitHub/mdFocus` (Swift)
-- **Nouveau dépôt:** `/home/inactinique/GitHub/mdfocus-electron` (Electron)
+- **Dépôt original:** `/home/inactinique/GitHub/ClioDesk` (Swift)
+- **Nouveau dépôt:** `/home/inactinique/GitHub/cliodesk` (Electron)
 - **Zotero API:** https://www.zotero.org/support/dev/web_api/v3/basics
 - **Tropy:** https://tropy.org/
 - **Ollama:** https://ollama.ai/

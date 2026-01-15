@@ -1,12 +1,12 @@
-# Guide d'installation - mdFocus pour Linux
+# Guide d'installation - ClioDesk pour Linux
 
-Ce guide vous accompagne dans l'installation complète de mdFocus sur Linux, depuis les prérequis jusqu'au premier lancement.
+Ce guide vous accompagne dans l'installation complète de ClioDesk sur Linux, depuis les prérequis jusqu'au premier lancement.
 
 ## Table des matières
 
 - [Prérequis système](#prérequis-système)
 - [Installation des dépendances](#installation-des-dépendances)
-- [Installation de mdFocus](#installation-de-mdfocus)
+- [Installation de ClioDesk](#installation-de-cliodesk)
 - [Configuration initiale](#configuration-initiale)
 - [Vérification de l'installation](#vérification-de-linstallation)
 - [Dépannage](#dépannage)
@@ -47,7 +47,7 @@ sudo apt install -y \
   texlive-lang-french
 ```
 
-**Note :** Pandoc et XeLaTeX sont nécessaires pour l'export PDF depuis mdFocus.
+**Note :** Pandoc et XeLaTeX sont nécessaires pour l'export PDF depuis ClioDesk.
 
 #### Fedora/RHEL/CentOS
 
@@ -98,7 +98,7 @@ sudo pacman -Syu --needed \
 
 ### 2. Node.js et npm
 
-mdFocus nécessite Node.js 20+ et npm 10+.
+ClioDesk nécessite Node.js 20+ et npm 10+.
 
 #### Méthode 1 : Via NodeSource (recommandé)
 
@@ -161,7 +161,7 @@ npm --version
 
 ### 3. Python 3
 
-mdFocus utilise Python pour certains services (topic modeling). Python 3.11+ est requis.
+ClioDesk utilise Python pour certains services (topic modeling). Python 3.11+ est requis.
 
 #### Ubuntu/Debian
 
@@ -199,7 +199,7 @@ sudo pacman -S python python-pip
 python --version
 ```
 
-**Note :** L'environnement virtuel Python (venv) sera créé automatiquement par mdFocus au premier lancement.
+**Note :** L'environnement virtuel Python (venv) sera créé automatiquement par ClioDesk au premier lancement.
 
 ### 4. Ollama (LLM local)
 
@@ -307,7 +307,7 @@ ollama list
 # gemma2:2b
 ```
 
-## Installation de mdFocus
+## Installation de ClioDesk
 
 ### Option A : Installation depuis les binaires (utilisateur)
 
@@ -317,13 +317,13 @@ Si une version packagée est disponible :
 
 ```bash
 # Télécharger l'AppImage
-wget https://github.com/votre-org/mdfocus-electron/releases/latest/download/mdFocus-0.1.0.AppImage
+wget https://github.com/votre-org/cliodesk/releases/latest/download/ClioDesk-0.1.0.AppImage
 
 # Rendre exécutable
-chmod +x mdFocus-0.1.0.AppImage
+chmod +x ClioDesk-0.1.0.AppImage
 
 # Lancer
-./mdFocus-0.1.0.AppImage
+./ClioDesk-0.1.0.AppImage
 ```
 
 **Intégration au système (optionnel) :**
@@ -331,16 +331,16 @@ chmod +x mdFocus-0.1.0.AppImage
 ```bash
 # Déplacer vers un emplacement standard
 mkdir -p ~/.local/bin
-mv mdFocus-0.1.0.AppImage ~/.local/bin/mdfocus
+mv ClioDesk-0.1.0.AppImage ~/.local/bin/cliodesk
 
 # Créer une entrée de menu desktop
 mkdir -p ~/.local/share/applications
-cat > ~/.local/share/applications/mdfocus.desktop <<EOF
+cat > ~/.local/share/applications/cliodesk.desktop <<EOF
 [Desktop Entry]
-Name=mdFocus
+Name=ClioDesk
 Comment=Assistant d'écriture pour historiens
-Exec=$HOME/.local/bin/mdfocus %U
-Icon=mdfocus
+Exec=$HOME/.local/bin/cliodesk %U
+Icon=cliodesk
 Terminal=false
 Type=Application
 Categories=Office;TextEditor;
@@ -355,16 +355,16 @@ update-desktop-database ~/.local/share/applications
 
 ```bash
 # Télécharger le package
-wget https://github.com/votre-org/mdfocus-electron/releases/latest/download/mdFocus-0.1.0.deb
+wget https://github.com/votre-org/cliodesk/releases/latest/download/ClioDesk-0.1.0.deb
 
 # Installer
-sudo dpkg -i mdFocus-0.1.0.deb
+sudo dpkg -i ClioDesk-0.1.0.deb
 
 # Résoudre les dépendances manquantes (si nécessaire)
 sudo apt-get install -f
 
 # Lancer
-mdfocus-electron
+cliodesk
 ```
 
 #### Package .rpm (Fedora/RHEL/CentOS)
@@ -373,16 +373,16 @@ Si disponible :
 
 ```bash
 # Télécharger le package
-wget https://github.com/votre-org/mdfocus-electron/releases/latest/download/mdFocus-0.1.0.rpm
+wget https://github.com/votre-org/cliodesk/releases/latest/download/ClioDesk-0.1.0.rpm
 
 # Installer
-sudo dnf install ./mdFocus-0.1.0.rpm
+sudo dnf install ./ClioDesk-0.1.0.rpm
 
 # Ou avec rpm
-sudo rpm -i mdFocus-0.1.0.rpm
+sudo rpm -i ClioDesk-0.1.0.rpm
 
 # Lancer
-mdfocus-electron
+cliodesk
 ```
 
 ### Option B : Installation depuis les sources (développeur)
@@ -391,8 +391,8 @@ Pour contribuer au projet ou exécuter la version de développement :
 
 1. **Cloner le dépôt**
    ```bash
-   git clone https://github.com/votre-org/mdfocus-electron.git
-   cd mdfocus-electron
+   git clone https://github.com/votre-org/cliodesk.git
+   cd cliodesk
    ```
 
 2. **Installer les dépendances npm**
@@ -432,17 +432,17 @@ Pour contribuer au projet ou exécuter la version de développement :
    npm run build:linux
 
    # Les fichiers seront dans : release/
-   # - mdFocus-0.1.0.AppImage
-   # - mdFocus-0.1.0.deb
+   # - ClioDesk-0.1.0.AppImage
+   # - ClioDesk-0.1.0.deb
    ```
 
 ## Configuration initiale
 
-Au premier lancement de mdFocus :
+Au premier lancement de ClioDesk :
 
 ### 1. Vérification d'Ollama
 
-mdFocus vérifie automatiquement la connexion à Ollama (http://localhost:11434).
+ClioDesk vérifie automatiquement la connexion à Ollama (http://localhost:11434).
 
 **Si la connexion échoue :**
 ```bash
@@ -469,10 +469,10 @@ curl http://localhost:11434/api/tags
 ### 3. Créer votre premier projet
 
 1. **Nouveau Projet** → Choisir un dossier
-2. mdFocus crée la structure :
+2. ClioDesk crée la structure :
    ```
    mon-projet/
-   ├── .mdfocus/
+   ├── .cliodesk/
    │   └── vectors.db          # Base de données vectorielle
    ├── src/
    │   ├── images/             # Images du projet
@@ -487,7 +487,7 @@ Si vous utilisez Zotero :
 
 1. Obtenir votre API Key : [https://www.zotero.org/settings/keys/new](https://www.zotero.org/settings/keys/new)
    - Permissions : "Read library" et "Write library"
-2. Dans mdFocus : **Settings** → **Zotero Integration**
+2. Dans ClioDesk : **Settings** → **Zotero Integration**
 3. Entrer votre User ID et API Key
 4. **Test Connection**
 
@@ -522,7 +522,7 @@ Si vous utilisez Zotero :
    xelatex --version  # TeX Live 2020+ ou supérieur
    ```
 
-5. **Tester mdFocus**
+5. **Tester ClioDesk**
    - Créer un nouveau projet
    - Importer un PDF dans `src/pdfs/`
    - Indexer le PDF via l'interface
@@ -534,10 +534,10 @@ En mode développement, les logs sont affichés dans la console. En production :
 
 ```bash
 # Logs de l'application
-journalctl --user -u mdfocus -f
+journalctl --user -u cliodesk -f
 
 # Ou pour les AppImages
-tail -f ~/.config/mdfocus-electron/logs/main.log
+tail -f ~/.config/cliodesk/logs/main.log
 ```
 
 ## Dépannage
@@ -563,7 +563,7 @@ ollama serve
 Cela signifie que le module natif n'a pas été compilé pour Electron.
 
 ```bash
-cd /path/to/mdfocus-electron
+cd /path/to/cliodesk
 
 # Supprimer le build existant
 rm -rf node_modules/better-sqlite3/build
@@ -589,10 +589,10 @@ sudo dnf install fuse-libs
 sudo pacman -S fuse2
 
 # Rendre l'AppImage exécutable
-chmod +x mdFocus-0.1.0.AppImage
+chmod +x ClioDesk-0.1.0.AppImage
 
 # Lancer avec --no-sandbox si nécessaire
-./mdFocus-0.1.0.AppImage --no-sandbox
+./ClioDesk-0.1.0.AppImage --no-sandbox
 ```
 
 ### Problème : Python venv ne se crée pas
@@ -619,7 +619,7 @@ Il manque probablement des bibliothèques système :
 
 ```bash
 # Vérifier les dépendances manquantes
-ldd /path/to/mdfocus-electron
+ldd /path/to/cliodesk
 
 # Ubuntu/Debian : Réinstaller les dépendances
 sudo apt install --reinstall \
@@ -675,7 +675,7 @@ Environment="OLLAMA_HOST=127.0.0.1:11435"
 sudo systemctl daemon-reload
 sudo systemctl restart ollama
 
-# Puis dans mdFocus Settings → LLM → URL : http://localhost:11435
+# Puis dans ClioDesk Settings → LLM → URL : http://localhost:11435
 ```
 
 ### Problème : Sandbox Electron (Wayland)
@@ -684,66 +684,66 @@ Sur certaines distributions avec Wayland :
 
 ```bash
 # Lancer avec --no-sandbox
-./mdFocus-0.1.0.AppImage --no-sandbox
+./ClioDesk-0.1.0.AppImage --no-sandbox
 
 # Ou définir la variable d'environnement
 export ELECTRON_NO_SANDBOX=1
-./mdFocus-0.1.0.AppImage
+./ClioDesk-0.1.0.AppImage
 ```
 
 ### Obtenir de l'aide
 
 - **Documentation** : [README.md](README.md)
-- **Issues** : [GitHub Issues](https://github.com/votre-org/mdfocus-electron/issues)
-- **Logs** : `~/.config/mdfocus-electron/logs/`
+- **Issues** : [GitHub Issues](https://github.com/votre-org/cliodesk/issues)
+- **Logs** : `~/.config/cliodesk/logs/`
 
 ## Désinstallation
 
-Pour désinstaller complètement mdFocus :
+Pour désinstaller complètement ClioDesk :
 
 ### AppImage
 
 ```bash
 # Supprimer l'AppImage
-rm ~/.local/bin/mdfocus
+rm ~/.local/bin/cliodesk
 
 # Supprimer l'entrée de menu
-rm ~/.local/share/applications/mdfocus.desktop
+rm ~/.local/share/applications/cliodesk.desktop
 update-desktop-database ~/.local/share/applications
 
 # Supprimer les données utilisateur
-rm -rf ~/.config/mdfocus-electron
-rm -rf ~/.local/share/mdfocus-electron
+rm -rf ~/.config/cliodesk
+rm -rf ~/.local/share/cliodesk
 ```
 
 ### Package .deb
 
 ```bash
 # Désinstaller
-sudo apt remove mdfocus-electron
+sudo apt remove cliodesk
 
 # Supprimer les données
-rm -rf ~/.config/mdfocus-electron
+rm -rf ~/.config/cliodesk
 ```
 
 ### Package .rpm
 
 ```bash
 # Désinstaller
-sudo dnf remove mdfocus-electron
+sudo dnf remove cliodesk
 
 # Supprimer les données
-rm -rf ~/.config/mdfocus-electron
+rm -rf ~/.config/cliodesk
 ```
 
 ### Depuis les sources
 
 ```bash
 # Supprimer le dépôt cloné
-rm -rf /path/to/mdfocus-electron
+rm -rf /path/to/cliodesk
 
 # Supprimer les données utilisateur
-rm -rf ~/.config/mdfocus-electron
+rm -rf ~/.config/cliodesk
 ```
 
 ### Désinstaller Ollama (optionnel)
@@ -768,11 +768,11 @@ sudo rm -rf ~/.ollama
 sudo userdel ollama
 ```
 
-**Note :** Vos projets mdFocus (fichiers .md, PDFs, .mdfocus/) ne sont pas supprimés automatiquement.
+**Note :** Vos projets ClioDesk (fichiers .md, PDFs, .cliodesk/) ne sont pas supprimés automatiquement.
 
 ## Prochaines étapes
 
-Une fois mdFocus installé :
+Une fois ClioDesk installé :
 1. Consultez le [README.md](README.md) pour comprendre l'architecture
 2. Lisez le [DEPLOYMENT.md](DEPLOYMENT.md) pour le workflow utilisateur
 3. Explorez les [exemples de projets](examples/) (si disponibles)
@@ -799,7 +799,7 @@ Une fois mdFocus installé :
 
 ### WSL2 (Windows Subsystem for Linux)
 
-mdFocus peut fonctionner sur WSL2, mais avec limitations :
+ClioDesk peut fonctionner sur WSL2, mais avec limitations :
 - Pas d'accélération GPU pour Ollama
 - Interface graphique nécessite un serveur X (VcXsrv, WSLg)
 - Performances réduites par rapport à Linux natif

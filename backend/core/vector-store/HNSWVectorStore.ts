@@ -42,7 +42,7 @@ export class HNSWVectorStore {
   ) {
     this.dimension = dimension;
     this.maxElements = maxElements;
-    this.indexPath = path.join(projectPath, '.mdfocus', 'hnsw.index');
+    this.indexPath = path.join(projectPath, '.cliodesk', 'hnsw.index');
     this.chunkIdMap = new Map();
     this.chunkDataMap = new Map();
   }

@@ -16,8 +16,8 @@ export class ConfigManager {
 
     this.store = new Store<AppConfig>({
       defaults: DEFAULT_CONFIG,
-      name: 'mdfocus-config',
-      projectName: 'mdfocus-electron',
+      name: 'cliodesk-config',
+      projectName: 'cliodesk',
     });
 
     this.initialized = true;

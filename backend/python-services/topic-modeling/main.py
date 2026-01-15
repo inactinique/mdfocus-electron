@@ -123,7 +123,7 @@ class HealthResponse(BaseModel):
 # MARK: - FastAPI App
 
 app = FastAPI(
-    title="mdFocus Topic Modeling Service",
+    title="ClioDesk Topic Modeling Service",
     description="Service Python pour analyse de topics avec BERTopic",
     version="1.0.0",
 )

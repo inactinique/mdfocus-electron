@@ -80,7 +80,7 @@ function findProjectDatabases() {
   log('info', 'Looking for project databases...');
 
   const homeDir = process.env.HOME || process.env.USERPROFILE;
-  const documentsPath = join(homeDir, 'Documents', 'GitHub', 'mdfocus-electron');
+  const documentsPath = join(homeDir, 'Documents', 'GitHub', 'cliodesk');
 
   const databases = [];
 
@@ -94,7 +94,7 @@ function findProjectDatabases() {
       for (const entry of entries) {
         const fullPath = join(dir, entry.name);
 
-        if (entry.isDirectory() && entry.name === '.mdfocus') {
+        if (entry.isDirectory() && entry.name === '.cliodesk') {
           const dbPath = join(fullPath, 'vectors.db');
           if (fs.existsSync(dbPath)) {
             databases.push({
@@ -275,7 +275,7 @@ async function testEmbeddingGeneration(url = 'http://localhost:11434') {
 // Main
 async function main() {
   console.log(`${colors.cyan}╔═══════════════════════════════════════╗${colors.reset}`);
-  console.log(`${colors.cyan}║   mdFocus RAG Diagnostic Tool         ║${colors.reset}`);
+  console.log(`${colors.cyan}║   ClioDesk RAG Diagnostic Tool        ║${colors.reset}`);
   console.log(`${colors.cyan}╚═══════════════════════════════════════╝${colors.reset}\n`);
 
   // Check if specific DB path provided as argument

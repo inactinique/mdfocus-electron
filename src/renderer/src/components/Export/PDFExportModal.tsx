@@ -146,7 +146,7 @@ export const PDFExportModal: React.FC<PDFExportModalProps> = ({ isOpen, onClose 
         cslPath: currentProject.cslPath,
         metadata: {
           title,
-          author: author || 'MDFocus',
+          author: author || 'ClioDesk',
           date: new Date().toLocaleDateString('fr-FR'),
         },
         beamerConfig,

@@ -1,4 +1,4 @@
-# Plan d'implémentation - mdFocus v1.0
+# Plan d'implémentation - ClioDesk v1.0
 
 Version actuelle: 0.1.0
 Objectif: Version 1.0 stable et complète
@@ -178,7 +178,7 @@ Objectif: Version 1.0 stable et complète
 - [x] Auditer le contenu actuel du guide méthodologique
 - [x] Évaluer la pertinence pour les utilisateurs (historiens/chercheurs)
 - [ ] Réécrire les sections obsolètes ou non pertinentes *(Guide actuel est pertinent et à jour)*
-- [ ] Ajouter des exemples concrets d'utilisation de mdFocus *(À faire si nécessaire)*
+- [ ] Ajouter des exemples concrets d'utilisation de ClioDesk *(À faire si nécessaire)*
 - [x] S'assurer que le guide reflète les fonctionnalités actuelles (embeddings, BM25, etc.)
 
 **Priorité:** Moyenne
@@ -218,7 +218,7 @@ Objectif: Version 1.0 stable et complète
 **Tâches:**
 - [x] Fusionner CHUNKING_IMPROVEMENTS.md et EMBEDDINGS_IMPROVEMENTS.md
 - [x] Créer un document ARCHITECTURE.md structuré:
-  - Introduction: Qu'est-ce que mdFocus et comment il fonctionne
+  - Introduction: Qu'est-ce que ClioDesk et comment il fonctionne
   - Architecture globale (frontend Electron + backend + services Python)
   - Système de RAG (Vector store, HNSW, BM25, hybrid search)
   - Pipeline d'indexation (chunking adaptatif, embeddings)
@@ -331,8 +331,8 @@ Objectif: Version 1.0 stable et complète
 - `LOGGING.md` - Documentation
 
 **Variables d'environnement:**
-- `MDFOCUS_DEBUG=1` : Active tous les logs en production
-- `MDFOCUS_LOG_LEVEL=debug` : Définit le niveau de log
+- `CLIODESK_DEBUG=1` : Active tous les logs en production
+- `CLIODESK_LOG_LEVEL=debug` : Définit le niveau de log
 
 **Priorité:** Haute
 **Complexité:** Moyenne

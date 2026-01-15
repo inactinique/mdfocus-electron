@@ -31,23 +31,23 @@ export class VectorStore {
     }
 
     this.projectPath = projectPath;
-    // Base de données dans project/.mdfocus/vectors.db
-    this.dbPath = path.join(projectPath, '.mdfocus', 'vectors.db');
+    // Base de données dans project/.cliodesk/vectors.db
+    this.dbPath = path.join(projectPath, '.cliodesk', 'vectors.db');
 
     console.log(`📁 Base de données projet: ${this.dbPath}`);
 
-    // Créer le dossier .mdfocus si nécessaire
-    const mdfocusDir = path.join(projectPath, '.mdfocus');
-    if (!existsSync(mdfocusDir)) {
-      mkdirSync(mdfocusDir, { recursive: true });
-      console.log(`📂 Dossier .mdfocus créé: ${mdfocusDir}`);
+    // Créer le dossier .cliodesk si nécessaire
+    const cliodeskDir = path.join(projectPath, '.cliodesk');
+    if (!existsSync(cliodeskDir)) {
+      mkdirSync(cliodeskDir, { recursive: true });
+      console.log(`📂 Dossier .cliodesk créé: ${cliodeskDir}`);
     }
 
-    // S'assurer que le dossier .mdfocus a les bonnes permissions
+    // S'assurer que le dossier .cliodesk a les bonnes permissions
     try {
-      chmodSync(mdfocusDir, 0o755); // rwxr-xr-x
+      chmodSync(cliodeskDir, 0o755); // rwxr-xr-x
     } catch (error) {
-      console.warn(`⚠️  Could not set permissions on ${mdfocusDir}:`, error);
+      console.warn(`⚠️  Could not set permissions on ${cliodeskDir}:`, error);
     }
 
     // Ouvrir la base de données

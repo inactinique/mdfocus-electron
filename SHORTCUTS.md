@@ -1,6 +1,6 @@
-# Raccourcis Clavier - mdFocus
+# Raccourcis Clavier - ClioDesk
 
-Ce document liste tous les raccourcis clavier disponibles dans mdFocus.
+Ce document liste tous les raccourcis clavier disponibles dans ClioDesk.
 
 > **Note**: Sur macOS, utilisez `Cmd` au lieu de `Ctrl`.
 
@@ -124,4 +124,4 @@ Vous pouvez utiliser :
 ## 📖 Références
 
 - [Documentation Electron - Accelerators](https://www.electronjs.org/docs/latest/api/accelerator)
-- [Documentation mdFocus](README.md)
+- [Documentation ClioDesk](README.md)
