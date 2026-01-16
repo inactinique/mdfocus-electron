@@ -1,6 +1,8 @@
 # ClioDesk Electron - Writing Assistant for Historians
 
-Multi-platform desktop application (Electron + React + TypeScript) to assist historians in writing articles and books, with RAG (Retrieval-Augmented Generation) and Zotero/Tropy integrations.
+**NOTE that *ClioDesk* is a vibe-coding experiment aimed at developping a Proof Of Concept. It is provided *as is*, at your own risk**.
+
+Multi-platform desktop application (Electron + React + TypeScript) to assist historians in writing articles (v1) and books (not implmented yet), with RAG (Retrieval-Augmented Generation) and Zotero (v1) / Tropy (not implemented yet) integrations.
 
 ## Objective
 
@@ -8,12 +10,12 @@ Create a writing assistant that allows historians to:
 - Efficiently search their bibliographic data
 - Query their digitized sources (PDFs) via RAG
 - Integrate Zotero for bibliography
-- Integrate Tropy for archival sources
-- Edit in markdown with contextual AI assistant
+- Integrate Tropy for archival sources (not implemented yet)
+- Edit in markdown (v1) with contextual AI assistant (not implmented yet)
 
 ## Progress Status
 
-**ClioDesk is approaching version 1.0** - Currently at **89% completion** (59/66 tasks complete)
+**ClioDesk is approaching version 1.0**
 
 ### ✅ Completed (Phases 1-5)
 
@@ -54,7 +56,7 @@ Create a writing assistant that allows historians to:
 - [ ] Multi-platform build testing
 - [ ] GitHub release preparation
 
-See [ROADMAP_V1.0.md](ROADMAP_V1.0.md) for detailed progress tracking.
+See [ROADMAP_V1.0]([ROADMAP_V1.0.md](https://github.com/inactinique/cliodeck/wiki/3.-Implementation-Plan-%E2%80%90-ClioDesk-v1.0)) for detailed progress tracking.
 
 ## Architecture
 
@@ -125,8 +127,8 @@ cliodesk/
 
 For complete installation instructions including system dependencies, Ollama configuration, and troubleshooting:
 
-- **[macOS Installation Guide](INSTALL_MACOS.md)** - Complete installation on macOS (Intel and Apple Silicon)
-- **[Linux Installation Guide](INSTALL_LINUX.md)** - Installation on Ubuntu, Debian, Fedora, Arch Linux, etc.
+- **[macOS Installation Guide](https://github.com/inactinique/cliodeck/wiki/1.2-ClioDesk-Installation-%E2%80%90-macOS)** - Complete installation on macOS (Intel and Apple Silicon)
+- **[Linux Installation Guide](https://github.com/inactinique/cliodeck/wiki/1.1-ClioDesk-Installation-%E2%80%90-Linux)** - Installation on Ubuntu, Debian, Fedora, Arch Linux, etc.
 
 ### Quick Installation (Developers)
 
@@ -344,23 +346,8 @@ The project rewrites ClioDesk (Swift/macOS) as a multi-platform Electron applica
 
 ## Documentation
 
-### Installation Guides
-- [INSTALL_MACOS.md](INSTALL_MACOS.md) - Complete guide for macOS (Intel & Apple Silicon)
-- [INSTALL_LINUX.md](INSTALL_LINUX.md) - Complete guide for Linux (Ubuntu, Debian, Fedora, Arch)
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Production deployment and user workflow
+See the [ClioDesk wiki](https://github.com/inactinique/cliodeck/wiki).
 
-### Technical Documentation
-- [VectorStore API](#vectorstore-completed) - VectorStore documentation
-- [Configuration](#configmanager-completed) - Configuration options
-- [Architecture](#architecture) - Project structure
-
-## Links
-
-- **Original repository:** `/home/inactinique/GitHub/ClioDesk` (Swift)
-- **New repository:** `/home/inactinique/GitHub/cliodesk` (Electron)
-- **Zotero API:** https://www.zotero.org/support/dev/web_api/v3/basics
-- **Tropy:** https://tropy.org/
-- **Ollama:** https://ollama.ai/
 
 ## License
 
