@@ -9,8 +9,8 @@
  *   import '@shared/console-filter';
  *
  * Environment variables:
- *   SCRIPTORIUM_DEBUG=1 : Enable all console logs even in production
- *   SCRIPTORIUM_LOG_LEVEL=debug : Same effect as SCRIPTORIUM_DEBUG=1
+ *   CLIODESK_DEBUG=1 : Enable all console logs even in production
+ *   CLIODESK_LOG_LEVEL=debug : Same effect as CLIODESK_DEBUG=1
  *
  * This is a pragmatic solution that:
  * - Doesn't require migrating all 850+ console.log calls
@@ -56,9 +56,9 @@ function isProduction(): boolean {
 function isDebugEnabled(): boolean {
   if (typeof process !== 'undefined') {
     return (
-      process.env.SCRIPTORIUM_DEBUG === '1' ||
+      process.env.CLIODESK_DEBUG === '1' ||
       process.env.DEBUG === '1' ||
-      process.env.SCRIPTORIUM_LOG_LEVEL === 'debug'
+      process.env.CLIODESK_LOG_LEVEL === 'debug'
     );
   }
   return false;
@@ -123,7 +123,7 @@ function installConsoleFilter(): void {
   // Log that filtering is active (using original to bypass filter)
   if (config.filterLog) {
     originalConsole.info(
-      '[ClioDesk] Production mode: console.log/info filtered. Set SCRIPTORIUM_DEBUG=1 to enable.'
+      '[ClioDesk] Production mode: console.log/info filtered. Set CLIODESK_DEBUG=1 to enable.'
     );
   }
 }
