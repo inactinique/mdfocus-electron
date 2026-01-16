@@ -303,29 +303,6 @@ Configuration management with electron-store.
 }
 ```
 
-## Next Steps
-
-1. **Finalize core backend** (2-3 days)
-   - Port DocumentChunker
-   - Port BibTeXParser
-   - Implement PDFExtractor with pdfjs-dist
-   - Port OllamaClient
-
-2. **Build scripts** (1 day)
-   - Configure Vite for Electron
-   - Separate main + renderer build
-   - TypeScript compilation
-
-3. **End-to-end testing** (1 day)
-   - Test VectorStore
-   - Test PDF indexing
-   - Test semantic search
-
-4. **React interface** (1 week)
-   - 3-panel layout
-   - Monaco Editor
-   - RAG chat interface
-   - Bibliography panel
 
 ## Documentation
 
