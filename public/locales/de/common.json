@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "ClioDesk"
+    "name": "ClioDeck"
   },
   "actions": {
     "save": "Speichern",
@@ -183,7 +183,7 @@
     "projectFiles": "Projektdateien",
     "appearance": "Darstellung",
     "removeFromRecent": "Aus letzten Projekten entfernen",
-    "dialogTitle": "ClioDesk-Projekt",
+    "dialogTitle": "ClioDeck-Projekt",
     "allFiles": "Alle Dateien",
     "name": "Name",
     "type": "Typ",
@@ -561,8 +561,8 @@
     "faq": "FAQ",
     "glossary": "Glossar",
     "searchPlaceholder": "Suchen...",
-    "welcome": "Willkommen bei ClioDesk",
-    "intro": "ClioDesk ist ein KI-gestütztes akademisches Schreibwerkzeug für Geisteswissenschaftler. Dieser Leitfaden hilft Ihnen, die Fähigkeiten, Einschränkungen und Best Practices jeder Funktion zu verstehen.",
+    "welcome": "Willkommen bei ClioDeck",
+    "intro": "ClioDeck ist ein KI-gestütztes akademisches Schreibwerkzeug für Geisteswissenschaftler. Dieser Leitfaden hilft Ihnen, die Fähigkeiten, Einschränkungen und Best Practices jeder Funktion zu verstehen.",
     "importantWarning": "Wichtig:",
     "importantWarningText": "KI ist ein Werkzeug zur Erkundung und Unterstützung, kein Ersatz für Ihre kritische Analyse. Überprüfen Sie immer die Quellen und dokumentieren Sie Ihre Methodik.",
     "mainFeatures": "Hauptfunktionen",
@@ -575,7 +575,7 @@
     "academicContext": "Akademischer Kontext"
   },
   "about": {
-    "title": "Über ClioDesk",
+    "title": "Über ClioDeck",
     "license": "Lizenz",
     "description": "Diese App wurde entwickelt von",
     "developedWith": "und dank Claude Code entwickelt. Es ist ein Vibe-Coding-Experiment und wird \"so wie es ist\" geliefert, verwenden Sie es auf eigenes Risiko.",

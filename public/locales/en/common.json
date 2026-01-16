@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "ClioDesk"
+    "name": "ClioDeck"
   },
   "actions": {
     "save": "Save",
@@ -183,7 +183,7 @@
     "projectFiles": "Project files",
     "appearance": "Appearance",
     "removeFromRecent": "Remove from recent projects",
-    "dialogTitle": "ClioDesk Project",
+    "dialogTitle": "ClioDeck Project",
     "allFiles": "All files",
     "name": "Name",
     "type": "Type",
@@ -561,8 +561,8 @@
     "faq": "FAQ",
     "glossary": "Glossary",
     "searchPlaceholder": "Search...",
-    "welcome": "Welcome to ClioDesk",
-    "intro": "ClioDesk is an AI-assisted academic writing tool designed for humanities researchers. This guide helps you understand the capabilities, limitations, and best practices of each feature.",
+    "welcome": "Welcome to ClioDeck",
+    "intro": "ClioDeck is an AI-assisted academic writing tool designed for humanities researchers. This guide helps you understand the capabilities, limitations, and best practices of each feature.",
     "importantWarning": "Important:",
     "importantWarningText": "AI is a tool for exploration and assistance, not a replacement for your critical analysis. Always verify sources and document your methodology.",
     "mainFeatures": "Main Features",
@@ -575,7 +575,7 @@
     "academicContext": "Academic Context"
   },
   "about": {
-    "title": "About ClioDesk",
+    "title": "About ClioDeck",
     "license": "License",
     "description": "This app was designed by",
     "developedWith": "and developed thanks to Claude Code. It is a vibe coding experiment and is delivered \"as is\", use it at your own risks.",

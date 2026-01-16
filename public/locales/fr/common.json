@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "ClioDesk"
+    "name": "ClioDeck"
   },
   "actions": {
     "save": "Sauvegarder",
@@ -183,7 +183,7 @@
     "projectFiles": "Fichiers du projet",
     "appearance": "Apparence",
     "removeFromRecent": "Retirer des projets récents",
-    "dialogTitle": "Projet ClioDesk",
+    "dialogTitle": "Projet ClioDeck",
     "allFiles": "Tous les fichiers",
     "name": "Nom",
     "type": "Type",
@@ -561,8 +561,8 @@
     "faq": "FAQ",
     "glossary": "Glossaire",
     "searchPlaceholder": "Rechercher...",
-    "welcome": "Bienvenue dans ClioDesk",
-    "intro": "ClioDesk est un outil d'écriture académique assistée par IA, conçu pour les chercheurs en sciences humaines. Ce guide vous aide à comprendre les capacités, limitations et bonnes pratiques de chaque fonctionnalité.",
+    "welcome": "Bienvenue dans ClioDeck",
+    "intro": "ClioDeck est un outil d'écriture académique assistée par IA, conçu pour les chercheurs en sciences humaines. Ce guide vous aide à comprendre les capacités, limitations et bonnes pratiques de chaque fonctionnalité.",
     "importantWarning": "Important :",
     "importantWarningText": "L'IA est un outil d'exploration et d'assistance, pas un remplacement de votre analyse critique. Vérifiez toujours les sources et documentez votre méthodologie.",
     "mainFeatures": "Fonctionnalités Principales",
@@ -575,7 +575,7 @@
     "academicContext": "Contexte Académique"
   },
   "about": {
-    "title": "À propos de ClioDesk",
+    "title": "À propos de ClioDeck",
     "license": "Licence",
     "description": "Cette application a été conçue par",
     "developedWith": "et développée grâce à Claude Code. C'est une expérience de vibe coding et est fournie \"en l'état\", utilisez-la à vos propres risques.",
