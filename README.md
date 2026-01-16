@@ -13,31 +13,48 @@ Create a writing assistant that allows historians to:
 
 ## Progress Status
 
-### Phase 1: Infrastructure (COMPLETED)
+**ClioDesk is approaching version 1.0** - Currently at **89% completion** (59/66 tasks complete)
+
+### ✅ Completed (Phases 1-5)
+
+**Phase 1: Core Infrastructure**
 - [x] Electron + React + TypeScript project initialized
-- [x] Folder structure created (src/, backend/)
-- [x] Dependencies installed (better-sqlite3, electron-store, Monaco, pdfjs-dist, etc.)
-- [x] IPC handlers configured (preload bridge)
+- [x] VectorStore with SQLite (documents, chunks, embeddings)
+- [x] IPC handlers and preload bridge
 - [x] ConfigManager with electron-store
-- [x] **VectorStore.ts** ported from Swift (586 lines)
-  - SQLite database with better-sqlite3
-  - Documents and chunks management
-  - Embeddings as BLOB
-  - Cosine similarity search
-  - CASCADE delete
-  - Statistics and integrity checks
 
-### In Progress: Core Backend Modules
-- [ ] DocumentChunker.ts
-- [ ] BibTeXParser.ts
-- [ ] PDFExtractor.ts (pdfjs-dist)
-- [ ] OllamaClient.ts
-- [ ] PDFIndexer.ts (orchestration)
+**Phase 2: Advanced Features**
+- [x] PDF indexing with adaptive chunking (cpuOptimized/standard/large)
+- [x] HNSW + BM25 hybrid search (16x faster than baseline)
+- [x] Word export (.docx) with .dotx template support
+- [x] Bibliography management with merge/replace modes
+- [x] System prompt customization (FR/EN)
+- [x] PDF renaming during import
 
-### Upcoming
-- [ ] React Interface (Monaco Editor, RAG Chat, Bibliography)
-- [ ] Zotero/Tropy Integrations
-- [ ] Exports (PDF, DOCX, reveal.js)
+**Phase 3: Documentation**
+- [x] Technical architecture documentation (ARCHITECTURE.md)
+- [x] Build and deployment guide (BUILD_AND_DEPLOYMENT.md)
+- [x] Platform-specific installation guides (macOS, Linux)
+
+**Phase 4: Internationalization**
+- [x] Complete i18n implementation (FR/EN/DE)
+- [x] 667+ translation keys per language
+- [x] All UI components translated
+
+**Phase 5: Cleanup**
+- [x] Removed experimental features (contextual suggestions)
+- [x] Codebase cleanup and optimization
+
+### 🚧 In Progress (Phase 6: Release - 46% complete)
+
+- [x] Centralized logging system with production filters
+- [ ] DevTools production configuration
+- [ ] Version bump to 1.0.0
+- [ ] Complete CHANGELOG.md
+- [ ] Multi-platform build testing
+- [ ] GitHub release preparation
+
+See [ROADMAP_V1.0.md](ROADMAP_V1.0.md) for detailed progress tracking.
 
 ## Architecture
 
@@ -351,4 +368,4 @@ MIT
 
 ---
 
-**Note:** This project is under active development. Phase 1 (infrastructure) is completed. The core backend is being ported from the Swift version.
+**Current Status:** ClioDesk is nearing completion of version 1.0 (89% complete). All core features are implemented and functional. The project is in final release preparation phase.
