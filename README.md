@@ -56,8 +56,6 @@ Create a writing assistant that allows historians to:
 - [ ] Multi-platform build testing
 - [ ] GitHub release preparation
 
-See [ROADMAP_V1.0]([ROADMAP_V1.0.md](https://github.com/inactinique/cliodeck/wiki/3.-Implementation-Plan-%E2%80%90-ClioDesk-v1.0)) for detailed progress tracking.
-
 ## Architecture
 
 ```
