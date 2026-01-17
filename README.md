@@ -62,7 +62,7 @@ cliodeck/
 - **Electron 28** - Multi-platform desktop
 - **React 18** - UI components
 - **TypeScript 5** - Type safety
-- **Monaco Editor** - Markdown editor
+- **Milkdown** - WYSIWYG Markdown editor
 - **Zustand** - State management
 - **Vite** - Build tool
 
@@ -75,9 +75,9 @@ cliodeck/
 
 ### LLM & AI
 - **Ollama** - Local models (nomic-embed-text, gemma2:2b)
-  - Embedding model: `nomic-embed-text` (768 dimensions)
-  - Chat model: `gemma2:2b` (fast, multilingual)
-- embedded qwen-0.5
+  - Embedding model: `nomic-embed-text` (768 dimensions) or `mxbai-embed-large`
+  - Chat model: `gemma2:2b` (fast, multilingual) or any chat model that can be used through ollama, depending on your computer
+- embedded (without ollama) qwen-0.5 or 1.5
 - **BERTopic** - Topic modeling and clustering (Python)
 
 ## Installation
@@ -95,7 +95,7 @@ For complete installation instructions including system dependencies, Ollama con
 - Node.js 20+ and npm 10+
 - Python 3.11+ (with venv)
 - Ollama with models:
-  - `nomic-embed-text` (required for embeddings)
+  - `nomic-embed-text` and `mxbai-embed-large` (required for embeddings)
   - `gemma2:2b` (recommended for chat)
 
 **Installation:**
