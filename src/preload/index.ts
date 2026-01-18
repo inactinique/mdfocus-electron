@@ -124,6 +124,13 @@ const api = {
       downloadPDFs: boolean;
       exportBibTeX: boolean;
     }) => ipcRenderer.invoke('zotero:sync', options),
+    downloadPDF: (options: {
+      userId: string;
+      apiKey: string;
+      attachmentKey: string;
+      filename: string;
+      targetDirectory: string;
+    }) => ipcRenderer.invoke('zotero:download-pdf', options),
   },
 
   // PDF Export

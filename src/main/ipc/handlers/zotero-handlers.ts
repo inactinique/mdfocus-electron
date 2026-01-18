@@ -60,5 +60,26 @@ export function setupZoteroHandlers() {
     }
   });
 
+  ipcMain.handle('zotero:download-pdf', async (_event, options: {
+    userId: string;
+    apiKey: string;
+    attachmentKey: string;
+    filename: string;
+    targetDirectory: string;
+  }) => {
+    console.log('📞 IPC Call: zotero:download-pdf', { attachmentKey: options.attachmentKey });
+    try {
+      const result = await zoteroService.downloadPDF(options);
+      console.log('📤 IPC Response: zotero:download-pdf', {
+        success: result.success,
+        filePath: result.filePath,
+      });
+      return result;
+    } catch (error: any) {
+      console.error('❌ zotero:download-pdf error:', error);
+      return errorResponse(error);
+    }
+  });
+
   console.log('✅ Zotero handlers registered');
 }

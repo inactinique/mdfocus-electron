@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Citation, useBibliographyStore } from '../../stores/bibliographyStore';
+import { PDFSelectionDialog } from './PDFSelectionDialog';
+import { useProjectStore } from '../../stores/projectStore';
 import './CitationCard.css';
 
 interface CitationCardProps {
@@ -11,7 +13,9 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
   const { t } = useTranslation('common');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
-  const { selectCitation, insertCitation, indexPDFFromCitation, reindexPDFFromCitation, isFileIndexed, refreshIndexedPDFs } = useBibliographyStore();
+  const [showPDFSelection, setShowPDFSelection] = useState(false);
+  const { selectCitation, insertCitation, indexPDFFromCitation, reindexPDFFromCitation, isFileIndexed, refreshIndexedPDFs, downloadAndIndexZoteroPDF } = useBibliographyStore();
+  const { currentProject } = useProjectStore();
 
   const hasPDF = !!citation.file;
   const hasZoteroPDFs = !!citation.zoteroAttachments && citation.zoteroAttachments.length > 0;
@@ -47,99 +51,141 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
       return;
     }
 
-    // Normal indexing for non-indexed PDFs
+    // Check if citation has local PDF
+    if (hasPDF) {
+      setIsIndexing(true);
+      try {
+        const result = await indexPDFFromCitation(citation.id);
+        if (result.alreadyIndexed) {
+          const shouldReindex = window.confirm(t('bibliography.reindexConfirm', { title: citation.title }));
+          if (shouldReindex) {
+            await reindexPDFFromCitation(citation.id);
+            alert(t('bibliography.pdfReindexed', { title: citation.title }));
+          }
+        } else {
+          alert(`${t('bibliography.pdfIndexed')} ${citation.title}`);
+        }
+      } catch (error) {
+        alert(`${t('bibliography.indexError')} ${error}`);
+      } finally {
+        setIsIndexing(false);
+      }
+      return;
+    }
+
+    // If no local PDF but has Zotero PDFs, show selection dialog
+    if (hasZoteroPDFs) {
+      if (citation.zoteroAttachments!.length === 1) {
+        // Only one PDF - download directly
+        handleZoteroPDFSelection(citation.zoteroAttachments![0].key);
+      } else {
+        // Multiple PDFs - show selection dialog
+        setShowPDFSelection(true);
+      }
+    }
+  };
+
+  const handleZoteroPDFSelection = async (attachmentKey: string) => {
+    setShowPDFSelection(false);
+    if (!currentProject?.path) {
+      alert(t('bibliography.noProjectOpen'));
+      return;
+    }
+
     setIsIndexing(true);
     try {
-      const result = await indexPDFFromCitation(citation.id);
-      if (result.alreadyIndexed) {
-        // This shouldn't happen anymore since we check isIndexed above, but keep as fallback
-        const shouldReindex = window.confirm(t('bibliography.reindexConfirm', { title: citation.title }));
-        if (shouldReindex) {
-          await reindexPDFFromCitation(citation.id);
-          alert(t('bibliography.pdfReindexed', { title: citation.title }));
-        }
-      } else {
-        alert(`${t('bibliography.pdfIndexed')} ${citation.title}`);
-      }
+      await downloadAndIndexZoteroPDF(citation.id, attachmentKey, currentProject.path);
+      alert(t('bibliography.pdfDownloadedAndIndexed', { title: citation.title }));
     } catch (error) {
-      alert(`${t('bibliography.indexError')} ${error}`);
+      alert(`${t('bibliography.downloadError')} ${error}`);
     } finally {
       setIsIndexing(false);
     }
   };
 
   return (
-    <div className="citation-card" onClick={() => selectCitation(citation.id)}>
-      <div className="citation-header" onClick={(e) => {
-        e.stopPropagation();
-        setIsExpanded(!isExpanded);
-      }}>
-        <div className="citation-main">
-          <div className="citation-author">{citation.author}</div>
-          <div className="citation-year">({citation.year})</div>
-          {hasPDF && (
-            <span className="pdf-badge" title={isIndexed ? t('bibliography.indexed') : t('bibliography.notIndexed')}>
-              {isIndexed ? '✅' : '📄'}
-            </span>
-          )}
-          {hasZoteroPDFs && (
-            <span
-              className="zotero-pdf-badge"
-              title={`${zoteroCount} PDF${zoteroCount > 1 ? 's' : ''} ${t('bibliography.availableInZotero')}`}
-            >
-              📎 {zoteroCount}
-            </span>
-          )}
-        </div>
-        <button className="expand-btn">
-          {isExpanded ? '▼' : '▶'}
-        </button>
-      </div>
-
-      <div className="citation-title">{citation.title}</div>
-
-      {isExpanded && (
-        <div className="citation-details">
-          {citation.journal && (
-            <div className="detail-item">
-              <span className="detail-label">{t('bibliography.journal')}</span>
-              <span className="detail-value">{citation.journal}</span>
-            </div>
-          )}
-          {citation.publisher && (
-            <div className="detail-item">
-              <span className="detail-label">{t('bibliography.publisher')}</span>
-              <span className="detail-value">{citation.publisher}</span>
-            </div>
-          )}
-          {citation.booktitle && (
-            <div className="detail-item">
-              <span className="detail-label">{t('bibliography.booktitle')}</span>
-              <span className="detail-value">{citation.booktitle}</span>
-            </div>
-          )}
-
-          <div className="citation-actions">
-            <button className="action-btn primary" onClick={handleInsert}>
-              ✍️ {t('bibliography.insertCitation')}
-            </button>
+    <>
+      <div className="citation-card" onClick={() => selectCitation(citation.id)}>
+        <div className="citation-header" onClick={(e) => {
+          e.stopPropagation();
+          setIsExpanded(!isExpanded);
+        }}>
+          <div className="citation-main">
+            <div className="citation-author">{citation.author}</div>
+            <div className="citation-year">({citation.year})</div>
             {hasPDF && (
-              <button
-                className={`action-btn ${isIndexed ? 'indexed' : 'secondary'}`}
-                onClick={handleIndexPDF}
-                disabled={isIndexing}
+              <span className="pdf-badge" title={isIndexed ? t('bibliography.indexed') : t('bibliography.notIndexed')}>
+                {isIndexed ? '✅' : '📄'}
+              </span>
+            )}
+            {hasZoteroPDFs && (
+              <span
+                className="zotero-pdf-badge"
+                title={`${zoteroCount} PDF${zoteroCount > 1 ? 's' : ''} ${t('bibliography.availableInZotero')}`}
               >
-                {isIndexing ? '⏳' : isIndexed ? '🔄' : '🔍'}{' '}
-                {isIndexing
-                  ? t('bibliography.indexing')
-                  : isIndexed
-                    ? t('bibliography.reindex')
-                    : t('bibliography.indexPDFButton')}
-              </button>
+                📎 {zoteroCount}
+              </span>
             )}
           </div>
+          <button className="expand-btn">
+            {isExpanded ? '▼' : '▶'}
+          </button>
         </div>
+
+        <div className="citation-title">{citation.title}</div>
+
+        {isExpanded && (
+          <div className="citation-details">
+            {citation.journal && (
+              <div className="detail-item">
+                <span className="detail-label">{t('bibliography.journal')}</span>
+                <span className="detail-value">{citation.journal}</span>
+              </div>
+            )}
+            {citation.publisher && (
+              <div className="detail-item">
+                <span className="detail-label">{t('bibliography.publisher')}</span>
+                <span className="detail-value">{citation.publisher}</span>
+              </div>
+            )}
+            {citation.booktitle && (
+              <div className="detail-item">
+                <span className="detail-label">{t('bibliography.booktitle')}</span>
+                <span className="detail-value">{citation.booktitle}</span>
+              </div>
+            )}
+
+            <div className="citation-actions">
+              <button className="action-btn primary" onClick={handleInsert}>
+                ✍️ {t('bibliography.insertCitation')}
+              </button>
+              {(hasPDF || hasZoteroPDFs) && (
+                <button
+                  className={`action-btn ${isIndexed ? 'indexed' : 'secondary'}`}
+                  onClick={handleIndexPDF}
+                  disabled={isIndexing}
+                >
+                  {isIndexing ? '⏳' : isIndexed ? '🔄' : '🔍'}{' '}
+                  {isIndexing
+                    ? t('bibliography.indexing')
+                    : isIndexed
+                      ? t('bibliography.reindex')
+                      : t('bibliography.indexPDFButton')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showPDFSelection && citation.zoteroAttachments && (
+        <PDFSelectionDialog
+          citationTitle={citation.title}
+          attachments={citation.zoteroAttachments}
+          onSelect={handleZoteroPDFSelection}
+          onCancel={() => setShowPDFSelection(false)}
+        />
       )}
-    </div>
+    </>
   );
 };

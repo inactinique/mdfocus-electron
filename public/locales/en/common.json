@@ -172,7 +172,13 @@
     "confirmIndexAll": "Index {{count}} PDFs from bibliography?",
     "indexAllComplete": "Indexing complete: {{indexed}} indexed, {{skipped}} skipped, {{errors}} errors",
     "indexingProgress": "Indexing {{current}}/{{total}}",
-    "availableInZotero": "available in Zotero"
+    "availableInZotero": "available in Zotero",
+    "selectPDF": "Select PDF to download",
+    "modified": "Modified",
+    "zoteroNotConfigured": "Zotero is not configured. Please configure it in Settings.",
+    "pdfDownloadedAndIndexed": "PDF downloaded and indexed",
+    "downloadError": "Download error:",
+    "noProjectOpen": "No project is currently open"
   },
   "project": {
     "title": "Project",
@@ -679,5 +685,8 @@
     "filtered": "filtered",
     "noResults": "No results",
     "tryDifferentSearch": "Try a different search term"
+  },
+  "common": {
+    "cancel": "Cancel"
   }
 }

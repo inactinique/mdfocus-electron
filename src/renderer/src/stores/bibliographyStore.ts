@@ -79,6 +79,7 @@ interface BibliographyState {
   indexAllPDFs: () => Promise<{ indexed: number; skipped: number; errors: string[] }>;
   refreshIndexedPDFs: () => Promise<void>;
   isFileIndexed: (filePath: string) => boolean;
+  downloadAndIndexZoteroPDF: (citationId: string, attachmentKey: string, projectPath: string) => Promise<void>;
 
   // Internal
   applyFilters: () => void;
@@ -530,5 +531,92 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
 
   isFileIndexed: (filePath: string) => {
     return get().indexedFilePaths.has(filePath);
+  },
+
+  downloadAndIndexZoteroPDF: async (citationId: string, attachmentKey: string, projectPath: string) => {
+    try {
+      const { citations } = get();
+      const citation = citations.find((c) => c.id === citationId);
+
+      if (!citation) {
+        throw new Error('Citation not found');
+      }
+
+      const attachment = citation.zoteroAttachments?.find((att) => att.key === attachmentKey);
+      if (!attachment) {
+        throw new Error('Attachment not found in citation');
+      }
+
+      // Get Zotero config
+      const zoteroConfig = await window.electron.config.get('zotero');
+      if (!zoteroConfig || !zoteroConfig.userId || !zoteroConfig.apiKey) {
+        throw new Error('Zotero not configured. Please configure Zotero in Settings.');
+      }
+
+      console.log(`📥 Downloading PDF from Zotero: ${attachment.filename}`);
+
+      // Download PDF from Zotero
+      const downloadResult = await window.electron.zotero.downloadPDF({
+        userId: zoteroConfig.userId,
+        apiKey: zoteroConfig.apiKey,
+        attachmentKey: attachment.key,
+        filename: attachment.filename,
+        targetDirectory: projectPath,
+      });
+
+      if (!downloadResult.success || !downloadResult.filePath) {
+        throw new Error(downloadResult.error || 'Failed to download PDF');
+      }
+
+      console.log(`✅ PDF downloaded to: ${downloadResult.filePath}`);
+
+      // Update citation with local file path
+      const updatedCitations = citations.map((c) =>
+        c.id === citationId ? { ...c, file: downloadResult.filePath } : c
+      );
+
+      set({ citations: updatedCitations });
+      get().applyFilters();
+
+      // Index the downloaded PDF
+      console.log(`🔍 Indexing downloaded PDF for citation: ${citation.title}`);
+
+      window.dispatchEvent(new CustomEvent('bibliography:indexing-start', {
+        detail: { citationId, title: citation.title, filePath: downloadResult.filePath }
+      }));
+
+      const bibliographyMetadata = {
+        title: citation.title,
+        author: citation.author,
+        year: citation.year,
+      };
+
+      const indexResult = await window.electron.pdf.index(
+        downloadResult.filePath!,
+        citationId,
+        bibliographyMetadata
+      );
+
+      if (!indexResult.success) {
+        window.dispatchEvent(new CustomEvent('bibliography:indexing-end', {
+          detail: { citationId, success: false, error: indexResult.error }
+        }));
+        throw new Error(indexResult.error || 'Failed to index PDF');
+      }
+
+      // Add to indexed set
+      set((state) => ({
+        indexedFilePaths: new Set([...state.indexedFilePaths, downloadResult.filePath!])
+      }));
+
+      window.dispatchEvent(new CustomEvent('bibliography:indexing-end', {
+        detail: { citationId, success: true }
+      }));
+
+      console.log(`✅ PDF downloaded and indexed from Zotero: ${citation.title}`);
+    } catch (error) {
+      console.error('❌ Failed to download and index PDF from Zotero:', error);
+      throw error;
+    }
   },
 }));

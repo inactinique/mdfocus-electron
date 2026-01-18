@@ -115,6 +115,55 @@ class ZoteroService {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * Download a specific PDF attachment from Zotero
+   */
+  async downloadPDF(options: {
+    userId: string;
+    apiKey: string;
+    attachmentKey: string;
+    filename: string;
+    targetDirectory: string;
+  }): Promise<{
+    success: boolean;
+    filePath?: string;
+    error?: string;
+  }> {
+    try {
+      const api = new ZoteroAPI({
+        userId: options.userId,
+        apiKey: options.apiKey,
+      });
+
+      const sync = new ZoteroSync(api);
+
+      // Create PDFs directory if it doesn't exist
+      const pdfDir = path.join(options.targetDirectory, 'PDFs');
+
+      // Sanitize filename
+      const sanitizedFilename = options.filename
+        .replace(/[<>:"/\\|?*]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .substring(0, 200);
+
+      const savePath = path.join(pdfDir, sanitizedFilename);
+
+      // Download the file
+      await api.downloadFile(options.attachmentKey, savePath);
+
+      console.log(`✅ PDF downloaded: ${sanitizedFilename}`);
+
+      return {
+        success: true,
+        filePath: savePath,
+      };
+    } catch (error: any) {
+      console.error('Zotero PDF download failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 export const zoteroService = new ZoteroService();
