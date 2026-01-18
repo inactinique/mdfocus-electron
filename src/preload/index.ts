@@ -46,6 +46,10 @@ const api = {
     getStatistics: () => ipcRenderer.invoke('pdf:get-statistics'),
     purge: () => ipcRenderer.invoke('pdf:purge'),
     cleanOrphanedChunks: () => ipcRenderer.invoke('pdf:clean-orphaned-chunks'),
+    checkModifiedPDFs: (options: {
+      citations: any[];
+      projectPath: string;
+    }) => ipcRenderer.invoke('pdf:check-modified-pdfs', options),
     onIndexingProgress: (callback: (progress: { stage: string; progress: number; message: string }) => void) => {
       const listener = (_event: any, progress: any) => callback(progress);
       ipcRenderer.on('pdf:indexing-progress', listener);
@@ -69,6 +73,27 @@ const api = {
     parse: (content: string) => ipcRenderer.invoke('bibliography:parse', content),
     search: (query: string) => ipcRenderer.invoke('bibliography:search', query),
     getStatistics: (citations?: any[]) => ipcRenderer.invoke('bibliography:get-statistics', citations),
+    export: (options: {
+      citations: any[];
+      filePath: string;
+      format?: 'modern' | 'legacy';
+    }) => ipcRenderer.invoke('bibliography:export', options),
+    exportString: (options: {
+      citations: any[];
+      format?: 'modern' | 'legacy';
+    }) => ipcRenderer.invoke('bibliography:export-string', options),
+    detectOrphanPDFs: (options: {
+      projectPath: string;
+      citations: any[];
+      includeSubdirectories?: boolean;
+      pdfSubdirectory?: string;
+    }) => ipcRenderer.invoke('bibliography:detect-orphan-pdfs', options),
+    deleteOrphanPDFs: (filePaths: string[]) => ipcRenderer.invoke('bibliography:delete-orphan-pdfs', filePaths),
+    archiveOrphanPDFs: (options: {
+      filePaths: string[];
+      projectPath: string;
+      archiveSubdir?: string;
+    }) => ipcRenderer.invoke('bibliography:archive-orphan-pdfs', options),
   },
 
   // Editor

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Citation, useBibliographyStore } from '../../stores/bibliographyStore';
 import { PDFSelectionDialog } from './PDFSelectionDialog';
+import { CitationMetadataModal } from './CitationMetadataModal';
+import { TagManager } from './TagManager';
 import { useProjectStore } from '../../stores/projectStore';
 import './CitationCard.css';
 
@@ -14,7 +16,8 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
   const [showPDFSelection, setShowPDFSelection] = useState(false);
-  const { selectCitation, insertCitation, indexPDFFromCitation, reindexPDFFromCitation, isFileIndexed, refreshIndexedPDFs, downloadAndIndexZoteroPDF } = useBibliographyStore();
+  const [showMetadataModal, setShowMetadataModal] = useState(false);
+  const { selectCitation, insertCitation, indexPDFFromCitation, reindexPDFFromCitation, isFileIndexed, refreshIndexedPDFs, downloadAndIndexZoteroPDF, updateCitationMetadata, getAllTags } = useBibliographyStore();
   const { currentProject } = useProjectStore();
 
   const hasPDF = !!citation.file;
@@ -155,6 +158,22 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
               </div>
             )}
 
+            {citation.tags && citation.tags.length > 0 && (
+              <div className="detail-item">
+                <span className="detail-label">Tags:</span>
+                <div className="detail-value">
+                  <TagManager tags={citation.tags} onTagsChange={() => {}} allTags={[]} readOnly />
+                </div>
+              </div>
+            )}
+
+            {citation.notes && (
+              <div className="detail-item">
+                <span className="detail-label">Notes:</span>
+                <span className="detail-value">{citation.notes}</span>
+              </div>
+            )}
+
             <div className="citation-actions">
               <button className="action-btn primary" onClick={handleInsert}>
                 ✍️ {t('bibliography.insertCitation')}
@@ -173,6 +192,15 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
                       : t('bibliography.indexPDFButton')}
                 </button>
               )}
+              <button
+                className="action-btn secondary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMetadataModal(true);
+                }}
+              >
+                🏷️ {t('bibliography.editMetadata')}
+              </button>
             </div>
           </div>
         )}
@@ -184,6 +212,18 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
           attachments={citation.zoteroAttachments}
           onSelect={handleZoteroPDFSelection}
           onCancel={() => setShowPDFSelection(false)}
+        />
+      )}
+
+      {showMetadataModal && (
+        <CitationMetadataModal
+          isOpen={showMetadataModal}
+          onClose={() => setShowMetadataModal(false)}
+          citation={citation}
+          allTags={getAllTags()}
+          onSave={(updatedCitation) => {
+            updateCitationMetadata(citation.id, updatedCitation);
+          }}
         />
       )}
     </>

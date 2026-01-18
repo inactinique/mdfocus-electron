@@ -144,6 +144,13 @@ export const BibliographyStats: React.FC<BibliographyStatsProps> = ({ citations,
           Publications
         </button>
         <button
+          className={`tab-button ${activeTab === 'tags' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tags')}
+        >
+          <Tag size={16} />
+          Tags
+        </button>
+        <button
           className={`tab-button ${activeTab === 'timeline' ? 'active' : ''}`}
           onClick={() => setActiveTab('timeline')}
         >
@@ -161,6 +168,9 @@ export const BibliographyStats: React.FC<BibliographyStatsProps> = ({ citations,
         )}
         {activeTab === 'publications' && (
           <PublicationsTab statistics={statistics} />
+        )}
+        {activeTab === 'tags' && (
+          <TagsTab statistics={statistics} />
         )}
         {activeTab === 'timeline' && (
           <TimelineTab statistics={statistics} />
@@ -363,6 +373,72 @@ const PublicationsTab: React.FC<{ statistics: BibliographyStatistics }> = ({ sta
                     style={{ width: `${(year.count / maxCount) * 100}%` }}
                   />
                   <span className="year-count">{year.count}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Tags Tab Component
+const TagsTab: React.FC<{ statistics: BibliographyStatistics }> = ({ statistics }) => {
+  if (!statistics.topTags || statistics.topTags.length === 0) {
+    return (
+      <div className="tags-tab">
+        <div className="section-header">
+          <h3><Tag size={18} /> No Tags Available</h3>
+          <p className="section-subtitle">Add tags to your citations to see tag statistics</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tags-tab">
+      <div className="section-header">
+        <h3><Tag size={18} /> Tag Statistics</h3>
+        <p className="section-subtitle">Most frequently used tags in your bibliography</p>
+      </div>
+
+      {/* Tag Coverage Card */}
+      <div className="stat-card primary" style={{ marginBottom: '1.5rem' }}>
+        <div className="stat-icon">
+          <Tag size={24} />
+        </div>
+        <div className="stat-info">
+          <div className="stat-value">{statistics.tagCoverage}%</div>
+          <div className="stat-label">Tag Coverage</div>
+          <div className="stat-subtitle">
+            {statistics.citationsWithTags} / {statistics.totalCitations} citations have tags
+          </div>
+        </div>
+      </div>
+
+      {/* Top Tags List */}
+      <div className="section">
+        <div className="tags-list">
+          {statistics.topTags.map((tagStat, idx) => {
+            const maxCount = statistics.topTags[0].count;
+            return (
+              <div key={idx} className="tag-stat-item">
+                <div className="tag-stat-rank">#{idx + 1}</div>
+                <div className="tag-stat-info">
+                  <div className="tag-stat-name">
+                    <Tag size={14} />
+                    {tagStat.tag}
+                  </div>
+                  <div className="tag-stat-details">
+                    {tagStat.count} citation{tagStat.count > 1 ? 's' : ''} ({tagStat.percentage}%)
+                  </div>
+                </div>
+                <div className="tag-stat-bar">
+                  <div
+                    className="tag-stat-bar-fill"
+                    style={{ width: `${(tagStat.count / maxCount) * 100}%` }}
+                  />
                 </div>
               </div>
             );

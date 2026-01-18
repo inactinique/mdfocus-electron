@@ -88,7 +88,7 @@ export class BibliographyStatsEngine {
     const yearRange = this.calculateYearRange(citations);
 
     // PDF statistics
-    const citationsWithPDFs = citations.filter(c => c.file || (c.attachments && c.attachments.length > 0)).length;
+    const citationsWithPDFs = citations.filter(c => c.file || (c.zoteroAttachments && c.zoteroAttachments.length > 0)).length;
     const pdfCoverage = (citationsWithPDFs / totalCitations) * 100;
 
     // Tag statistics
@@ -355,6 +355,9 @@ export class BibliographyStatsEngine {
       averageAuthorsPerPaper: 0,
       citationsWithPDFs: 0,
       pdfCoverage: 0,
+      topTags: [],
+      citationsWithTags: 0,
+      tagCoverage: 0,
     };
   }
 }
