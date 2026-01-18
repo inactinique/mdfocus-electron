@@ -117,13 +117,25 @@
     "autoSaveDelaySeconds": "{{seconds}} seconds"
   },
   "ui": {
-    "title": "User interface",
-    "density": "Interface density",
-    "comfortable": "Comfortable (default)",
-    "compact": "Compact (more visible elements)",
-    "densityHelp": "Controls spacing and element size",
-    "comfortableDesc": "Generous spacing, easier to read",
-    "compactDesc": "Reduced spacing, more information displayed"
+    "title": "Appearance",
+    "theme": {
+      "title": "Theme",
+      "description": "Choose application appearance",
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Auto (by time)",
+      "currentTheme": "Current theme",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "autoSwitch": {
+        "title": "Auto switch",
+        "description": "Automatically switch between light and dark mode based on time"
+      },
+      "lightModeStart": "Light mode starts at",
+      "lightModeStartDescription": "Time when light mode begins (default: 06:00)",
+      "darkModeStart": "Dark mode starts at",
+      "darkModeStartDescription": "Time when dark mode begins (default: 20:00)"
+    }
   },
   "bibliography": {
     "title": "Bibliography",
@@ -204,7 +216,9 @@
     "cslHelp": "The CSL file defines the citation and bibliography format in PDF and Word exports",
     "cslSelectError": "Error selecting CSL file",
     "cslSaveError": "Error saving CSL path",
-    "cslRemoveError": "Error removing CSL path"
+    "cslRemoveError": "Error removing CSL path",
+    "openInFinder": "Open in Finder",
+    "openFolderError": "Error opening project folder"
   },
   "export": {
     "pdf": {

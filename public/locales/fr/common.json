@@ -117,13 +117,25 @@
     "autoSaveDelaySeconds": "{{seconds}} secondes"
   },
   "ui": {
-    "title": "Interface utilisateur",
-    "density": "Densité de l'interface",
-    "densityHelp": "Contrôle l'espacement et la taille des éléments",
-    "comfortable": "Confortable (par défaut)",
-    "comfortableDesc": "Espacement généreux, plus facile à lire",
-    "compact": "Compact (plus d'éléments visibles)",
-    "compactDesc": "Espacement réduit, plus d'informations affichées"
+    "title": "Apparence",
+    "theme": {
+      "title": "Thème",
+      "description": "Choisir l'apparence de l'application",
+      "light": "Clair",
+      "dark": "Foncé",
+      "auto": "Auto (par heure)",
+      "currentTheme": "Thème actuel",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "autoSwitch": {
+        "title": "Basculement automatique",
+        "description": "Basculer automatiquement entre mode clair et foncé selon l'heure"
+      },
+      "lightModeStart": "Mode clair commence à",
+      "lightModeStartDescription": "Heure de début du mode clair (par défaut: 06:00)",
+      "darkModeStart": "Mode foncé commence à",
+      "darkModeStartDescription": "Heure de début du mode foncé (par défaut: 20:00)"
+    }
   },
   "bibliography": {
     "title": "Bibliographie",
@@ -204,7 +216,9 @@
     "cslHelp": "Le fichier CSL définit le format des citations et de la bibliographie dans les exports PDF et Word",
     "cslSelectError": "Erreur lors de la sélection du fichier CSL",
     "cslSaveError": "Erreur lors de la sauvegarde du chemin CSL",
-    "cslRemoveError": "Erreur lors de la suppression du chemin CSL"
+    "cslRemoveError": "Erreur lors de la suppression du chemin CSL",
+    "openInFinder": "Ouvrir dans le Finder",
+    "openFolderError": "Erreur lors de l'ouverture du dossier du projet"
   },
   "export": {
     "pdf": {
