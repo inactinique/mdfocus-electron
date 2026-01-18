@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FileStack, Download } from 'lucide-react';
+import { Plus, FileStack, Download, BarChart3 } from 'lucide-react';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { CitationList } from './CitationList';
@@ -8,6 +8,7 @@ import { CollapsibleSection } from '../common/CollapsibleSection';
 import { ZoteroImport } from './ZoteroImport';
 import { BibImportModeModal } from './BibImportModeModal';
 import { BibImportSummaryModal } from './BibImportSummaryModal';
+import { BibliographyStats } from './BibliographyStats';
 import './BibliographyPanel.css';
 
 export const BibliographyPanel: React.FC = () => {
@@ -41,6 +42,7 @@ export const BibliographyPanel: React.FC = () => {
 
   const [showModeModal, setShowModeModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [importSummary, setImportSummary] = useState({
     mode: 'replace' as 'replace' | 'merge',
     totalCitations: 0,
@@ -228,6 +230,15 @@ export const BibliographyPanel: React.FC = () => {
             <Download size={20} strokeWidth={1} />
           </button>
         )}
+        {citations.length > 0 && (
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowStats(!showStats)}
+            title={t('bibliography.viewStatistics')}
+          >
+            <BarChart3 size={20} strokeWidth={1} />
+          </button>
+        )}
       </div>
 
       {/* Batch Indexing Progress */}
@@ -260,6 +271,13 @@ export const BibliographyPanel: React.FC = () => {
 
       {/* Zotero Import */}
       <ZoteroImport />
+
+      {/* Statistics Dashboard */}
+      {showStats && citations.length > 0 && (
+        <CollapsibleSection title={t('bibliography.statistics')} defaultExpanded={true}>
+          <BibliographyStats citations={citations} />
+        </CollapsibleSection>
+      )}
 
       {/* Search & Filters */}
       <CollapsibleSection title={t('bibliography.searchAndFilters')} defaultExpanded={true}>

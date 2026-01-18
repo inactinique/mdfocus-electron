@@ -182,7 +182,9 @@
     "downloadAllMissing": "Download all missing PDFs from Zotero",
     "noMissingPDFs": "No missing PDFs to download. All citations with Zotero PDFs already have local copies.",
     "confirmDownloadAll": "Download and index {{count}} PDFs from Zotero?",
-    "downloadAllComplete": "Download complete: {{downloaded}} downloaded and indexed, {{skipped}} skipped, {{errors}} errors"
+    "downloadAllComplete": "Download complete: {{downloaded}} downloaded and indexed, {{skipped}} skipped, {{errors}} errors",
+    "viewStatistics": "View bibliography statistics",
+    "statistics": "Statistics"
   },
   "project": {
     "title": "Project",

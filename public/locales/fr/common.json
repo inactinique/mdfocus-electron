@@ -182,7 +182,9 @@
     "downloadAllMissing": "Télécharger tous les PDFs manquants depuis Zotero",
     "noMissingPDFs": "Aucun PDF manquant à télécharger. Toutes les citations avec des PDFs Zotero ont déjà des copies locales.",
     "confirmDownloadAll": "Télécharger et indexer {{count}} PDFs depuis Zotero ?",
-    "downloadAllComplete": "Téléchargement terminé : {{downloaded}} téléchargés et indexés, {{skipped}} ignorés, {{errors}} erreurs"
+    "downloadAllComplete": "Téléchargement terminé : {{downloaded}} téléchargés et indexés, {{skipped}} ignorés, {{errors}} erreurs",
+    "viewStatistics": "Afficher les statistiques de la bibliographie",
+    "statistics": "Statistiques"
   },
   "project": {
     "title": "Projet",

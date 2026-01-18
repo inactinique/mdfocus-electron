@@ -9,6 +9,7 @@ export interface ZoteroAttachmentInfo {
 
 export interface Citation {
   id: string; // Clé BibTeX
+  key?: string; // Alternative BibTeX key (for compatibility)
   type: string; // @book, @article, @incollection, etc.
   author: string;
   year: string;
@@ -22,6 +23,14 @@ export interface Citation {
   // Zotero metadata
   zoteroKey?: string; // Zotero item key
   zoteroAttachments?: ZoteroAttachmentInfo[]; // PDF attachments from Zotero
+
+  // Tags and metadata
+  tags?: string[]; // User-defined tags
+  keywords?: string; // BibTeX keywords field
+  notes?: string; // User notes
+  customFields?: Record<string, string>; // Custom metadata fields
+  dateAdded?: string; // ISO date when citation was added
+  dateModified?: string; // ISO date when citation was last modified
 
   // Computed properties
   get displayString(): string;

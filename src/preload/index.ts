@@ -68,6 +68,7 @@ const api = {
     load: (filePath: string) => ipcRenderer.invoke('bibliography:load', filePath),
     parse: (content: string) => ipcRenderer.invoke('bibliography:parse', content),
     search: (query: string) => ipcRenderer.invoke('bibliography:search', query),
+    getStatistics: (citations?: any[]) => ipcRenderer.invoke('bibliography:get-statistics', citations),
   },
 
   // Editor

@@ -30,6 +30,12 @@ export interface TimelineData {
   annual: number;
 }
 
+export interface TagStats {
+  tag: string;
+  count: number;
+  percentage: number;
+}
+
 export interface BibliographyStatistics {
   // Overview
   totalCitations: number;
@@ -44,6 +50,7 @@ export interface BibliographyStatistics {
   // Top items
   topAuthors: AuthorStats[];
   topJournals: JournalStats[];
+  topTags: TagStats[];
 
   // Timeline
   timelineData: TimelineData[];
@@ -52,6 +59,8 @@ export interface BibliographyStatistics {
   averageAuthorsPerPaper: number;
   citationsWithPDFs: number;
   pdfCoverage: number; // percentage
+  citationsWithTags: number;
+  tagCoverage: number; // percentage
 }
 
 /**
@@ -74,12 +83,17 @@ export class BibliographyStatsEngine {
     const publicationsByType = this.calculatePublicationsByType(citations);
     const authorStats = this.calculateAuthorStats(citations);
     const journalStats = this.calculateJournalStats(citations);
+    const tagStats = this.calculateTagStats(citations);
     const timelineData = this.calculateTimelineData(citations);
     const yearRange = this.calculateYearRange(citations);
 
     // PDF statistics
     const citationsWithPDFs = citations.filter(c => c.file || (c.attachments && c.attachments.length > 0)).length;
     const pdfCoverage = (citationsWithPDFs / totalCitations) * 100;
+
+    // Tag statistics
+    const citationsWithTags = citations.filter(c => c.tags && c.tags.length > 0).length;
+    const tagCoverage = (citationsWithTags / totalCitations) * 100;
 
     // Author metrics
     const totalAuthors = authorStats.length;
@@ -97,10 +111,13 @@ export class BibliographyStatsEngine {
       publicationsByType,
       topAuthors: authorStats.slice(0, 10), // Top 10
       topJournals: journalStats.slice(0, 10), // Top 10
+      topTags: tagStats.slice(0, 15), // Top 15
       timelineData,
       averageAuthorsPerPaper: Math.round(averageAuthorsPerPaper * 10) / 10,
       citationsWithPDFs,
       pdfCoverage: Math.round(pdfCoverage * 10) / 10,
+      citationsWithTags,
+      tagCoverage: Math.round(tagCoverage * 10) / 10,
     };
   }
 
@@ -212,6 +229,30 @@ export class BibliographyStatsEngine {
         percentage: total > 0 ? Math.round((count / total) * 100 * 10) / 10 : 0,
       }))
       .sort((a, b) => b.publicationCount - a.publicationCount);
+  }
+
+  /**
+   * Calculate tag statistics
+   */
+  private calculateTagStats(citations: Citation[]): TagStats[] {
+    const tagMap = new Map<string, number>();
+    const total = citations.length;
+
+    for (const citation of citations) {
+      if (citation.tags && citation.tags.length > 0) {
+        for (const tag of citation.tags) {
+          tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+        }
+      }
+    }
+
+    return Array.from(tagMap.entries())
+      .map(([tag, count]) => ({
+        tag,
+        count,
+        percentage: Math.round((count / total) * 100 * 10) / 10,
+      }))
+      .sort((a, b) => b.count - a.count);
   }
 
   /**

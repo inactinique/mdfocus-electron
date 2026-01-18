@@ -14,6 +14,7 @@ export interface ZoteroAttachmentInfo {
 
 export interface Citation {
   id: string;
+  key?: string; // Alternative BibTeX key
   type: string;
   author: string;
   year: string;
@@ -27,6 +28,14 @@ export interface Citation {
   // Zotero metadata
   zoteroKey?: string; // Zotero item key
   zoteroAttachments?: ZoteroAttachmentInfo[]; // PDF attachments from Zotero
+
+  // Tags and metadata
+  tags?: string[];
+  keywords?: string;
+  notes?: string;
+  customFields?: Record<string, string>;
+  dateAdded?: string;
+  dateModified?: string;
 }
 
 export interface IndexingProgress {
@@ -62,6 +71,7 @@ interface BibliographyState {
   searchQuery: string;
   sortBy: 'author' | 'year' | 'title';
   sortOrder: 'asc' | 'desc';
+  selectedTags: string[]; // Tags filter
 
   // Actions
   loadBibliography: (filePath: string) => Promise<void>;
@@ -72,6 +82,12 @@ interface BibliographyState {
 
   selectCitation: (citationId: string) => void;
   insertCitation: (citationId: string) => void;
+
+  // Tags & metadata
+  updateCitationMetadata: (citationId: string, updates: Partial<Citation>) => void;
+  getAllTags: () => string[];
+  setTagsFilter: (tags: string[]) => void;
+  clearTagsFilter: () => void;
 
   indexPDFFromCitation: (citationId: string) => Promise<{ alreadyIndexed: boolean }>;
   reindexPDFFromCitation: (citationId: string) => Promise<void>;
@@ -104,6 +120,7 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
   searchQuery: '',
   sortBy: 'author',
   sortOrder: 'asc',
+  selectedTags: [],
 
   loadBibliography: async (filePath: string) => {
     try {
@@ -201,7 +218,7 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
   },
 
   applyFilters: () => {
-    const { citations, searchQuery, sortBy, sortOrder } = get();
+    const { citations, searchQuery, sortBy, sortOrder, selectedTags } = get();
 
     // Filter by search query
     let filtered = citations;
@@ -212,7 +229,17 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
         (citation) =>
           citation.author.toLowerCase().includes(query) ||
           citation.title.toLowerCase().includes(query) ||
-          citation.year.includes(query)
+          citation.year.includes(query) ||
+          (citation.tags && citation.tags.some(tag => tag.toLowerCase().includes(query))) ||
+          (citation.keywords && citation.keywords.toLowerCase().includes(query)) ||
+          (citation.notes && citation.notes.toLowerCase().includes(query))
+      );
+    }
+
+    // Filter by tags
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(citation =>
+        citation.tags && citation.tags.some(tag => selectedTags.includes(tag))
       );
     }
 
@@ -255,6 +282,39 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
 
     // Call IPC to insert citation into editor
     window.electron.editor.insertText(citationText);
+  },
+
+  // Tags & metadata methods
+  updateCitationMetadata: (citationId: string, updates: Partial<Citation>) => {
+    set((state) => ({
+      citations: state.citations.map((citation) =>
+        citation.id === citationId
+          ? { ...citation, ...updates }
+          : citation
+      ),
+    }));
+    get().applyFilters();
+  },
+
+  getAllTags: () => {
+    const { citations } = get();
+    const tagsSet = new Set<string>();
+    citations.forEach((citation) => {
+      if (citation.tags) {
+        citation.tags.forEach((tag) => tagsSet.add(tag));
+      }
+    });
+    return Array.from(tagsSet).sort();
+  },
+
+  setTagsFilter: (tags: string[]) => {
+    set({ selectedTags: tags });
+    get().applyFilters();
+  },
+
+  clearTagsFilter: () => {
+    set({ selectedTags: [] });
+    get().applyFilters();
   },
 
   indexPDFFromCitation: async (citationId: string) => {
