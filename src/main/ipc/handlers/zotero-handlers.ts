@@ -81,6 +81,29 @@ export function setupZoteroHandlers() {
     }
   });
 
+  ipcMain.handle('zotero:enrich-citations', async (_event, options: {
+    userId: string;
+    apiKey: string;
+    citations: any[];
+    collectionKey?: string;
+  }) => {
+    console.log('📞 IPC Call: zotero:enrich-citations', {
+      citationCount: options.citations?.length,
+      collectionKey: options.collectionKey
+    });
+    try {
+      const result = await zoteroService.enrichCitations(options);
+      console.log('📤 IPC Response: zotero:enrich-citations', {
+        success: result.success,
+        enrichedCount: result.citations?.length,
+      });
+      return result;
+    } catch (error: any) {
+      console.error('❌ zotero:enrich-citations error:', error);
+      return errorResponse(error);
+    }
+  });
+
   ipcMain.handle('zotero:check-updates', async (_event, options: {
     userId: string;
     apiKey: string;

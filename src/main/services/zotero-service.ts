@@ -169,6 +169,55 @@ class ZoteroService {
   }
 
   /**
+   * Enrich citations with Zotero attachment information
+   */
+  async enrichCitations(options: {
+    userId: string;
+    apiKey: string;
+    citations: Citation[];
+    collectionKey?: string;
+  }): Promise<{
+    success: boolean;
+    citations?: Citation[];
+    error?: string;
+  }> {
+    try {
+      const api = new ZoteroAPI({
+        userId: options.userId,
+        apiKey: options.apiKey,
+      });
+
+      const sync = new ZoteroSync(api);
+
+      // Get Zotero items from collection
+      const items = await api.listItems({
+        collectionKey: options.collectionKey,
+      });
+
+      // Filter to bibliographic items only
+      const bibliographicItems = items.filter(
+        (item) => item.data.itemType !== 'attachment' && item.data.itemType !== 'note'
+      );
+
+      // Enrich citations with attachment info
+      const enrichedCitations = await sync.enrichCitationsWithAttachments(
+        options.citations,
+        bibliographicItems
+      );
+
+      console.log(`✅ Enriched ${enrichedCitations.length} citations with Zotero attachments`);
+
+      return {
+        success: true,
+        citations: enrichedCitations,
+      };
+    } catch (error: any) {
+      console.error('Zotero enrich citations failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Check for updates from Zotero collection
    */
   async checkUpdates(options: {

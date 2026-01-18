@@ -171,6 +171,12 @@ const api = {
       strategy: 'local' | 'remote' | 'manual';
       resolution?: any;
     }) => ipcRenderer.invoke('zotero:apply-updates', options),
+    enrichCitations: (options: {
+      userId: string;
+      apiKey: string;
+      citations: any[];
+      collectionKey?: string;
+    }) => ipcRenderer.invoke('zotero:enrich-citations', options),
   },
 
   // PDF Export

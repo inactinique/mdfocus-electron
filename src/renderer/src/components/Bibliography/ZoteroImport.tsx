@@ -109,8 +109,32 @@ export const ZoteroImport: React.FC = () => {
         // Load the exported BibTeX into bibliography
         await useBibliographyStore.getState().loadBibliography(syncResult.bibtexPath);
 
-        // Get the actual count of loaded citations
-        const citationCount = useBibliographyStore.getState().citations.length;
+        // Get the loaded citations
+        const loadedCitations = useBibliographyStore.getState().citations;
+        const citationCount = loadedCitations.length;
+
+        // Enrich citations with Zotero attachment information (for PDF download)
+        console.log('🔗 Enriching citations with Zotero attachment info...');
+        const enrichResult = await window.electron.zotero.enrichCitations({
+          userId,
+          apiKey,
+          citations: loadedCitations,
+          collectionKey: selectedCollection || undefined,
+        });
+
+        if (enrichResult.success && enrichResult.citations) {
+          // Update store with enriched citations
+          useBibliographyStore.setState({ citations: enrichResult.citations });
+          console.log(`✅ Enriched ${enrichResult.citations.length} citations with attachment info`);
+
+          // Count how many have PDF attachments available
+          const withPDFs = enrichResult.citations.filter(
+            (c: any) => c.zoteroAttachments && c.zoteroAttachments.length > 0
+          ).length;
+          console.log(`📎 ${withPDFs} citations have PDF attachments available in Zotero`);
+        } else {
+          console.warn('⚠️ Failed to enrich citations with attachment info:', enrichResult.error);
+        }
 
         // If we have a project, save the bibliography source configuration
         if (projectJsonPath && currentProject) {
