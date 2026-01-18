@@ -81,5 +81,56 @@ export function setupZoteroHandlers() {
     }
   });
 
+  ipcMain.handle('zotero:check-updates', async (_event, options: {
+    userId: string;
+    apiKey: string;
+    localCitations: any[];
+    collectionKey?: string;
+  }) => {
+    console.log('📞 IPC Call: zotero:check-updates', {
+      citationCount: options.localCitations?.length,
+      collectionKey: options.collectionKey
+    });
+    try {
+      const result = await zoteroService.checkUpdates(options);
+      console.log('📤 IPC Response: zotero:check-updates', {
+        success: result.success,
+        hasChanges: result.hasChanges,
+        summary: result.summary,
+      });
+      return result;
+    } catch (error: any) {
+      console.error('❌ zotero:check-updates error:', error);
+      return errorResponse(error);
+    }
+  });
+
+  ipcMain.handle('zotero:apply-updates', async (_event, options: {
+    userId: string;
+    apiKey: string;
+    currentCitations: any[];
+    diff: any;
+    strategy: 'local' | 'remote' | 'manual';
+    resolution?: any;
+  }) => {
+    console.log('📞 IPC Call: zotero:apply-updates', {
+      strategy: options.strategy,
+      citationCount: options.currentCitations?.length
+    });
+    try {
+      const result = await zoteroService.applyUpdates(options);
+      console.log('📤 IPC Response: zotero:apply-updates', {
+        success: result.success,
+        addedCount: result.addedCount,
+        modifiedCount: result.modifiedCount,
+        deletedCount: result.deletedCount,
+      });
+      return result;
+    } catch (error: any) {
+      console.error('❌ zotero:apply-updates error:', error);
+      return errorResponse(error);
+    }
+  });
+
   console.log('✅ Zotero handlers registered');
 }

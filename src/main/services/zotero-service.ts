@@ -1,6 +1,9 @@
 import path from 'path';
 import { ZoteroAPI } from '../../../backend/integrations/zotero/ZoteroAPI.js';
 import { ZoteroSync } from '../../../backend/integrations/zotero/ZoteroSync.js';
+import { Citation } from '../../../backend/types/citation.js';
+import { SyncDiff } from '../../../backend/integrations/zotero/ZoteroDiffEngine.js';
+import { ConflictStrategy, SyncResolution } from '../../../backend/integrations/zotero/ZoteroSyncResolver.js';
 
 class ZoteroService {
   /**
@@ -161,6 +164,104 @@ class ZoteroService {
       };
     } catch (error: any) {
       console.error('Zotero PDF download failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Check for updates from Zotero collection
+   */
+  async checkUpdates(options: {
+    userId: string;
+    apiKey: string;
+    localCitations: Citation[];
+    collectionKey?: string;
+  }): Promise<{
+    success: boolean;
+    diff?: SyncDiff;
+    hasChanges?: boolean;
+    summary?: {
+      totalChanges: number;
+      addedCount: number;
+      modifiedCount: number;
+      deletedCount: number;
+      unchangedCount: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const api = new ZoteroAPI({
+        userId: options.userId,
+        apiKey: options.apiKey,
+      });
+
+      const sync = new ZoteroSync(api);
+
+      // Check for updates
+      const diff = await sync.checkForUpdates(options.localCitations, options.collectionKey);
+
+      // Get summary
+      const diffEngine = new (await import('../../../backend/integrations/zotero/ZoteroDiffEngine.js')).ZoteroDiffEngine();
+      const summary = diffEngine.getSummary(diff);
+      const hasChanges = diffEngine.hasChanges(diff);
+
+      return {
+        success: true,
+        diff,
+        hasChanges,
+        summary,
+      };
+    } catch (error: any) {
+      console.error('Zotero check updates failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Apply updates from Zotero
+   */
+  async applyUpdates(options: {
+    userId: string;
+    apiKey: string;
+    currentCitations: Citation[];
+    diff: SyncDiff;
+    strategy: ConflictStrategy;
+    resolution?: SyncResolution;
+  }): Promise<{
+    success: boolean;
+    finalCitations?: Citation[];
+    addedCount?: number;
+    modifiedCount?: number;
+    deletedCount?: number;
+    skippedCount?: number;
+    error?: string;
+  }> {
+    try {
+      const api = new ZoteroAPI({
+        userId: options.userId,
+        apiKey: options.apiKey,
+      });
+
+      const sync = new ZoteroSync(api);
+
+      // Apply updates
+      const result = await sync.applyUpdates(
+        options.currentCitations,
+        options.diff,
+        options.strategy,
+        options.resolution
+      );
+
+      return {
+        success: true,
+        finalCitations: result.finalCitations,
+        addedCount: result.addedCount,
+        modifiedCount: result.modifiedCount,
+        deletedCount: result.deletedCount,
+        skippedCount: result.skippedCount,
+      };
+    } catch (error: any) {
+      console.error('Zotero apply updates failed:', error);
       return { success: false, error: error.message };
     }
   }

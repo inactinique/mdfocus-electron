@@ -36,5 +36,23 @@ export function setupBibliographyHandlers() {
     }
   });
 
+  ipcMain.handle('bibliography:get-statistics', async (_event, citations?: any[]) => {
+    console.log('📞 IPC Call: bibliography:get-statistics', {
+      citationCount: citations?.length || 'using stored citations'
+    });
+    try {
+      const statistics = bibliographyService.generateStatistics(citations);
+      console.log('📤 IPC Response: bibliography:get-statistics', {
+        totalCitations: statistics.totalCitations,
+        totalAuthors: statistics.totalAuthors,
+        yearRange: statistics.yearRange
+      });
+      return successResponse({ statistics });
+    } catch (error: any) {
+      console.error('❌ bibliography:get-statistics error:', error);
+      return errorResponse(error);
+    }
+  });
+
   console.log('✅ Bibliography handlers registered');
 }

@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ZoteroAPI, ZoteroItem, ZoteroCollection } from './ZoteroAPI';
 import { Citation, ZoteroAttachmentInfo } from '../../types/citation';
+import { ZoteroDiffEngine, SyncDiff } from './ZoteroDiffEngine';
+import { ZoteroSyncResolver, ConflictStrategy, SyncResolution, MergeResult } from './ZoteroSyncResolver';
 
 export interface SyncResult {
   collections: ZoteroCollection[];
@@ -20,9 +22,13 @@ export interface SyncOptions {
 
 export class ZoteroSync {
   private api: ZoteroAPI;
+  private diffEngine: ZoteroDiffEngine;
+  private resolver: ZoteroSyncResolver;
 
   constructor(api: ZoteroAPI) {
     this.api = api;
+    this.diffEngine = new ZoteroDiffEngine();
+    this.resolver = new ZoteroSyncResolver();
   }
 
   /**
@@ -273,6 +279,120 @@ export class ZoteroSync {
 
     console.log(`📥 PDF téléchargé: ${filename}`);
     return savePath;
+  }
+
+  /**
+   * Vérifie les mises à jour disponibles depuis Zotero
+   * Compare les citations locales avec celles de Zotero et détecte les différences
+   */
+  async checkForUpdates(
+    localCitations: Citation[],
+    collectionKey?: string
+  ): Promise<SyncDiff> {
+    try {
+      // Récupérer les items depuis Zotero
+      const remoteItems = await this.api.listItems({ collectionKey });
+
+      // Filter bibliographic items only
+      const bibliographicItems = remoteItems.filter(
+        (item) => item.data.itemType !== 'attachment' && item.data.itemType !== 'note'
+      );
+
+      // Enrichir avec les attachments
+      const enrichedItems: ZoteroItem[] = [];
+      for (const item of bibliographicItems) {
+        try {
+          const attachments = await this.api.getItemAttachments(item.key);
+          enrichedItems.push({
+            ...item,
+            data: {
+              ...item.data,
+              attachments,
+            },
+          });
+        } catch (error) {
+          console.error(`Failed to get attachments for item ${item.key}:`, error);
+          enrichedItems.push(item);
+        }
+      }
+
+      // Comparer avec les citations locales
+      const diff = await this.diffEngine.detectChanges(localCitations, enrichedItems, {
+        compareAttachments: true,
+      });
+
+      console.log('📊 Update check completed:');
+      console.log(`   - Added: ${diff.added.length}`);
+      console.log(`   - Modified: ${diff.modified.length}`);
+      console.log(`   - Deleted: ${diff.deleted.length}`);
+      console.log(`   - Unchanged: ${diff.unchanged.length}`);
+
+      return diff;
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Applique les mises à jour de Zotero aux citations locales
+   */
+  async applyUpdates(
+    currentCitations: Citation[],
+    diff: SyncDiff,
+    strategy: ConflictStrategy,
+    resolution?: SyncResolution
+  ): Promise<MergeResult> {
+    try {
+      // Create backup before applying changes
+      const backup = this.resolver.createBackup(currentCitations);
+      console.log('📦 Backup created');
+
+      // Resolve conflicts and merge
+      const result = await this.resolver.resolveConflicts(diff, currentCitations, strategy, resolution);
+
+      // Generate report
+      const report = this.resolver.generateSyncReport(result);
+      console.log(report);
+
+      return result;
+    } catch (error) {
+      console.error('Failed to apply updates:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Synchronise complète: vérifie les mises à jour et les applique
+   * Wrapper pratique pour un workflow complet
+   */
+  async updateFromZotero(
+    localCitations: Citation[],
+    collectionKey: string | undefined,
+    strategy: ConflictStrategy = 'remote'
+  ): Promise<{ diff: SyncDiff; result: MergeResult }> {
+    // 1. Vérifier les mises à jour
+    const diff = await this.checkForUpdates(localCitations, collectionKey);
+
+    // 2. Si pas de changements, retourner
+    if (!this.diffEngine.hasChanges(diff)) {
+      console.log('✅ No updates available');
+      return {
+        diff,
+        result: {
+          finalCitations: localCitations,
+          addedCount: 0,
+          modifiedCount: 0,
+          deletedCount: 0,
+          skippedCount: 0,
+        },
+      };
+    }
+
+    // 3. Appliquer les mises à jour
+    const result = await this.applyUpdates(localCitations, diff, strategy);
+
+    return { diff, result };
   }
 
   /**

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw, GitCompare } from 'lucide-react';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { SyncPreviewModal } from './SyncPreviewModal';
 
 interface ZoteroCollection {
   key: string;
@@ -19,6 +20,9 @@ export const ZoteroImport: React.FC = () => {
   const [selectedCollection, setSelectedCollection] = useState<string>('');
   const [isLoadingCollections, setIsLoadingCollections] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncDiff, setSyncDiff] = useState<any>(null);
 
   // Calculate depth of a collection in hierarchy
   const getCollectionDepth = (collectionKey: string): number => {
@@ -138,6 +142,87 @@ export const ZoteroImport: React.FC = () => {
     }
   };
 
+  const handleCheckUpdates = async () => {
+    if (!userId || !apiKey) {
+      alert(t('zotero.import.configureFirst'));
+      return;
+    }
+
+    const citations = useBibliographyStore.getState().citations;
+    if (citations.length === 0) {
+      alert('No citations in bibliography. Please import first.');
+      return;
+    }
+
+    setIsCheckingUpdates(true);
+
+    try {
+      const result = await window.electron.zotero.checkUpdates({
+        userId,
+        apiKey,
+        localCitations: citations,
+        collectionKey: selectedCollection || undefined,
+      });
+
+      if (result.success && result.diff) {
+        if (result.hasChanges) {
+          setSyncDiff(result.diff);
+          setShowSyncModal(true);
+        } else {
+          alert('Your bibliography is up to date! No changes detected.');
+        }
+      } else {
+        alert(`Failed to check updates: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to check updates:', error);
+      alert(`Error checking updates: ${error}`);
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
+
+  const handleApplySync = async (strategy: 'local' | 'remote' | 'manual', resolution?: any) => {
+    if (!syncDiff) return;
+
+    setShowSyncModal(false);
+
+    try {
+      const currentCitations = useBibliographyStore.getState().citations;
+
+      const result = await window.electron.zotero.applyUpdates({
+        userId,
+        apiKey,
+        currentCitations,
+        diff: syncDiff,
+        strategy,
+        resolution,
+      });
+
+      if (result.success && result.finalCitations) {
+        // Update bibliography store with new citations
+        useBibliographyStore.setState({ citations: result.finalCitations });
+
+        // Show summary
+        alert(
+          `Sync complete!\n\n` +
+          `Added: ${result.addedCount}\n` +
+          `Modified: ${result.modifiedCount}\n` +
+          `Deleted: ${result.deletedCount}\n` +
+          (result.skippedCount ? `Skipped: ${result.skippedCount}\n` : '')
+        );
+
+        // Clear sync diff
+        setSyncDiff(null);
+      } else {
+        alert(`Failed to apply updates: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to apply sync:', error);
+      alert(`Error applying sync: ${error}`);
+    }
+  };
+
   return (
     <div className="zotero-import">
       <div className="zotero-import-header">
@@ -195,7 +280,30 @@ export const ZoteroImport: React.FC = () => {
           <Download size={16} />
           {isImporting ? t('zotero.import.importing') : t('zotero.import.importButton')}
         </button>
+
+        <button
+          className="zotero-update-btn"
+          onClick={handleCheckUpdates}
+          disabled={!userId || !apiKey || isCheckingUpdates}
+          title="Check for updates from Zotero"
+        >
+          <GitCompare size={16} />
+          {isCheckingUpdates ? 'Checking...' : 'Update from Zotero'}
+        </button>
       </div>
+
+      {/* Sync Preview Modal */}
+      {syncDiff && (
+        <SyncPreviewModal
+          isOpen={showSyncModal}
+          onClose={() => {
+            setShowSyncModal(false);
+            setSyncDiff(null);
+          }}
+          diff={syncDiff}
+          onApplySync={handleApplySync}
+        />
+      )}
     </div>
   );
 };

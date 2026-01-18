@@ -131,6 +131,20 @@ const api = {
       filename: string;
       targetDirectory: string;
     }) => ipcRenderer.invoke('zotero:download-pdf', options),
+    checkUpdates: (options: {
+      userId: string;
+      apiKey: string;
+      localCitations: any[];
+      collectionKey?: string;
+    }) => ipcRenderer.invoke('zotero:check-updates', options),
+    applyUpdates: (options: {
+      userId: string;
+      apiKey: string;
+      currentCitations: any[];
+      diff: any;
+      strategy: 'local' | 'remote' | 'manual';
+      resolution?: any;
+    }) => ipcRenderer.invoke('zotero:apply-updates', options),
   },
 
   // PDF Export
