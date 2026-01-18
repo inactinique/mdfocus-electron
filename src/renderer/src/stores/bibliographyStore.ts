@@ -80,6 +80,7 @@ interface BibliographyState {
   refreshIndexedPDFs: () => Promise<void>;
   isFileIndexed: (filePath: string) => boolean;
   downloadAndIndexZoteroPDF: (citationId: string, attachmentKey: string, projectPath: string) => Promise<void>;
+  downloadAllMissingPDFs: (projectPath: string) => Promise<{ downloaded: number; skipped: number; errors: string[] }>;
 
   // Internal
   applyFilters: () => void;
@@ -616,6 +617,144 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
       console.log(`✅ PDF downloaded and indexed from Zotero: ${citation.title}`);
     } catch (error) {
       console.error('❌ Failed to download and index PDF from Zotero:', error);
+      throw error;
+    }
+  },
+
+  downloadAllMissingPDFs: async (projectPath: string) => {
+    try {
+      const { citations } = get();
+
+      // Get Zotero config
+      const zoteroConfig = await window.electron.config.get('zotero');
+      if (!zoteroConfig || !zoteroConfig.userId || !zoteroConfig.apiKey) {
+        throw new Error('Zotero not configured. Please configure Zotero in Settings.');
+      }
+
+      // Find citations with Zotero PDFs but no local file
+      const citationsNeedingPDFs = citations.filter(
+        (c) => !c.file && c.zoteroAttachments && c.zoteroAttachments.length > 0
+      );
+
+      if (citationsNeedingPDFs.length === 0) {
+        return { downloaded: 0, skipped: 0, errors: [] };
+      }
+
+      const errors: string[] = [];
+      let downloaded = 0;
+      let skipped = 0;
+
+      // Update batch indexing state
+      set({
+        batchIndexing: {
+          isIndexing: true,
+          current: 0,
+          total: citationsNeedingPDFs.length,
+          skipped: 0,
+          indexed: 0,
+          errors: [],
+        }
+      });
+
+      for (let i = 0; i < citationsNeedingPDFs.length; i++) {
+        const citation = citationsNeedingPDFs[i];
+
+        set((state) => ({
+          batchIndexing: {
+            ...state.batchIndexing,
+            current: i + 1,
+            currentCitation: {
+              citationId: citation.id,
+              title: citation.title,
+              progress: 0,
+              stage: 'Downloading PDF...',
+            }
+          }
+        }));
+
+        try {
+          // Download first available PDF (or could show selection dialog for multiple)
+          const firstAttachment = citation.zoteroAttachments![0];
+
+          console.log(`📥 Downloading PDF for: ${citation.title}`);
+
+          const downloadResult = await window.electron.zotero.downloadPDF({
+            userId: zoteroConfig.userId,
+            apiKey: zoteroConfig.apiKey,
+            attachmentKey: firstAttachment.key,
+            filename: firstAttachment.filename,
+            targetDirectory: projectPath,
+          });
+
+          if (!downloadResult.success || !downloadResult.filePath) {
+            errors.push(`${citation.title}: ${downloadResult.error || 'Failed to download'}`);
+            continue;
+          }
+
+          // Update citation with local file path
+          const updatedCitations = get().citations.map((c) =>
+            c.id === citation.id ? { ...c, file: downloadResult.filePath } : c
+          );
+
+          set({ citations: updatedCitations });
+          get().applyFilters();
+
+          // Index the downloaded PDF
+          set((state) => ({
+            batchIndexing: {
+              ...state.batchIndexing,
+              currentCitation: {
+                citationId: citation.id,
+                title: citation.title,
+                progress: 50,
+                stage: 'Indexing PDF...',
+              }
+            }
+          }));
+
+          const bibliographyMetadata = {
+            title: citation.title,
+            author: citation.author,
+            year: citation.year,
+          };
+
+          const indexResult = await window.electron.pdf.index(
+            downloadResult.filePath,
+            citation.id,
+            bibliographyMetadata
+          );
+
+          if (indexResult.success) {
+            downloaded++;
+            set((state) => ({
+              indexedFilePaths: new Set([...state.indexedFilePaths, downloadResult.filePath!]),
+              batchIndexing: { ...state.batchIndexing, indexed: downloaded }
+            }));
+          } else {
+            errors.push(`${citation.title}: ${indexResult.error || 'Failed to index'}`);
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          errors.push(`${citation.title}: ${errorMsg}`);
+        }
+      }
+
+      set({
+        batchIndexing: {
+          isIndexing: false,
+          current: citationsNeedingPDFs.length,
+          total: citationsNeedingPDFs.length,
+          skipped,
+          indexed: downloaded,
+          errors,
+        }
+      });
+
+      console.log(`✅ Batch download complete: ${downloaded} downloaded, ${errors.length} errors`);
+
+      return { downloaded, skipped, errors };
+    } catch (error) {
+      console.error('❌ Failed to download all missing PDFs:', error);
       throw error;
     }
   },

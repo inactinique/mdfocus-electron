@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FileStack } from 'lucide-react';
+import { Plus, FileStack, Download } from 'lucide-react';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { CitationList } from './CitationList';
@@ -25,6 +25,7 @@ export const BibliographyPanel: React.FC = () => {
     batchIndexing,
     indexAllPDFs,
     refreshIndexedPDFs,
+    downloadAllMissingPDFs,
   } = useBibliographyStore();
 
   // Refresh indexed PDFs on mount
@@ -32,8 +33,11 @@ export const BibliographyPanel: React.FC = () => {
     refreshIndexedPDFs();
   }, []);
 
-  // Count citations with PDFs
+  // Count citations with PDFs and citations needing PDFs
   const citationsWithPDFs = citations.filter((c) => c.file).length;
+  const citationsNeedingPDFs = citations.filter(
+    (c) => !c.file && c.zoteroAttachments && c.zoteroAttachments.length > 0
+  ).length;
 
   const [showModeModal, setShowModeModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -164,6 +168,39 @@ export const BibliographyPanel: React.FC = () => {
     }
   };
 
+  const handleDownloadAllPDFs = async () => {
+    if (batchIndexing.isIndexing) return;
+
+    if (!currentProject) {
+      alert(t('bibliography.noProjectOpen'));
+      return;
+    }
+
+    if (citationsNeedingPDFs === 0) {
+      alert(t('bibliography.noMissingPDFs'));
+      return;
+    }
+
+    const confirm = window.confirm(
+      t('bibliography.confirmDownloadAll', { count: citationsNeedingPDFs })
+    );
+    if (!confirm) return;
+
+    try {
+      const result = await downloadAllMissingPDFs(currentProject.path);
+      alert(
+        t('bibliography.downloadAllComplete', {
+          downloaded: result.downloaded,
+          skipped: result.skipped,
+          errors: result.errors.length,
+        })
+      );
+    } catch (error) {
+      console.error('Failed to download all PDFs:', error);
+      alert(`${t('bibliography.downloadError')} ${error}`);
+    }
+  };
+
   return (
     <div className="bibliography-panel">
       {/* Header */}
@@ -179,6 +216,16 @@ export const BibliographyPanel: React.FC = () => {
             title={t('bibliography.indexAllPDFs')}
           >
             <FileStack size={20} strokeWidth={1} />
+          </button>
+        )}
+        {citationsNeedingPDFs > 0 && (
+          <button
+            className="toolbar-btn"
+            onClick={handleDownloadAllPDFs}
+            disabled={batchIndexing.isIndexing}
+            title={t('bibliography.downloadAllMissing')}
+          >
+            <Download size={20} strokeWidth={1} />
           </button>
         )}
       </div>

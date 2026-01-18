@@ -178,7 +178,11 @@
     "zoteroNotConfigured": "Zotero n'est pas configuré. Veuillez le configurer dans les Paramètres.",
     "pdfDownloadedAndIndexed": "PDF téléchargé et indexé",
     "downloadError": "Erreur de téléchargement :",
-    "noProjectOpen": "Aucun projet n'est actuellement ouvert"
+    "noProjectOpen": "Aucun projet n'est actuellement ouvert",
+    "downloadAllMissing": "Télécharger tous les PDFs manquants depuis Zotero",
+    "noMissingPDFs": "Aucun PDF manquant à télécharger. Toutes les citations avec des PDFs Zotero ont déjà des copies locales.",
+    "confirmDownloadAll": "Télécharger et indexer {{count}} PDFs depuis Zotero ?",
+    "downloadAllComplete": "Téléchargement terminé : {{downloaded}} téléchargés et indexés, {{skipped}} ignorés, {{errors}} erreurs"
   },
   "project": {
     "title": "Projet",
