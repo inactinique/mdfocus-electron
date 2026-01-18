@@ -171,7 +171,8 @@
     "noPDFsToIndex": "Aucun PDF à indexer dans la bibliographie",
     "confirmIndexAll": "Indexer {{count}} PDFs de la bibliographie ?",
     "indexAllComplete": "Indexation terminée: {{indexed}} indexés, {{skipped}} ignorés, {{errors}} erreurs",
-    "indexingProgress": "Indexation {{current}}/{{total}}"
+    "indexingProgress": "Indexation {{current}}/{{total}}",
+    "availableInZotero": "disponible(s) dans Zotero"
   },
   "project": {
     "title": "Projet",

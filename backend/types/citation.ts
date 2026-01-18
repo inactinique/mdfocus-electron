@@ -1,3 +1,12 @@
+export interface ZoteroAttachmentInfo {
+  key: string; // Zotero attachment key
+  filename: string;
+  contentType: string;
+  downloaded: boolean;
+  dateModified?: string;
+  md5?: string;
+}
+
 export interface Citation {
   id: string; // Clé BibTeX
   type: string; // @book, @article, @incollection, etc.
@@ -8,15 +17,20 @@ export interface Citation {
   journal?: string;
   publisher?: string;
   booktitle?: string;
-  file?: string; // Chemin vers le PDF
+  file?: string; // Chemin vers le PDF (local)
+
+  // Zotero metadata
+  zoteroKey?: string; // Zotero item key
+  zoteroAttachments?: ZoteroAttachmentInfo[]; // PDF attachments from Zotero
 
   // Computed properties
   get displayString(): string;
   get details(): string | null;
   get hasPDF(): boolean;
+  get hasZoteroPDFs(): boolean;
 }
 
-export function createCitation(data: Omit<Citation, 'displayString' | 'details' | 'hasPDF'>): Citation {
+export function createCitation(data: Omit<Citation, 'displayString' | 'details' | 'hasPDF' | 'hasZoteroPDFs'>): Citation {
   return {
     ...data,
     get displayString() {
@@ -31,6 +45,9 @@ export function createCitation(data: Omit<Citation, 'displayString' | 'details' 
     },
     get hasPDF() {
       return !!this.file;
+    },
+    get hasZoteroPDFs() {
+      return !!this.zoteroAttachments && this.zoteroAttachments.length > 0;
     },
   };
 }

@@ -14,6 +14,8 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
   const { selectCitation, insertCitation, indexPDFFromCitation, reindexPDFFromCitation, isFileIndexed, refreshIndexedPDFs } = useBibliographyStore();
 
   const hasPDF = !!citation.file;
+  const hasZoteroPDFs = !!citation.zoteroAttachments && citation.zoteroAttachments.length > 0;
+  const zoteroCount = citation.zoteroAttachments?.length || 0;
   const isIndexed = hasPDF && isFileIndexed(citation.file!);
 
   // Refresh indexed status on mount
@@ -78,6 +80,14 @@ export const CitationCard: React.FC<CitationCardProps> = ({ citation }) => {
           {hasPDF && (
             <span className="pdf-badge" title={isIndexed ? t('bibliography.indexed') : t('bibliography.notIndexed')}>
               {isIndexed ? '✅' : '📄'}
+            </span>
+          )}
+          {hasZoteroPDFs && (
+            <span
+              className="zotero-pdf-badge"
+              title={`${zoteroCount} PDF${zoteroCount > 1 ? 's' : ''} ${t('bibliography.availableInZotero')}`}
+            >
+              📎 {zoteroCount}
             </span>
           )}
         </div>

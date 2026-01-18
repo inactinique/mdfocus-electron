@@ -2,6 +2,16 @@ import { create } from 'zustand';
 
 // MARK: - Types
 
+export interface ZoteroAttachmentInfo {
+  key: string; // Zotero attachment key
+  filename: string;
+  contentType: string;
+  downloaded: boolean;
+  localPath?: string; // Path to downloaded PDF
+  dateModified?: string;
+  md5?: string;
+}
+
 export interface Citation {
   id: string;
   type: string;
@@ -13,6 +23,10 @@ export interface Citation {
   publisher?: string;
   booktitle?: string;
   file?: string;
+
+  // Zotero metadata
+  zoteroKey?: string; // Zotero item key
+  zoteroAttachments?: ZoteroAttachmentInfo[]; // PDF attachments from Zotero
 }
 
 export interface IndexingProgress {

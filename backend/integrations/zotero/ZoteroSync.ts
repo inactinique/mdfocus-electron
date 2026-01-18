@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ZoteroAPI, ZoteroItem, ZoteroCollection } from './ZoteroAPI';
+import { Citation, ZoteroAttachmentInfo } from '../../types/citation';
 
 export interface SyncResult {
   collections: ZoteroCollection[];
@@ -188,6 +189,90 @@ export class ZoteroSync {
       console.error('Failed to get collection summary:', error);
       throw error;
     }
+  }
+
+  /**
+   * Enrichit les citations avec les informations sur les attachments Zotero
+   * @param citations - Liste des citations à enrichir
+   * @param items - Items Zotero correspondants
+   */
+  async enrichCitationsWithAttachments(
+    citations: Citation[],
+    items: ZoteroItem[]
+  ): Promise<Citation[]> {
+    const enrichedCitations: Citation[] = [];
+
+    for (const citation of citations) {
+      // Find corresponding Zotero item by matching title or BibTeX key
+      const zoteroItem = items.find((item) => {
+        const itemTitle = item.data.title?.toLowerCase();
+        const citationTitle = citation.title?.toLowerCase();
+        return itemTitle === citationTitle || item.key === citation.zoteroKey;
+      });
+
+      if (zoteroItem) {
+        try {
+          // Get PDF attachments
+          const pdfAttachments = await this.api.getItemAttachments(zoteroItem.key);
+
+          const attachmentInfos: ZoteroAttachmentInfo[] = pdfAttachments.map((att) => ({
+            key: att.key,
+            filename: att.data.filename || 'unknown.pdf',
+            contentType: att.data.contentType || 'application/pdf',
+            downloaded: false, // Will be updated when PDF is downloaded
+            dateModified: att.data.dateModified,
+            md5: att.data.md5,
+          }));
+
+          enrichedCitations.push({
+            ...citation,
+            zoteroKey: zoteroItem.key,
+            zoteroAttachments: attachmentInfos,
+          });
+        } catch (error) {
+          console.error(`Failed to get attachments for ${citation.title}:`, error);
+          enrichedCitations.push(citation);
+        }
+      } else {
+        enrichedCitations.push(citation);
+      }
+    }
+
+    return enrichedCitations;
+  }
+
+  /**
+   * Télécharge un PDF depuis Zotero et met à jour la citation
+   * @param citation - Citation contenant les infos Zotero
+   * @param attachmentKey - Clé de l'attachment à télécharger
+   * @param targetDirectory - Dossier de destination
+   * @returns Chemin du fichier téléchargé
+   */
+  async downloadPDFForCitation(
+    citation: Citation,
+    attachmentKey: string,
+    targetDirectory: string
+  ): Promise<string> {
+    const pdfDir = path.join(targetDirectory, 'PDFs');
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
+    // Find attachment info
+    const attachmentInfo = citation.zoteroAttachments?.find((att) => att.key === attachmentKey);
+    if (!attachmentInfo) {
+      throw new Error(`Attachment ${attachmentKey} not found in citation`);
+    }
+
+    // Sanitize filename
+    const filename = this.sanitizeFilename(attachmentInfo.filename);
+    const savePath = path.join(pdfDir, filename);
+
+    // Download file
+    await this.api.downloadFile(attachmentKey, savePath);
+
+    console.log(`📥 PDF téléchargé: ${filename}`);
+    return savePath;
   }
 
   /**

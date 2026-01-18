@@ -44,11 +44,28 @@ export interface ZoteroItem {
 
 export interface ZoteroAttachment {
   key: string;
-  itemType: 'attachment';
-  linkMode: string;
-  contentType?: string;
-  filename?: string;
-  path?: string;
+  version: number;
+  library?: {
+    type: string;
+    id: number;
+    name: string;
+  };
+  data: {
+    key: string;
+    version: number;
+    itemType: 'attachment';
+    linkMode: string;
+    contentType?: string;
+    filename?: string;
+    path?: string;
+    title?: string;
+    note?: string;
+    tags?: Array<{ tag: string }>;
+    dateAdded?: string;
+    dateModified?: string;
+    md5?: string;
+    mtime?: number;
+  };
 }
 
 export interface ZoteroCollection {
@@ -316,9 +333,39 @@ export class ZoteroAPI {
   // MARK: - Files
 
   /**
-   * Télécharge un fichier attaché (PDF)
+   * Récupère les attachments PDF d'un item
    */
-  async downloadFile(itemKey: string, savePath: string): Promise<void> {
+  async getItemAttachments(itemKey: string): Promise<ZoteroItem[]> {
+    const children = await this.getItemChildren(itemKey);
+
+    // Filter only PDF attachments
+    return children.filter((child) => {
+      return (
+        child.data.itemType === 'attachment' &&
+        (child.data.contentType === 'application/pdf' ||
+          child.data.filename?.toLowerCase().endsWith('.pdf'))
+      );
+    });
+  }
+
+  /**
+   * Vérifie si un item a des PDFs attachés
+   */
+  async hasAttachments(itemKey: string): Promise<boolean> {
+    const attachments = await this.getItemAttachments(itemKey);
+    return attachments.length > 0;
+  }
+
+  /**
+   * Télécharge un fichier attaché (PDF)
+   * @param itemKey - Clé de l'attachment (pas de l'item parent)
+   * @param savePath - Chemin où sauvegarder le fichier
+   * @returns Métadonnées du fichier téléchargé
+   */
+  async downloadFile(
+    itemKey: string,
+    savePath: string
+  ): Promise<{ filename: string; size: number }> {
     const url = `${this.baseURL}/users/${this.config.userId}/items/${itemKey}/file`;
 
     const response = await fetch(url, {
@@ -332,8 +379,32 @@ export class ZoteroAPI {
     }
 
     const fs = await import('fs');
+    const path = await import('path');
+
+    // Get filename from Content-Disposition header or use default
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = 'document.pdf';
+
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (match && match[1]) {
+        filename = match[1].replace(/['"]/g, '');
+      }
+    }
+
+    // Ensure directory exists
+    const dir = path.dirname(savePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
     const buffer = await response.arrayBuffer();
     fs.writeFileSync(savePath, Buffer.from(buffer));
+
+    return {
+      filename,
+      size: buffer.byteLength,
+    };
   }
 
   // MARK: - Request Helper
