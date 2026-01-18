@@ -335,17 +335,13 @@ export class ZoteroAPI {
   /**
    * Récupère les attachments PDF d'un item
    */
-  async getItemAttachments(itemKey: string): Promise<ZoteroItem[]> {
+  async getItemAttachments(itemKey: string): Promise<ZoteroAttachment[]> {
     const children = await this.getItemChildren(itemKey);
 
-    // Filter only PDF attachments
+    // Filter only PDF attachments and cast to ZoteroAttachment
     return children.filter((child) => {
-      return (
-        child.data.itemType === 'attachment' &&
-        (child.data.contentType === 'application/pdf' ||
-          child.data.filename?.toLowerCase().endsWith('.pdf'))
-      );
-    });
+      return child.data.itemType === 'attachment';
+    }) as ZoteroAttachment[];
   }
 
   /**

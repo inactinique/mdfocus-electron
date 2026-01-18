@@ -5,7 +5,6 @@ import { editorViewCtx } from '@milkdown/kit/core';
 import { useEditorStore } from '../../stores/editorStore';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import '@milkdown/crepe/theme/common/style.css';
-import '@milkdown/crepe/theme/nord-dark.css';
 import './MilkdownEditor.css';
 
 // Citation autocomplete component
