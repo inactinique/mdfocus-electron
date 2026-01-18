@@ -17,22 +17,22 @@ const DEFAULT_CONFIG: ThemeConfig = {
   darkModeStart: '20:00',
 };
 
-export const useTheme = () => {
-  const [config, setConfigState] = useState<ThemeConfig>(DEFAULT_CONFIG);
-  const [currentTheme, setCurrentTheme] = useState<Theme>('dark');
-
-  // Load config from localStorage on mount
-  useEffect(() => {
+// Load config synchronously from localStorage
+const loadInitialConfig = (): ThemeConfig => {
+  try {
     const saved = localStorage.getItem('theme-config');
     if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as ThemeConfig;
-        setConfigState(parsed);
-      } catch (error) {
-        console.error('Failed to parse theme config:', error);
-      }
+      return JSON.parse(saved) as ThemeConfig;
     }
-  }, []);
+  } catch (error) {
+    console.error('Failed to parse theme config:', error);
+  }
+  return DEFAULT_CONFIG;
+};
+
+export const useTheme = () => {
+  const [config, setConfigState] = useState<ThemeConfig>(loadInitialConfig);
+  const [currentTheme, setCurrentTheme] = useState<Theme>('dark');
 
   // Calculate current theme based on config
   useEffect(() => {
