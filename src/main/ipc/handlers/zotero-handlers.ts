@@ -7,13 +7,14 @@ import { successResponse, errorResponse } from '../utils/error-handler.js';
 import { validate, ZoteroTestConnectionSchema, ZoteroSyncSchema } from '../utils/validation.js';
 
 export function setupZoteroHandlers() {
-  ipcMain.handle('zotero:test-connection', async (_event, userId: string, apiKey: string) => {
-    console.log('📞 IPC Call: zotero:test-connection', { userId });
+  ipcMain.handle('zotero:test-connection', async (_event, userId: string, apiKey: string, groupId?: string) => {
+    console.log('📞 IPC Call: zotero:test-connection', { userId, groupId });
     try {
-      const validatedData = validate(ZoteroTestConnectionSchema, { userId, apiKey });
+      const validatedData = validate(ZoteroTestConnectionSchema, { userId, apiKey, groupId });
       const result = await zoteroService.testConnection(
         validatedData.userId,
-        validatedData.apiKey
+        validatedData.apiKey,
+        validatedData.groupId
       );
       console.log('📤 IPC Response: zotero:test-connection', result);
       return result;
@@ -23,13 +24,14 @@ export function setupZoteroHandlers() {
     }
   });
 
-  ipcMain.handle('zotero:list-collections', async (_event, userId: string, apiKey: string) => {
-    console.log('📞 IPC Call: zotero:list-collections', { userId });
+  ipcMain.handle('zotero:list-collections', async (_event, userId: string, apiKey: string, groupId?: string) => {
+    console.log('📞 IPC Call: zotero:list-collections', { userId, groupId });
     try {
-      const validatedData = validate(ZoteroTestConnectionSchema, { userId, apiKey });
+      const validatedData = validate(ZoteroTestConnectionSchema, { userId, apiKey, groupId });
       const result = await zoteroService.listCollections(
         validatedData.userId,
-        validatedData.apiKey
+        validatedData.apiKey,
+        validatedData.groupId
       );
       console.log('📤 IPC Response: zotero:list-collections', {
         success: result.success,
@@ -63,6 +65,7 @@ export function setupZoteroHandlers() {
   ipcMain.handle('zotero:download-pdf', async (_event, options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     attachmentKey: string;
     filename: string;
     targetDirectory: string;
@@ -84,6 +87,7 @@ export function setupZoteroHandlers() {
   ipcMain.handle('zotero:enrich-citations', async (_event, options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     citations: any[];
     collectionKey?: string;
   }) => {
@@ -107,6 +111,7 @@ export function setupZoteroHandlers() {
   ipcMain.handle('zotero:check-updates', async (_event, options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     localCitations: any[];
     collectionKey?: string;
   }) => {
@@ -131,6 +136,7 @@ export function setupZoteroHandlers() {
   ipcMain.handle('zotero:apply-updates', async (_event, options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     currentCitations: any[];
     diff: any;
     strategy: 'local' | 'remote' | 'manual';

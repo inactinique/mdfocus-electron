@@ -9,9 +9,9 @@ class ZoteroService {
   /**
    * Test connection to Zotero API
    */
-  async testConnection(userId: string, apiKey: string): Promise<{ success: boolean; error?: string }> {
+  async testConnection(userId: string, apiKey: string, groupId?: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const api = new ZoteroAPI({ userId, apiKey });
+      const api = new ZoteroAPI({ userId, apiKey, groupId });
       const isConnected = await api.testConnection();
 
       return { success: isConnected };
@@ -24,13 +24,13 @@ class ZoteroService {
   /**
    * List all collections from Zotero with hierarchy
    */
-  async listCollections(userId: string, apiKey: string): Promise<{
+  async listCollections(userId: string, apiKey: string, groupId?: string): Promise<{
     success: boolean;
     collections?: Array<{ key: string; name: string; parentCollection?: string }>;
     error?: string;
   }> {
     try {
-      const api = new ZoteroAPI({ userId, apiKey });
+      const api = new ZoteroAPI({ userId, apiKey, groupId });
       const collections = await api.listCollections();
 
       // Build hierarchical structure
@@ -78,6 +78,7 @@ class ZoteroService {
   async sync(options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     collectionKey?: string;
     downloadPDFs: boolean;
     exportBibTeX: boolean;
@@ -93,6 +94,7 @@ class ZoteroService {
       const api = new ZoteroAPI({
         userId: options.userId,
         apiKey: options.apiKey,
+        groupId: options.groupId,
       });
 
       const sync = new ZoteroSync(api);
@@ -125,6 +127,7 @@ class ZoteroService {
   async downloadPDF(options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     attachmentKey: string;
     filename: string;
     targetDirectory: string;
@@ -137,6 +140,7 @@ class ZoteroService {
       const api = new ZoteroAPI({
         userId: options.userId,
         apiKey: options.apiKey,
+        groupId: options.groupId,
       });
 
       const sync = new ZoteroSync(api);
@@ -174,6 +178,7 @@ class ZoteroService {
   async enrichCitations(options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     citations: Citation[];
     collectionKey?: string;
   }): Promise<{
@@ -185,6 +190,7 @@ class ZoteroService {
       const api = new ZoteroAPI({
         userId: options.userId,
         apiKey: options.apiKey,
+        groupId: options.groupId,
       });
 
       const sync = new ZoteroSync(api);
@@ -223,6 +229,7 @@ class ZoteroService {
   async checkUpdates(options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     localCitations: Citation[];
     collectionKey?: string;
   }): Promise<{
@@ -242,6 +249,7 @@ class ZoteroService {
       const api = new ZoteroAPI({
         userId: options.userId,
         apiKey: options.apiKey,
+        groupId: options.groupId,
       });
 
       const sync = new ZoteroSync(api);
@@ -272,6 +280,7 @@ class ZoteroService {
   async applyUpdates(options: {
     userId: string;
     apiKey: string;
+    groupId?: string;
     currentCitations: Citation[];
     diff: SyncDiff;
     strategy: ConflictStrategy;
@@ -289,6 +298,7 @@ class ZoteroService {
       const api = new ZoteroAPI({
         userId: options.userId,
         apiKey: options.apiKey,
+        groupId: options.groupId,
       });
 
       const sync = new ZoteroSync(api);

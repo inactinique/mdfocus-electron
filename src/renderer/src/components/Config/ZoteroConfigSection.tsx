@@ -5,6 +5,7 @@ import { CollapsibleSection } from '../common/CollapsibleSection';
 export interface ZoteroConfig {
   userId: string;
   apiKey: string;
+  groupId?: string;
   autoSync: boolean;
 }
 
@@ -30,7 +31,7 @@ export const ZoteroConfigSection: React.FC<ZoteroConfigSectionProps> = ({
     setTestStatus('idle');
 
     try {
-      const result = await window.electron.zotero.testConnection(config.userId, config.apiKey);
+      const result = await window.electron.zotero.testConnection(config.userId, config.apiKey, config.groupId);
       setTestStatus(result.success ? 'success' : 'error');
 
       if (result.success) {
@@ -70,6 +71,19 @@ export const ZoteroConfigSection: React.FC<ZoteroConfigSectionProps> = ({
             onChange={(e) => onChange({ ...config, apiKey: e.target.value })}
             placeholder="Votre clé API Zotero"
           />
+        </div>
+
+        <div className="config-field">
+          <label>Group ID (optionnel)</label>
+          <input
+            type="text"
+            value={config.groupId || ''}
+            onChange={(e) => onChange({ ...config, groupId: e.target.value || undefined })}
+            placeholder="ID du groupe (laisser vide pour bibliothèque personnelle)"
+          />
+          <span className="config-help">
+            Renseignez l'ID du groupe pour synchroniser une bibliothèque de groupe au lieu de votre bibliothèque personnelle.
+          </span>
         </div>
 
         <div className="config-actions">

@@ -16,6 +16,7 @@ export const ZoteroImport: React.FC = () => {
   const currentProject = useProjectStore((state) => state.currentProject);
   const [userId, setUserId] = useState<string>('');
   const [apiKey, setApiKey] = useState<string>('');
+  const [groupId, setGroupId] = useState<string>('');
   const [collections, setCollections] = useState<ZoteroCollection[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<string>('');
   const [isLoadingCollections, setIsLoadingCollections] = useState(false);
@@ -42,6 +43,7 @@ export const ZoteroImport: React.FC = () => {
       if (config) {
         setUserId(config.userId || '');
         setApiKey(config.apiKey || '');
+        setGroupId(config.groupId || '');
       }
     } catch (error) {
       console.error('Failed to load Zotero config:', error);
@@ -57,7 +59,7 @@ export const ZoteroImport: React.FC = () => {
     setIsLoadingCollections(true);
 
     try {
-      const result = await window.electron.zotero.listCollections(userId, apiKey);
+      const result = await window.electron.zotero.listCollections(userId, apiKey, groupId || undefined);
       if (result.success && result.collections) {
         setCollections(result.collections);
       } else {
@@ -99,6 +101,7 @@ export const ZoteroImport: React.FC = () => {
       const syncResult = await window.electron.zotero.sync({
         userId,
         apiKey,
+        groupId: groupId || undefined,
         collectionKey: selectedCollection || undefined,
         downloadPDFs: false,
         exportBibTeX: true,
@@ -118,6 +121,7 @@ export const ZoteroImport: React.FC = () => {
         const enrichResult = await window.electron.zotero.enrichCitations({
           userId,
           apiKey,
+          groupId: groupId || undefined,
           citations: loadedCitations,
           collectionKey: selectedCollection || undefined,
         });
@@ -197,6 +201,7 @@ export const ZoteroImport: React.FC = () => {
       const result = await window.electron.zotero.checkUpdates({
         userId,
         apiKey,
+        groupId: groupId || undefined,
         localCitations: citations,
         collectionKey: selectedCollection || undefined,
       });
@@ -230,6 +235,7 @@ export const ZoteroImport: React.FC = () => {
       const result = await window.electron.zotero.applyUpdates({
         userId,
         apiKey,
+        groupId: groupId || undefined,
         currentCitations,
         diff: syncDiff,
         strategy,

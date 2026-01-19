@@ -651,6 +651,7 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
       const downloadResult = await window.electron.zotero.downloadPDF({
         userId: zoteroConfig.userId,
         apiKey: zoteroConfig.apiKey,
+        groupId: zoteroConfig.groupId || undefined,
         attachmentKey: attachment.key,
         filename: attachment.filename,
         targetDirectory: projectPath,
@@ -792,6 +793,7 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
           const downloadResult = await window.electron.zotero.downloadPDF({
             userId: zoteroConfig.userId,
             apiKey: zoteroConfig.apiKey,
+            groupId: zoteroConfig.groupId || undefined,
             attachmentKey: firstAttachment.key,
             filename: firstAttachment.filename,
             targetDirectory: projectPath,

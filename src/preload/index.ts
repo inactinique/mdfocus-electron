@@ -148,20 +148,23 @@ const api = {
 
   // Zotero
   zotero: {
-    testConnection: (userId: string, apiKey: string) =>
-      ipcRenderer.invoke('zotero:test-connection', userId, apiKey),
-    listCollections: (userId: string, apiKey: string) =>
-      ipcRenderer.invoke('zotero:list-collections', userId, apiKey),
+    testConnection: (userId: string, apiKey: string, groupId?: string) =>
+      ipcRenderer.invoke('zotero:test-connection', userId, apiKey, groupId),
+    listCollections: (userId: string, apiKey: string, groupId?: string) =>
+      ipcRenderer.invoke('zotero:list-collections', userId, apiKey, groupId),
     sync: (options: {
       userId: string;
       apiKey: string;
+      groupId?: string;
       collectionKey?: string;
       downloadPDFs: boolean;
       exportBibTeX: boolean;
+      targetDirectory?: string;
     }) => ipcRenderer.invoke('zotero:sync', options),
     downloadPDF: (options: {
       userId: string;
       apiKey: string;
+      groupId?: string;
       attachmentKey: string;
       filename: string;
       targetDirectory: string;
@@ -169,12 +172,14 @@ const api = {
     checkUpdates: (options: {
       userId: string;
       apiKey: string;
+      groupId?: string;
       localCitations: any[];
       collectionKey?: string;
     }) => ipcRenderer.invoke('zotero:check-updates', options),
     applyUpdates: (options: {
       userId: string;
       apiKey: string;
+      groupId?: string;
       currentCitations: any[];
       diff: any;
       strategy: 'local' | 'remote' | 'manual';
@@ -183,6 +188,7 @@ const api = {
     enrichCitations: (options: {
       userId: string;
       apiKey: string;
+      groupId?: string;
       citations: any[];
       collectionKey?: string;
     }) => ipcRenderer.invoke('zotero:enrich-citations', options),

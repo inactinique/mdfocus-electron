@@ -79,11 +79,13 @@ export const ChatSendSchema = z.object({
 export const ZoteroTestConnectionSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   apiKey: z.string().min(1, 'API key is required'),
+  groupId: z.string().optional(),
 });
 
 export const ZoteroSyncSchema = z.object({
   userId: z.string().min(1),
   apiKey: z.string().min(1),
+  groupId: z.string().optional(),
   collectionKey: z.string().optional(),
   downloadPDFs: z.boolean().default(true),
   exportBibTeX: z.boolean().default(true),

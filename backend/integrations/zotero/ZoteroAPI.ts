@@ -5,6 +5,8 @@ export interface ZoteroConfig {
   userId: string;
   apiKey: string;
   baseURL?: string;
+  /** If set, use group library instead of user library */
+  groupId?: string;
 }
 
 export interface ZoteroItem {
@@ -88,6 +90,17 @@ export class ZoteroAPI {
     this.baseURL = config.baseURL || 'https://api.zotero.org';
   }
 
+  /**
+   * Returns the library prefix for API calls
+   * Uses /groups/{groupId} if groupId is set, otherwise /users/{userId}
+   */
+  private getLibraryPrefix(): string {
+    if (this.config.groupId) {
+      return `${this.baseURL}/groups/${this.config.groupId}`;
+    }
+    return `${this.baseURL}/users/${this.config.userId}`;
+  }
+
   // MARK: - Collections
 
   /**
@@ -104,7 +117,7 @@ export class ZoteroAPI {
       params.append('limit', pageSize.toString());
       params.append('start', start.toString());
 
-      const url = `${this.baseURL}/users/${this.config.userId}/collections?${params.toString()}`;
+      const url = `${this.getLibraryPrefix()}/collections?${params.toString()}`;
 
       const collections = (await this.makeRequest(url)) as ZoteroCollection[];
       allCollections.push(...collections);
@@ -134,7 +147,7 @@ export class ZoteroAPI {
    * Obtient une collection spécifique
    */
   async getCollection(collectionKey: string): Promise<ZoteroCollection> {
-    const url = `${this.baseURL}/users/${this.config.userId}/collections/${collectionKey}`;
+    const url = `${this.getLibraryPrefix()}/collections/${collectionKey}`;
     const response = await this.makeRequest(url);
     return response as ZoteroCollection;
   }
@@ -157,8 +170,8 @@ export class ZoteroAPI {
 
     while (hasMore) {
       let url = options?.collectionKey
-        ? `${this.baseURL}/users/${this.config.userId}/collections/${options.collectionKey}/items`
-        : `${this.baseURL}/users/${this.config.userId}/items`;
+        ? `${this.getLibraryPrefix()}/collections/${options.collectionKey}/items`
+        : `${this.getLibraryPrefix()}/items`;
 
       const params = new URLSearchParams();
       params.append('limit', pageSize.toString());
@@ -193,7 +206,7 @@ export class ZoteroAPI {
    * Obtient un item spécifique
    */
   async getItem(itemKey: string): Promise<ZoteroItem> {
-    const url = `${this.baseURL}/users/${this.config.userId}/items/${itemKey}`;
+    const url = `${this.getLibraryPrefix()}/items/${itemKey}`;
     const response = await this.makeRequest(url);
     return response as ZoteroItem;
   }
@@ -202,7 +215,7 @@ export class ZoteroAPI {
    * Liste les enfants d'un item (attachements, notes)
    */
   async getItemChildren(itemKey: string): Promise<ZoteroItem[]> {
-    const url = `${this.baseURL}/users/${this.config.userId}/items/${itemKey}/children`;
+    const url = `${this.getLibraryPrefix()}/items/${itemKey}/children`;
     const response = await this.makeRequest(url);
     return response as ZoteroItem[];
   }
@@ -260,7 +273,7 @@ export class ZoteroAPI {
       params.append('limit', pageSize.toString());
       params.append('start', start.toString());
 
-      const url = `${this.baseURL}/users/${this.config.userId}/collections/${collectionKey}/items?${params.toString()}`;
+      const url = `${this.getLibraryPrefix()}/collections/${collectionKey}/items?${params.toString()}`;
 
       const response = await this.makeRequest(url, { headers: { Accept: 'text/plain' } });
       const bibtex = response as string;
@@ -301,7 +314,7 @@ export class ZoteroAPI {
       params.append('limit', pageSize.toString());
       params.append('start', start.toString());
 
-      const url = `${this.baseURL}/users/${this.config.userId}/items?${params.toString()}`;
+      const url = `${this.getLibraryPrefix()}/items?${params.toString()}`;
 
       const response = await this.makeRequest(url, { headers: { Accept: 'text/plain' } });
       const bibtex = response as string;
@@ -362,7 +375,7 @@ export class ZoteroAPI {
     itemKey: string,
     savePath: string
   ): Promise<{ filename: string; size: number }> {
-    const url = `${this.baseURL}/users/${this.config.userId}/items/${itemKey}/file`;
+    const url = `${this.getLibraryPrefix()}/items/${itemKey}/file`;
 
     const response = await fetch(url, {
       headers: {
