@@ -570,7 +570,9 @@
     "newFileConfirm": "Create a new file? Unsaved changes will be lost.",
     "markdown": "Markdown",
     "openError": "Error opening file",
-    "saveError": "Error saving file"
+    "saveError": "Error saving file",
+    "wysiwygMode": "Visual mode (WYSIWYG)",
+    "sourceMode": "Source mode (Markdown)"
   },
   "ragSettings": {
     "provider": "LLM Provider",

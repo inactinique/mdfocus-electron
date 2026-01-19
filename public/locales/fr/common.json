@@ -570,7 +570,9 @@
     "newFileConfirm": "Créer un nouveau fichier ? Les modifications non sauvegardées seront perdues.",
     "markdown": "Markdown",
     "openError": "Erreur lors de l'ouverture du fichier",
-    "saveError": "Erreur lors de la sauvegarde du fichier"
+    "saveError": "Erreur lors de la sauvegarde du fichier",
+    "wysiwygMode": "Mode visuel (WYSIWYG)",
+    "sourceMode": "Mode source (Markdown)"
   },
   "ragSettings": {
     "provider": "Provider LLM",

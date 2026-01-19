@@ -504,7 +504,9 @@
     "newFileConfirm": "Neue Datei erstellen? Nicht gespeicherte Änderungen gehen verloren.",
     "markdown": "Markdown",
     "openError": "Fehler beim Öffnen der Datei",
-    "saveError": "Fehler beim Speichern der Datei"
+    "saveError": "Fehler beim Speichern der Datei",
+    "wysiwygMode": "Visueller Modus (WYSIWYG)",
+    "sourceMode": "Quellmodus (Markdown)"
   },
   "ragSettings": {
     "provider": "LLM-Anbieter",
