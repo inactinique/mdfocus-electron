@@ -172,12 +172,39 @@ export function setupZoteroHandlers() {
       if (result.success) {
         const vectorStore = pdfService.getVectorStore();
         if (vectorStore) {
+          // Use the ORIGINAL citations (before sync) because they have the correct bibtexKey format
+          // from Better BibTeX. The finalCitations after sync may have newly generated IDs that
+          // don't match the documents' bibtex_key field.
+          // We combine both: original citations for bibtexKey, plus finalCitations for zoteroKey mapping
+          const originalCitations = options.currentCitations || [];
+          const finalCitations = result.finalCitations || [];
+
+          // Build a map of title -> zoteroKey from final citations (which have zoteroKey set)
+          const titleToZoteroKey: Record<string, string> = {};
+          for (const fc of finalCitations) {
+            if (fc.title && fc.zoteroKey) {
+              const normalizedTitle = fc.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+              titleToZoteroKey[normalizedTitle] = fc.zoteroKey;
+            }
+          }
+
+          // Map original citations to their zoteroKey by matching titles
+          const localCitations = originalCitations.map((c: any) => {
+            const normalizedTitle = c.title?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
+            return {
+              id: c.id,
+              zoteroKey: c.zoteroKey || titleToZoteroKey[normalizedTitle],
+              title: c.title,
+            };
+          });
+
           // Fetch fresh data from Zotero to update collections and document links
           const refreshResult = await zoteroService.refreshCollectionLinks({
             userId: options.userId,
             apiKey: options.apiKey,
             groupId: options.groupId,
             collectionKey: options.collectionKey,
+            localCitations,
           });
 
           if (refreshResult.collections && refreshResult.collections.length > 0) {

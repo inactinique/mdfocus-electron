@@ -399,12 +399,17 @@ class ZoteroService {
   /**
    * Refresh collection links by fetching current Zotero data
    * Used after apply-updates to ensure document-collection links are current
+   *
+   * @param options.localCitations Local citations with their bibtexKey (id) and zoteroKey
+   *   This is needed because the bibtexKey in documents comes from Better BibTeX format,
+   *   not from a simple Author_Year generation.
    */
   async refreshCollectionLinks(options: {
     userId: string;
     apiKey: string;
     groupId?: string;
     collectionKey?: string;
+    localCitations?: Array<{ id: string; zoteroKey?: string; title?: string }>;
   }): Promise<{
     collections: Array<{ key: string; name: string; parentKey?: string }>;
     bibtexKeyToCollections: Record<string, string[]>;
@@ -424,7 +429,7 @@ class ZoteroService {
         parentKey: c.data.parentCollection,
       }));
 
-      // Fetch items to build bibtexKey -> collections mapping
+      // Fetch items to build zoteroKey -> collections mapping
       const items = await api.listItems({
         collectionKey: options.collectionKey,
       });
@@ -434,16 +439,67 @@ class ZoteroService {
         (item) => item.data.itemType !== 'attachment' && item.data.itemType !== 'note'
       );
 
-      // Build bibtexKey -> collections mapping
-      const bibtexKeyToCollections: Record<string, string[]> = {};
+      // Build zoteroKey -> collections mapping from Zotero items
+      const zoteroKeyToCollections: Record<string, string[]> = {};
       for (const item of bibliographicItems) {
         if (item.data.collections && item.data.collections.length > 0) {
-          const bibtexKey = generateBibtexKeyFromZoteroItem(item);
-          bibtexKeyToCollections[bibtexKey] = item.data.collections;
+          zoteroKeyToCollections[item.key] = item.data.collections;
         }
       }
 
-      console.log(`🔄 Refreshed: ${collections.length} collections, ${Object.keys(bibtexKeyToCollections).length} items with collections`);
+      // Build bibtexKey -> collections mapping using local citations as the bridge
+      // Local citations have: id (bibtexKey from Better BibTeX) and zoteroKey (Zotero item key)
+      const bibtexKeyToCollections: Record<string, string[]> = {};
+
+      if (options.localCitations && options.localCitations.length > 0) {
+        // First try: use zoteroKey if available
+        let linkedViaZoteroKey = 0;
+        for (const citation of options.localCitations) {
+          if (citation.zoteroKey && zoteroKeyToCollections[citation.zoteroKey]) {
+            bibtexKeyToCollections[citation.id] = zoteroKeyToCollections[citation.zoteroKey];
+            linkedViaZoteroKey++;
+          }
+        }
+
+        // If no matches via zoteroKey, try matching by normalized title
+        // This handles the case where local citations don't have zoteroKey set yet
+        if (linkedViaZoteroKey === 0 && options.localCitations.length > 0) {
+          console.log(`⚠️ No zoteroKey matches found, trying to match by title...`);
+
+          // Build a map of normalized title -> Zotero item key
+          const titleToZoteroKey: Record<string, string> = {};
+          for (const item of bibliographicItems) {
+            if (item.data.title) {
+              const normalizedTitle = item.data.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+              titleToZoteroKey[normalizedTitle] = item.key;
+            }
+          }
+
+          // Match local citations by title
+          for (const citation of options.localCitations) {
+            if (citation.title) {
+              const normalizedTitle = citation.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const matchedZoteroKey = titleToZoteroKey[normalizedTitle];
+              if (matchedZoteroKey && zoteroKeyToCollections[matchedZoteroKey]) {
+                bibtexKeyToCollections[citation.id] = zoteroKeyToCollections[matchedZoteroKey];
+              }
+            }
+          }
+          console.log(`🔄 Refreshed: ${collections.length} collections, ${Object.keys(bibtexKeyToCollections).length} citations linked via title matching`);
+        } else {
+          console.log(`🔄 Refreshed: ${collections.length} collections, ${linkedViaZoteroKey} citations linked via zoteroKey`);
+        }
+      } else {
+        // Fallback: generate bibtexKey from Zotero items (may not match Better BibTeX format)
+        console.log(`⚠️ No local citations provided, falling back to generated bibtexKeys`);
+        for (const item of bibliographicItems) {
+          if (item.data.collections && item.data.collections.length > 0) {
+            const bibtexKey = generateBibtexKeyFromZoteroItem(item);
+            bibtexKeyToCollections[bibtexKey] = item.data.collections;
+          }
+        }
+        console.log(`🔄 Refreshed: ${collections.length} collections, ${Object.keys(bibtexKeyToCollections).length} items with collections (fallback)`);
+      }
 
       return {
         collections,

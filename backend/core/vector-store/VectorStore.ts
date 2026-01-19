@@ -1181,6 +1181,17 @@ export class VectorStore {
     console.log(`🔗 Attempting to link ${documents.length} documents to collections...`);
     console.log(`📋 Collection mapping has ${Object.keys(bibtexKeyToCollections).length} entries`);
 
+    // Debug: show sample keys from both sides to help diagnose mismatches
+    if (documents.length > 0) {
+      const sampleDocKeys = documents.slice(0, 5).map(d => d.bibtex_key);
+      console.log(`📄 Sample document bibtexKeys: ${sampleDocKeys.join(', ')}`);
+    }
+    const mappingKeys = Object.keys(bibtexKeyToCollections);
+    if (mappingKeys.length > 0) {
+      const sampleMappingKeys = mappingKeys.slice(0, 5);
+      console.log(`📎 Sample Zotero bibtexKeys: ${sampleMappingKeys.join(', ')}`);
+    }
+
     const insertStmt = this.db.prepare(`
       INSERT OR IGNORE INTO document_collections (document_id, collection_key)
       VALUES (?, ?)
