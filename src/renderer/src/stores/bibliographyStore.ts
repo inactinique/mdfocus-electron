@@ -134,6 +134,9 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
         });
 
         get().applyFilters();
+
+        // Immediately refresh indexed PDFs state to avoid race condition
+        await get().refreshIndexedPDFs();
       } else {
         console.error('Invalid response from bibliography.load:', result);
         throw new Error(result.error || 'Failed to load bibliography');
@@ -164,6 +167,17 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
         });
 
         get().applyFilters();
+
+        // Immediately refresh indexed PDFs state to avoid race condition
+        // This ensures indexedFilePaths is populated before UI components render
+        try {
+          console.log('🔄 About to call refreshIndexedPDFs from loadBibliographyWithMetadata...');
+          await get().refreshIndexedPDFs();
+          console.log('✅ refreshIndexedPDFs completed');
+        } catch (refreshError) {
+          console.error('⚠️ refreshIndexedPDFs failed (non-blocking):', refreshError);
+          // Don't throw - this is non-blocking, the bibliography is still loaded
+        }
       } else {
         console.error('Invalid response from bibliography.loadWithMetadata:', result);
         throw new Error(result.error || 'Failed to load bibliography with metadata');
@@ -586,8 +600,10 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
   },
 
   refreshIndexedPDFs: async () => {
+    console.log('🔄 refreshIndexedPDFs called...');
     try {
       const result = await window.electron.pdf.getAll();
+      console.log('📄 pdf.getAll result:', { success: result.success, documentCount: result.documents?.length });
       if (result.success && Array.isArray(result.documents)) {
         // Extract file paths from indexed documents
         // Documents store the original file path or we can match by bibtexKey
@@ -607,6 +623,7 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
 
         // Match citations by bibtexKey and add their file paths
         const { citations } = get();
+        console.log(`📋 Matching ${indexedBibtexKeys.size} bibtexKeys against ${citations.length} citations`);
         citations.forEach((citation) => {
           if (citation.file && indexedBibtexKeys.has(citation.id)) {
             indexedPaths.add(citation.file);
@@ -614,10 +631,12 @@ export const useBibliographyStore = create<BibliographyState>((set, get) => ({
         });
 
         set({ indexedFilePaths: indexedPaths });
-        console.log(`📚 Refreshed indexed PDFs: ${indexedPaths.size} files`);
+        console.log(`📚 Refreshed indexed PDFs: ${indexedPaths.size} files (${indexedBibtexKeys.size} bibtexKeys matched)`);
+      } else {
+        console.warn('⚠️ refreshIndexedPDFs: pdf.getAll returned no documents or failed', result);
       }
     } catch (error) {
-      console.error('Failed to refresh indexed PDFs:', error);
+      console.error('❌ Failed to refresh indexed PDFs:', error);
     }
   },
 

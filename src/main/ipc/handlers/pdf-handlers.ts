@@ -137,11 +137,13 @@ export function setupPDFHandlers() {
   });
 
   ipcMain.handle('pdf:get-all', async () => {
+    console.log('📞 IPC Call: pdf:get-all');
     try {
       const projectPath = projectManager.getCurrentProjectPath();
       requireProject(projectPath);
 
       const documents = await pdfService.getAllDocuments();
+      console.log(`📤 IPC Response: pdf:get-all { documentCount: ${documents.length} }`);
       return successResponse({ documents });
     } catch (error: any) {
       console.error('❌ pdf:get-all error:', error);

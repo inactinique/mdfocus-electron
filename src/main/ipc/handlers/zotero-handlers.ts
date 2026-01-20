@@ -59,10 +59,45 @@ export function setupZoteroHandlers() {
           vectorStore.saveCollections(result.collections);
           console.log(`📁 Saved ${result.collections.length} collections to VectorStore`);
 
-          // Link existing documents to their Zotero collections using bibtexKey
-          if (result.bibtexKeyToCollections && Object.keys(result.bibtexKeyToCollections).length > 0) {
+          // Link documents to collections using the BibTeX file that was just created
+          // The BibTeX file has the correct Better BibTeX keys that match indexed documents
+          if (result.bibtexPath) {
+            try {
+              const { BibTeXParser } = await import('../../../../backend/core/bibliography/BibTeXParser.js');
+              const parser = new BibTeXParser();
+              const citations = parser.parseFile(result.bibtexPath);
+
+              if (citations.length > 0) {
+                // Refresh collection links using the parsed citations
+                const refreshResult = await zoteroService.refreshCollectionLinks({
+                  userId: validatedData.userId,
+                  apiKey: validatedData.apiKey,
+                  groupId: validatedData.groupId,
+                  collectionKey: validatedData.collectionKey,
+                  localCitations: citations.map((c: any) => ({
+                    id: c.id,
+                    zoteroKey: c.zoteroKey,
+                    title: c.title,
+                  })),
+                });
+
+                if (refreshResult.bibtexKeyToCollections && Object.keys(refreshResult.bibtexKeyToCollections).length > 0) {
+                  const linkedCount = vectorStore.linkDocumentsToCollectionsByBibtexKey(refreshResult.bibtexKeyToCollections);
+                  console.log(`🔗 Linked ${linkedCount} documents to their Zotero collections`);
+                }
+              }
+            } catch (parseError) {
+              console.error('⚠️ Could not parse BibTeX for collection linking:', parseError);
+              // Fallback to generated bibtexKeys (may not match Better BibTeX format)
+              if (result.bibtexKeyToCollections && Object.keys(result.bibtexKeyToCollections).length > 0) {
+                const linkedCount = vectorStore.linkDocumentsToCollectionsByBibtexKey(result.bibtexKeyToCollections);
+                console.log(`🔗 Linked ${linkedCount} documents to their Zotero collections (fallback)`);
+              }
+            }
+          } else if (result.bibtexKeyToCollections && Object.keys(result.bibtexKeyToCollections).length > 0) {
+            // No BibTeX file, use generated keys as fallback
             const linkedCount = vectorStore.linkDocumentsToCollectionsByBibtexKey(result.bibtexKeyToCollections);
-            console.log(`🔗 Linked ${linkedCount} documents to their Zotero collections`);
+            console.log(`🔗 Linked ${linkedCount} documents to their Zotero collections (fallback)`);
           }
         }
       }
