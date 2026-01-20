@@ -22,6 +22,8 @@ const api = {
       projectPath: string;
       cslPath?: string;
     }) => ipcRenderer.invoke('project:set-csl-path', data),
+    getConfig: (projectPath: string) => ipcRenderer.invoke('project:get-config', projectPath),
+    updateConfig: (projectPath: string, updates: any) => ipcRenderer.invoke('project:update-config', projectPath, updates),
     onRebuildProgress: (callback: (progress: {
       current: number;
       total: number;

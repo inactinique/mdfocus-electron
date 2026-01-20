@@ -32,18 +32,40 @@ export const ZoteroImport: React.FC = () => {
     return 1 + getCollectionDepth(col.parentCollection);
   };
 
-  // Load config on mount
+  // Load config on mount and when project changes
   useEffect(() => {
     loadZoteroConfig();
-  }, []);
+  }, [currentProject]);
 
   const loadZoteroConfig = async () => {
     try {
-      const config = await window.electron.config.get('zotero');
-      if (config) {
-        setUserId(config.userId || '');
-        setApiKey(config.apiKey || '');
-        setGroupId(config.groupId || '');
+      // Load global Zotero config (userId, apiKey only - groupId is per-project)
+      const globalConfig = await window.electron.config.get('zotero');
+      if (globalConfig) {
+        setUserId(globalConfig.userId || '');
+        setApiKey(globalConfig.apiKey || '');
+      }
+
+      // Load project-specific Zotero config (groupId, collectionKey)
+      if (currentProject?.path) {
+        const projectFilePath = `${currentProject.path}/project.json`;
+        const projectConfig = await window.electron.project.getConfig(projectFilePath);
+        if (projectConfig?.zotero?.groupId) {
+          setGroupId(projectConfig.zotero.groupId);
+          console.log('📁 Using project-specific groupId:', projectConfig.zotero.groupId);
+        } else {
+          setGroupId(''); // No groupId = personal library
+        }
+        if (projectConfig?.zotero?.collectionKey) {
+          setSelectedCollection(projectConfig.zotero.collectionKey);
+          console.log('📁 Using project-specific collectionKey:', projectConfig.zotero.collectionKey);
+        } else {
+          setSelectedCollection('');
+        }
+      } else {
+        // No project open - reset project-specific settings
+        setGroupId('');
+        setSelectedCollection('');
       }
     } catch (error) {
       console.error('Failed to load Zotero config:', error);

@@ -323,6 +323,59 @@ N'oubliez pas de mentionner les perspectives futures.
     }
   }
 
+  /**
+   * Get project configuration from project.json
+   */
+  async getConfig(projectPath: string): Promise<Project | null> {
+    try {
+      if (!existsSync(projectPath)) {
+        console.warn('⚠️ Project file not found:', projectPath);
+        return null;
+      }
+
+      const content = await readFile(projectPath, 'utf-8');
+      const project: Project = JSON.parse(content);
+      return project;
+    } catch (error) {
+      console.error('❌ Failed to get project config:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update project configuration (partial update)
+   */
+  async updateConfig(projectPath: string, updates: Partial<Project>): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!existsSync(projectPath)) {
+        throw new Error(`Project file not found: ${projectPath}`);
+      }
+
+      const content = await readFile(projectPath, 'utf-8');
+      const project: Project = JSON.parse(content);
+
+      // Merge updates into project
+      const updatedProject = {
+        ...project,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await writeFile(projectPath, JSON.stringify(updatedProject, null, 2));
+      console.log('✅ Project config updated:', projectPath);
+
+      // Update current project if it's the same
+      if (this.currentProjectPath && projectPath.startsWith(this.currentProjectPath)) {
+        this.currentProject = updatedProject;
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ Failed to update project config:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   async setCSLPath(data: {
     projectPath: string;
     cslPath?: string;

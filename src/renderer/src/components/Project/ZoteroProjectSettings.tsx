@@ -20,6 +20,11 @@ export const ZoteroProjectSettings: React.FC<ZoteroProjectSettingsProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
+  // projectPath is the directory, we need the project.json file path
+  const projectFilePath = projectPath.endsWith('project.json')
+    ? projectPath
+    : `${projectPath}/project.json`;
+
   useEffect(() => {
     loadConfig();
   }, [projectPath]);
@@ -27,7 +32,7 @@ export const ZoteroProjectSettings: React.FC<ZoteroProjectSettingsProps> = ({
   const loadConfig = async () => {
     try {
       // Load project-specific Zotero config from project.json
-      const projectConfig = await window.electron.project.getConfig(projectPath);
+      const projectConfig = await window.electron.project.getConfig(projectFilePath);
       if (projectConfig?.zotero) {
         setConfig({
           groupId: projectConfig.zotero.groupId || '',
@@ -43,7 +48,7 @@ export const ZoteroProjectSettings: React.FC<ZoteroProjectSettingsProps> = ({
     setIsSaving(true);
     setSaveMessage('');
     try {
-      await window.electron.project.updateConfig(projectPath, {
+      await window.electron.project.updateConfig(projectFilePath, {
         zotero: {
           groupId: config.groupId || undefined,
           collectionKey: config.collectionKey || undefined,

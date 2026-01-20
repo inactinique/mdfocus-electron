@@ -6,7 +6,6 @@ import { CollapsibleSection } from '../common/CollapsibleSection';
 export interface ZoteroConfig {
   userId: string;
   apiKey: string;
-  groupId?: string;
   autoSync: boolean;
 }
 
@@ -33,7 +32,7 @@ export const ZoteroConfigSection: React.FC<ZoteroConfigSectionProps> = ({
     setTestStatus('idle');
 
     try {
-      const result = await window.electron.zotero.testConnection(config.userId, config.apiKey, config.groupId);
+      const result = await window.electron.zotero.testConnection(config.userId, config.apiKey);
       setTestStatus(result.success ? 'success' : 'error');
 
       if (result.success) {
@@ -75,7 +74,7 @@ export const ZoteroConfigSection: React.FC<ZoteroConfigSectionProps> = ({
         </div>
 
         <p className="config-help" style={{ marginTop: '8px' }}>
-          {t('zotero.groupIdNote')}
+          {t('zotero.projectNote')}
         </p>
 
         <div className="config-actions">

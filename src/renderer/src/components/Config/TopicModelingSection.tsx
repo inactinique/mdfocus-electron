@@ -31,7 +31,13 @@ export const TopicModelingSection: React.FC = () => {
       const result = await window.electron.topicModeling.checkStatus();
       console.log('Topic modeling status result:', result);
       if (result.success) {
-        setStatus(result.data);
+        // Les propriétés sont directement sur result (pas de .data imbriqué)
+        setStatus({
+          installed: result.installed,
+          venvPath: result.venvPath,
+          pythonVersion: result.pythonVersion,
+          error: result.error,
+        });
       } else {
         setStatus({ installed: false, error: result.error });
       }
@@ -55,14 +61,15 @@ export const TopicModelingSection: React.FC = () => {
     try {
       const result = await window.electron.topicModeling.setupEnvironment();
 
-      if (result.success && result.data.success) {
+      // La réponse est { success: true } directement (pas de .data imbriqué)
+      if (result.success) {
         setInstallProgress((prev) => [...prev, `✅ ${t('topicModeling.installSuccess')}`]);
         // Reload status
         await checkStatus();
       } else {
         setInstallProgress((prev) => [
           ...prev,
-          `❌ ${t('topicModeling.installError')}: ${result.data?.error || result.error || 'Unknown error'}`,
+          `❌ ${t('topicModeling.installError')}: ${result.error || 'Unknown error'}`,
         ]);
       }
     } catch (error: any) {
@@ -87,40 +94,40 @@ export const TopicModelingSection: React.FC = () => {
           ) : (
             <>
               <div className="topic-modeling-status">
-                <div className={`status-indicator ${status?.installed ? 'status-success' : 'status-warning'}`}>
-                  <span className="status-dot"></span>
-                  <span className="status-text">
+                <div className={`topic-status-indicator ${status?.installed ? 'topic-status-success' : 'topic-status-warning'}`}>
+                  <span className="topic-status-dot"></span>
+                  <span className="topic-status-text">
                     {status?.installed ? t('topicModeling.installed') : t('topicModeling.notInstalled')}
                   </span>
                 </div>
 
                 {status?.installed && status.pythonVersion && (
-                  <div className="status-details">
-                    <p>{t('topicModeling.pythonVersion')}: {status.pythonVersion}</p>
-                    <p className="status-path">{t('topicModeling.venvPath')}: {status.venvPath}</p>
+                  <div className="topic-status-details">
+                    <span>{status.pythonVersion}</span>
+                    <span className="topic-status-path">{status.venvPath}</span>
                   </div>
                 )}
 
                 {status?.error && !status.installed && (
-                  <div className="status-error">
-                    <p>⚠️ {status.error}</p>
+                  <div className="topic-status-error">
+                    {status.error}
                   </div>
                 )}
               </div>
 
-              <div className="config-actions">
+              <div className="topic-modeling-actions">
                 {(!status || !status.installed) && (
-                  <button onClick={setupEnvironment} disabled={installing} className="btn-primary">
+                  <button onClick={setupEnvironment} disabled={installing} className="config-btn primary">
                     {installing ? t('topicModeling.installingButton') : t('topicModeling.installButton')}
                   </button>
                 )}
 
                 {status && status.installed && (
                   <>
-                    <button onClick={setupEnvironment} disabled={installing} className="btn-secondary">
+                    <button onClick={setupEnvironment} disabled={installing} className="config-btn-small">
                       {installing ? t('topicModeling.reinstallingButton') : t('topicModeling.reinstallButton')}
                     </button>
-                    <button onClick={checkStatus} disabled={loading || installing} className="btn-secondary">
+                    <button onClick={checkStatus} disabled={loading || installing} className="config-btn-small">
                       {t('topicModeling.checkButton')}
                     </button>
                   </>
@@ -128,10 +135,10 @@ export const TopicModelingSection: React.FC = () => {
               </div>
 
               {installing && installProgress.length > 0 && (
-                <div className="install-progress">
-                  <div className="progress-log">
+                <div className="topic-install-progress">
+                  <div className="topic-progress-log">
                     {installProgress.map((msg, idx) => (
-                      <div key={idx} className="progress-message">
+                      <div key={idx} className="topic-progress-message">
                         {msg}
                       </div>
                     ))}
@@ -140,7 +147,7 @@ export const TopicModelingSection: React.FC = () => {
               )}
 
               {!installing && installProgress.length > 0 && (
-                <button onClick={() => setInstallProgress([])} className="btn-text">
+                <button onClick={() => setInstallProgress([])} className="config-btn-small" style={{ marginTop: '8px' }}>
                   {t('topicModeling.clearLog')}
                 </button>
               )}
