@@ -16,6 +16,8 @@ export interface SimilarityOptions {
   maxResults: number;
   similarityThreshold: number;
   collectionFilter: string[] | null;
+  useReranking: boolean; // Use LLM to rerank results for better accuracy
+  useContextualEmbedding: boolean; // Add document context to embeddings for better matching
 }
 
 export interface TextSegment {
@@ -95,6 +97,8 @@ const DEFAULT_OPTIONS: SimilarityOptions = {
   // which already handles cross-language search with appropriate fallbacks
   similarityThreshold: 0,
   collectionFilter: null,
+  useReranking: true, // Enable LLM reranking by default for better accuracy
+  useContextualEmbedding: true, // Add document context to embeddings by default
 };
 
 const DEFAULT_PROGRESS: AnalysisProgress = {

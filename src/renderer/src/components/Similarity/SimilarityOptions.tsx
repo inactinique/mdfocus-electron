@@ -7,6 +7,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { useSimilarityStore, type Granularity } from '../../stores/similarityStore';
+import { HelperTooltip } from '../Methodology/HelperTooltip';
 import './SimilarityOptions.css';
 
 interface SimilarityOptionsProps {
@@ -35,6 +36,14 @@ export const SimilarityOptions: React.FC<SimilarityOptionsProps> = ({ onClose })
     }
   };
 
+  const handleRerankingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setOptions({ useReranking: e.target.checked });
+  };
+
+  const handleContextualEmbeddingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setOptions({ useContextualEmbedding: e.target.checked });
+  };
+
   return (
     <div className="similarity-options-overlay" onClick={onClose}>
       <div className="similarity-options-modal" onClick={(e) => e.stopPropagation()}>
@@ -50,9 +59,12 @@ export const SimilarityOptions: React.FC<SimilarityOptionsProps> = ({ onClose })
         <div className="similarity-options-content">
           {/* Granularity */}
           <div className="similarity-option-group">
-            <label className="similarity-option-label">
-              {t('similarity.granularity')}
-            </label>
+            <div className="similarity-option-label-wrapper">
+              <label className="similarity-option-label">
+                {t('similarity.granularity')}
+              </label>
+              <HelperTooltip content={t('similarity.help.granularity')} />
+            </div>
             <p className="similarity-option-description">
               {t('similarity.granularityDescription')}
             </p>
@@ -83,9 +95,12 @@ export const SimilarityOptions: React.FC<SimilarityOptionsProps> = ({ onClose })
 
           {/* Max Results */}
           <div className="similarity-option-group">
-            <label className="similarity-option-label">
-              {t('similarity.maxResults')}
-            </label>
+            <div className="similarity-option-label-wrapper">
+              <label className="similarity-option-label">
+                {t('similarity.maxResults')}
+              </label>
+              <HelperTooltip content={t('similarity.help.maxResults')} />
+            </div>
             <p className="similarity-option-description">
               {t('similarity.maxResultsDescription')}
             </p>
@@ -104,9 +119,12 @@ export const SimilarityOptions: React.FC<SimilarityOptionsProps> = ({ onClose })
 
           {/* Similarity Threshold */}
           <div className="similarity-option-group">
-            <label className="similarity-option-label">
-              {t('similarity.threshold')}
-            </label>
+            <div className="similarity-option-label-wrapper">
+              <label className="similarity-option-label">
+                {t('similarity.threshold')}
+              </label>
+              <HelperTooltip content={t('similarity.help.threshold')} />
+            </div>
             <p className="similarity-option-description">
               {t('similarity.thresholdDescription')}
             </p>
@@ -123,6 +141,56 @@ export const SimilarityOptions: React.FC<SimilarityOptionsProps> = ({ onClose })
               <span className="similarity-slider-value">
                 {options.similarityThreshold === 0 ? t('similarity.noFilter') : `${(options.similarityThreshold * 100).toFixed(1)}%`}
               </span>
+            </div>
+          </div>
+
+          {/* LLM Reranking */}
+          <div className="similarity-option-group">
+            <div className="similarity-option-label-wrapper">
+              <label className="similarity-option-label">
+                {t('similarity.reranking')}
+              </label>
+              <HelperTooltip content={t('similarity.help.reranking')} />
+            </div>
+            <p className="similarity-option-description">
+              {t('similarity.rerankingDescription')}
+            </p>
+            <div className="similarity-option-toggle">
+              <input
+                type="checkbox"
+                id="reranking-toggle"
+                checked={options.useReranking}
+                onChange={handleRerankingChange}
+                className="similarity-checkbox"
+              />
+              <label htmlFor="reranking-toggle" className="similarity-toggle-label">
+                {options.useReranking ? t('similarity.rerankingEnabled') : t('similarity.rerankingDisabled')}
+              </label>
+            </div>
+          </div>
+
+          {/* Contextual Embedding */}
+          <div className="similarity-option-group">
+            <div className="similarity-option-label-wrapper">
+              <label className="similarity-option-label">
+                {t('similarity.contextualEmbedding')}
+              </label>
+              <HelperTooltip content={t('similarity.help.contextualEmbedding')} />
+            </div>
+            <p className="similarity-option-description">
+              {t('similarity.contextualEmbeddingDescription')}
+            </p>
+            <div className="similarity-option-toggle">
+              <input
+                type="checkbox"
+                id="contextual-toggle"
+                checked={options.useContextualEmbedding}
+                onChange={handleContextualEmbeddingChange}
+                className="similarity-checkbox"
+              />
+              <label htmlFor="contextual-toggle" className="similarity-toggle-label">
+                {options.useContextualEmbedding ? t('similarity.contextualEnabled') : t('similarity.contextualDisabled')}
+              </label>
             </div>
           </div>
         </div>

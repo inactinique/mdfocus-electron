@@ -79,12 +79,17 @@
   margin-bottom: 0;
 }
 
+.similarity-option-label-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
 .similarity-option-label {
   display: block;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary, #e0e0e0);
-  margin-bottom: 4px;
 }
 
 .similarity-option-description {
@@ -180,6 +185,26 @@
   font-weight: 600;
   color: var(--accent-color, #4a9eff);
   text-align: right;
+}
+
+/* Toggle */
+.similarity-option-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.similarity-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-color, #4a9eff);
+  cursor: pointer;
+}
+
+.similarity-toggle-label {
+  font-size: 13px;
+  color: var(--text-primary, #e0e0e0);
+  cursor: pointer;
 }
 
 /* Footer */

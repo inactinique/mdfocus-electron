@@ -12,6 +12,7 @@ import { useEditorStore } from '../../stores/editorStore';
 import { SimilarityProgress } from './SimilarityProgress';
 import { SimilarityResults } from './SimilarityResults';
 import { SimilarityOptions } from './SimilarityOptions';
+import { HelperTooltip } from '../Methodology/HelperTooltip';
 import { logger } from '../../utils/logger';
 import './SimilarityPanel.css';
 
@@ -66,7 +67,10 @@ export const SimilarityPanel: React.FC = () => {
     <div className="similarity-panel">
       {/* Header */}
       <div className="similarity-panel-header">
-        <h3 className="similarity-panel-title">{t('similarity.title')}</h3>
+        <div className="similarity-panel-title-wrapper">
+          <h3 className="similarity-panel-title">{t('similarity.title')}</h3>
+          <HelperTooltip content={t('similarity.help')} />
+        </div>
         <div className="similarity-panel-actions">
           <button
             className="similarity-icon-btn"

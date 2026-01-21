@@ -28,6 +28,11 @@
   background: var(--bg-tertiary, #252525);
 }
 
+.similarity-panel-title-wrapper {
+  display: flex;
+  align-items: center;
+}
+
 .similarity-panel-title {
   margin: 0;
   font-size: 14px;

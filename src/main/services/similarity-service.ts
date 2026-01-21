@@ -19,6 +19,14 @@ export interface SimilarityOptions {
   maxResults: number;
   similarityThreshold: number;
   collectionFilter: string[] | null;
+  useReranking: boolean; // Use LLM to rerank results for better accuracy
+  useContextualEmbedding: boolean; // Add document context to embeddings for better matching
+}
+
+// Context extracted from the document for contextual embeddings
+interface DocumentContext {
+  title: string | null;
+  currentSection: string | null;
 }
 
 export interface TextSegment {
@@ -74,6 +82,8 @@ const DEFAULT_OPTIONS: SimilarityOptions = {
   // in the 0.01-0.05 range. Setting to 0 to rely on pdfService's built-in filtering.
   similarityThreshold: 0,
   collectionFilter: null,
+  useReranking: true, // Enable LLM reranking by default for better accuracy
+  useContextualEmbedding: true, // Add document context to embeddings by default
 };
 
 // MARK: - Service
@@ -124,6 +134,10 @@ class SimilarityService {
       return Object.values(cache.segments);
     }
 
+    // Extract document-level context for contextual embeddings
+    const documentContext = this.extractDocumentContext(text);
+    console.log('📄 [SIMILARITY] Document context:', documentContext);
+
     // Segment the text
     const segments = this.segmentText(text, opts.granularity);
     console.log(`📝 [SIMILARITY] Document split into ${segments.length} segments`);
@@ -132,6 +146,9 @@ class SimilarityService {
       console.warn('⚠️  [SIMILARITY] No segments found in document');
       return [];
     }
+
+    // Build section map for contextual embeddings (maps line number to section title)
+    const sectionMap = this.buildSectionMap(text);
 
     const results: SimilarityResult[] = [];
     const total = segments.length;
@@ -147,6 +164,13 @@ class SimilarityService {
       const segment = segments[i];
       const segmentTitle = segment.title || segment.content.substring(0, 50) + '...';
 
+      // Get current section context for this segment
+      const currentSection = sectionMap.get(segment.startLine) || segment.title || null;
+      const segmentContext: DocumentContext = {
+        title: documentContext.title,
+        currentSection,
+      };
+
       onProgress?.({
         current: i + 1,
         total,
@@ -156,7 +180,7 @@ class SimilarityService {
       });
 
       try {
-        const recommendations = await this.findSimilarPDFs(segment, opts);
+        const recommendations = await this.findSimilarPDFs(segment, opts, segmentContext);
 
         results.push({
           segmentId: segment.id,
@@ -202,6 +226,82 @@ class SimilarityService {
       this.abortController = null;
       console.log('⚠️  [SIMILARITY] Analysis cancellation requested');
     }
+  }
+
+  /**
+   * Extract document-level context (title from first H1)
+   */
+  private extractDocumentContext(text: string): DocumentContext {
+    const lines = text.split('\n');
+    let title: string | null = null;
+
+    // Look for first H1 heading as document title
+    for (const line of lines) {
+      const h1Match = line.match(/^#\s+(.+)$/);
+      if (h1Match) {
+        title = h1Match[1].trim();
+        break;
+      }
+    }
+
+    return { title, currentSection: null };
+  }
+
+  /**
+   * Build a map of line numbers to their containing section title
+   * Used for contextual embeddings to know which section a paragraph belongs to
+   */
+  private buildSectionMap(text: string): Map<number, string> {
+    const lines = text.split('\n');
+    const sectionMap = new Map<number, string>();
+    let currentSection: string | null = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const headingMatch = line.match(/^#{1,6}\s+(.+)$/);
+
+      if (headingMatch) {
+        currentSection = headingMatch[1].trim();
+      }
+
+      if (currentSection) {
+        sectionMap.set(i, currentSection);
+      }
+    }
+
+    return sectionMap;
+  }
+
+  /**
+   * Build a contextual query by adding document context
+   * This helps the embedding model understand the broader topic
+   */
+  private buildContextualQuery(
+    segmentContent: string,
+    context: DocumentContext,
+    options: SimilarityOptions
+  ): string {
+    if (!options.useContextualEmbedding) {
+      return segmentContent;
+    }
+
+    const parts: string[] = [];
+
+    if (context.title) {
+      parts.push(`Document: ${context.title}`);
+    }
+
+    if (context.currentSection) {
+      parts.push(`Section: ${context.currentSection}`);
+    }
+
+    if (parts.length > 0) {
+      parts.push(''); // Empty line before content
+      parts.push(`Content: ${segmentContent}`);
+      return parts.join('\n');
+    }
+
+    return segmentContent;
   }
 
   /**
@@ -450,29 +550,41 @@ class SimilarityService {
    */
   private async findSimilarPDFs(
     segment: TextSegment,
-    options: SimilarityOptions
+    options: SimilarityOptions,
+    context: DocumentContext = { title: null, currentSection: null }
   ): Promise<PDFRecommendation[]> {
     // Skip very short segments (less than 20 characters)
     if (segment.content.trim().length < 20) {
       return [];
     }
 
-    // Use the existing search functionality
-    const searchResults = await pdfService.search(segment.content, {
-      topK: options.maxResults * 2, // Get more results to filter by threshold
+    // Get more candidates for reranking (3x if reranking enabled, 2x otherwise)
+    const candidateMultiplier = options.useReranking ? 3 : 2;
+
+    // Build contextual query if enabled
+    const searchQuery = this.buildContextualQuery(segment.content, context, options);
+
+    if (options.useContextualEmbedding && searchQuery !== segment.content) {
+      console.log('🎯 [SIMILARITY] Using contextual query:', {
+        documentTitle: context.title,
+        section: context.currentSection,
+        originalLength: segment.content.length,
+        contextualLength: searchQuery.length,
+      });
+    }
+
+    // Use the existing search functionality with contextual query
+    const searchResults = await pdfService.search(searchQuery, {
+      topK: options.maxResults * candidateMultiplier,
       collectionKeys: options.collectionFilter || undefined,
     });
 
-    // Filter by similarity threshold and limit results
-    const recommendations: PDFRecommendation[] = [];
+    // Filter by similarity threshold and deduplicate by document
+    let recommendations: PDFRecommendation[] = [];
 
     for (const result of searchResults) {
       if (result.similarity < options.similarityThreshold) {
         continue;
-      }
-
-      if (recommendations.length >= options.maxResults) {
-        break;
       }
 
       // Skip if we already have a recommendation from this document
@@ -493,7 +605,143 @@ class SimilarityService {
       }
     }
 
-    return recommendations;
+    // Apply LLM reranking if enabled and we have enough candidates
+    if (options.useReranking && recommendations.length > 1) {
+      try {
+        recommendations = await this.rerankWithLLM(segment.content, recommendations);
+        console.log('🔄 [SIMILARITY] Reranking applied successfully');
+      } catch (error: any) {
+        console.warn('⚠️  [SIMILARITY] Reranking failed, using original order:', error.message);
+        // Fall back to original order if reranking fails
+      }
+    }
+
+    // Limit to maxResults after reranking
+    return recommendations.slice(0, options.maxResults);
+  }
+
+  /**
+   * Rerank recommendations using LLM listwise comparison
+   *
+   * Asks the LLM to rank all candidates at once, which is more efficient
+   * and often more accurate than pairwise or pointwise scoring.
+   */
+  private async rerankWithLLM(
+    query: string,
+    candidates: PDFRecommendation[]
+  ): Promise<PDFRecommendation[]> {
+    const ollamaClient = pdfService.getOllamaClient();
+    if (!ollamaClient) {
+      throw new Error('Ollama client not available');
+    }
+
+    // Limit candidates to avoid context length issues
+    const maxCandidates = Math.min(candidates.length, 10);
+    const candidatesToRank = candidates.slice(0, maxCandidates);
+
+    // Build the ranking prompt
+    const candidateList = candidatesToRank
+      .map((c, i) => {
+        const preview = c.chunkPreview.substring(0, 150).replace(/\n/g, ' ');
+        return `${i + 1}. "${c.title}" - ${preview}...`;
+      })
+      .join('\n');
+
+    const prompt = `You are a research assistant helping to find relevant academic sources.
+
+Given this text from a document being written:
+---
+${query.substring(0, 500)}
+---
+
+Rank these potential source documents by relevance (most relevant first).
+Consider: topic match, conceptual similarity, and potential usefulness as a citation.
+
+Documents to rank:
+${candidateList}
+
+Return ONLY the numbers in order from most to least relevant, separated by commas.
+Example response: 3, 1, 4, 2, 5
+
+Your ranking:`;
+
+    console.log('🔄 [SIMILARITY] Sending reranking request to LLM...');
+    const startTime = Date.now();
+
+    // Use generateResponse (non-streaming) for efficiency
+    const response = await ollamaClient.generateResponse(prompt, []);
+    const duration = Date.now() - startTime;
+
+    console.log('🔄 [SIMILARITY] LLM reranking response:', {
+      duration: `${duration}ms`,
+      response: response.substring(0, 100),
+    });
+
+    // Parse the ranking from the response
+    const ranking = this.parseRankingResponse(response, candidatesToRank.length);
+
+    if (ranking.length === 0) {
+      console.warn('⚠️  [SIMILARITY] Could not parse ranking, keeping original order');
+      return candidates;
+    }
+
+    // Reorder candidates based on ranking
+    const reranked: PDFRecommendation[] = [];
+    const seen = new Set<number>();
+
+    for (const rank of ranking) {
+      const index = rank - 1; // Convert 1-based to 0-based
+      if (index >= 0 && index < candidatesToRank.length && !seen.has(index)) {
+        // Update similarity to reflect new ranking (higher rank = higher score)
+        const newSimilarity = (ranking.length - reranked.length) / ranking.length;
+        reranked.push({
+          ...candidatesToRank[index],
+          similarity: newSimilarity,
+        });
+        seen.add(index);
+      }
+    }
+
+    // Add any candidates that weren't in the ranking (shouldn't happen, but safety)
+    for (let i = 0; i < candidatesToRank.length; i++) {
+      if (!seen.has(i)) {
+        reranked.push(candidatesToRank[i]);
+      }
+    }
+
+    // Add remaining candidates that weren't ranked (beyond maxCandidates)
+    if (candidates.length > maxCandidates) {
+      reranked.push(...candidates.slice(maxCandidates));
+    }
+
+    return reranked;
+  }
+
+  /**
+   * Parse the LLM's ranking response into an array of indices
+   */
+  private parseRankingResponse(response: string, expectedCount: number): number[] {
+    // Extract numbers from the response
+    const numbers = response.match(/\d+/g);
+
+    if (!numbers) {
+      return [];
+    }
+
+    // Parse and validate
+    const ranking: number[] = [];
+    const seen = new Set<number>();
+
+    for (const numStr of numbers) {
+      const num = parseInt(numStr, 10);
+      // Only accept numbers within valid range and not duplicates
+      if (num >= 1 && num <= expectedCount && !seen.has(num)) {
+        ranking.push(num);
+        seen.add(num);
+      }
+    }
+
+    return ranking;
   }
 
   // MARK: - Cache Management

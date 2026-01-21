@@ -395,6 +395,8 @@ const api = {
       maxResults?: number;
       similarityThreshold?: number;
       collectionFilter?: string[] | null;
+      useReranking?: boolean;
+      useContextualEmbedding?: boolean;
     }) => ipcRenderer.invoke('similarity:analyze', text, options),
     cancel: () => ipcRenderer.invoke('similarity:cancel'),
     getSegmentResults: (segmentId: string) =>
