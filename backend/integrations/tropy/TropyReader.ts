@@ -417,6 +417,64 @@ export class TropyReader {
   }
 
   /**
+   * Extrait SEULEMENT les notes (transcriptions) d'un item, sans les métadonnées
+   * Utilisé pour déterminer si un item a des transcriptions réelles
+   */
+  extractItemNotesOnly(item: TropyItem): string {
+    const textParts: string[] = [];
+
+    // Notes de l'item uniquement
+    for (const note of item.notes) {
+      if (note.text && note.text.trim()) {
+        textParts.push(note.text.trim());
+      }
+    }
+
+    // Notes des photos et sélections
+    for (const photo of item.photos) {
+      for (const note of photo.notes) {
+        if (note.text && note.text.trim()) {
+          textParts.push(note.text.trim());
+        }
+      }
+      for (const selection of photo.selections) {
+        for (const note of selection.notes) {
+          if (note.text && note.text.trim()) {
+            textParts.push(note.text.trim());
+          }
+        }
+      }
+    }
+
+    return textParts.join('\n\n');
+  }
+
+  /**
+   * Compte le nombre de notes (transcriptions) dans un item
+   */
+  countItemNotes(item: TropyItem): { itemNotes: number; photoNotes: number; selectionNotes: number; total: number } {
+    const itemNotes = item.notes?.filter(n => n.text && n.text.trim()).length || 0;
+
+    let photoNotes = 0;
+    let selectionNotes = 0;
+
+    for (const photo of item.photos || []) {
+      photoNotes += photo.notes?.filter(n => n.text && n.text.trim()).length || 0;
+
+      for (const selection of photo.selections || []) {
+        selectionNotes += selection.notes?.filter(n => n.text && n.text.trim()).length || 0;
+      }
+    }
+
+    return {
+      itemNotes,
+      photoNotes,
+      selectionNotes,
+      total: itemNotes + photoNotes + selectionNotes,
+    };
+  }
+
+  /**
    * Liste toutes les photos du projet avec leurs chemins
    * Utile pour vérifier quelles photos existent et lesquelles nécessitent OCR
    */
@@ -513,6 +571,26 @@ export class TropyReader {
     } catch (error) {
       console.warn(`Failed to get metadata for item ${itemId}:`, error);
       return {};
+    }
+  }
+
+  /**
+   * Récupère toutes les métadonnées brutes d'un item (pour debug)
+   */
+  getAllItemMetadataRaw(itemId: number): Array<{ property: string; value: string }> {
+    if (!this.db) return [];
+
+    try {
+      return this.db
+        .prepare(`
+          SELECT m.property, mv.text as value
+          FROM metadata m
+          JOIN metadata_values mv ON m.value_id = mv.value_id
+          WHERE m.id = ?
+        `)
+        .all(itemId) as Array<{ property: string; value: string }>;
+    } catch {
+      return [];
     }
   }
 

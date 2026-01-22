@@ -198,6 +198,14 @@ class TropyService {
         console.log('📐 [TROPY-SERVICE] Starting embedding generation...');
         const embeddingResult = await this.generateEmbeddingsForSources(onProgress);
         console.log(`📐 [TROPY-SERVICE] Embeddings generated: ${embeddingResult.chunksCreated} chunks for ${embeddingResult.sourcesProcessed} sources`);
+
+        // Save HNSW index after embedding generation
+        if (embeddingResult.chunksCreated > 0 && this.vectorStore) {
+          console.log('💾 [TROPY-SERVICE] Saving HNSW index...');
+          this.vectorStore.saveHNSWIndex();
+          const stats = this.vectorStore.getIndexStats();
+          console.log(`💾 [TROPY-SERVICE] Index saved. HNSW: ${stats.hnswSize}, BM25: ${stats.bm25Size}`);
+        }
       } catch (error: any) {
         console.error('❌ [TROPY-SERVICE] Embedding generation failed:', error);
         result.errors.push(`Embedding generation failed: ${error.message}`);
@@ -241,6 +249,17 @@ class TropyService {
       const existingChunks = this.vectorStore!.getChunks(source.id);
       return existingChunks.length === 0;
     });
+
+    // DEBUG: Log transcription status
+    const withTranscription = allSources.filter(s => s.transcription && s.transcription.trim().length > 0);
+    const withLongTranscription = allSources.filter(s => s.transcription && s.transcription.trim().length > 100);
+    console.log(`📐 [TROPY-SERVICE] Sources: ${allSources.length} total, ${withTranscription.length} with transcription, ${withLongTranscription.length} with transcription > 100 chars`);
+
+    if (withTranscription.length > 0) {
+      const sample = withTranscription[0];
+      console.log(`📐 [TROPY-SERVICE] Sample source "${sample.title}": transcription length = ${sample.transcription?.length || 0}`);
+      console.log(`📐 [TROPY-SERVICE] Sample transcription preview: "${sample.transcription?.substring(0, 200)}..."`);
+    }
 
     if (sourcesToProcess.length === 0) {
       console.log('📐 [TROPY-SERVICE] No sources need embedding generation');
@@ -527,10 +546,16 @@ class TropyService {
     query: string,
     options?: { topK?: number; threshold?: number }
   ): Promise<Array<PrimarySourceSearchResult & { source?: any }>> {
+    console.log(`📜 [TROPY-SERVICE] Search called with query: "${query}"`);
+
     if (!this.vectorStore) {
       console.warn('⚠️ [TROPY-SERVICE] VectorStore not initialized');
       return [];
     }
+
+    // Debug: Check index state
+    const indexStats = this.vectorStore.getIndexStats();
+    console.log(`📜 [TROPY-SERVICE] Index stats: HNSW=${indexStats.hnswSize}, BM25=${indexStats.bm25Size}, dimension=${indexStats.hnswDimension}`);
 
     const topK = options?.topK || 10;
     const threshold = options?.threshold || 0.2; // Reduced threshold for hybrid search
@@ -551,6 +576,7 @@ class TropyService {
 
       // Generate embedding for the expanded query
       const queryEmbedding = await ollamaClient.generateEmbedding(expandedQuery);
+      console.log(`📜 [TROPY-SERVICE] Query embedding generated, dimension: ${queryEmbedding.length}`);
 
       // Search using hybrid search (HNSW + BM25) - pass both embedding and text
       const results = this.vectorStore.search(queryEmbedding, topK * 2, expandedQuery);
@@ -559,6 +585,17 @@ class TropyService {
       const enrichedResults = results.filter((r) => r.similarity >= threshold);
 
       console.log(`📜 [TROPY-SERVICE] Hybrid search found ${enrichedResults.length} results (threshold: ${threshold})`);
+
+      // Debug: Show top result if any
+      if (enrichedResults.length > 0) {
+        const topResult = enrichedResults[0];
+        console.log(`📜 [TROPY-SERVICE] Top result: "${topResult.source?.title}" (similarity: ${topResult.similarity.toFixed(4)})`);
+      } else {
+        console.log(`📜 [TROPY-SERVICE] No results found. Total results before threshold: ${results.length}`);
+        if (results.length > 0) {
+          console.log(`📜 [TROPY-SERVICE] Best result similarity: ${results[0].similarity.toFixed(4)} (below threshold ${threshold})`);
+        }
+      }
 
       return enrichedResults.slice(0, topK);
     } catch (error) {

@@ -103,6 +103,45 @@ export class TropySync {
 
       console.log(`📚 Syncing Tropy project: ${result.projectName} (${items.length} items)`);
 
+      // DEBUG: Count items with notes and analyze first item
+      let itemsWithNotes = 0;
+      let totalNotes = 0;
+      for (const item of items) {
+        const counts = this.reader.countItemNotes(item);
+        if (counts.total > 0) {
+          itemsWithNotes++;
+          totalNotes += counts.total;
+        }
+      }
+      console.log(`📝 [TROPY-SYNC] Items with notes: ${itemsWithNotes}/${items.length} (${totalNotes} total notes)`);
+
+      // DEBUG: Analyze first item in detail
+      if (items.length > 0) {
+        const firstItem = items[0];
+        console.log(`🔍 [TROPY-SYNC] First item analysis: "${firstItem.title}"`);
+        console.log(`   - ID: ${firstItem.id}`);
+        console.log(`   - Template: ${firstItem.template}`);
+        console.log(`   - Notes count: ${firstItem.notes?.length || 0}`);
+        console.log(`   - Photos count: ${firstItem.photos?.length || 0}`);
+
+        if (firstItem.photos?.length > 0) {
+          const firstPhoto = firstItem.photos[0];
+          console.log(`   - First photo notes: ${firstPhoto.notes?.length || 0}`);
+          console.log(`   - First photo selections: ${firstPhoto.selections?.length || 0}`);
+          if (firstPhoto.selections?.length > 0) {
+            console.log(`   - First selection notes: ${firstPhoto.selections[0].notes?.length || 0}`);
+          }
+        }
+
+        // Show all raw metadata for first item
+        const rawMetadata = this.reader.getAllItemMetadataRaw(firstItem.id);
+        console.log(`   - Raw metadata properties: ${rawMetadata.length}`);
+        for (const meta of rawMetadata) {
+          const valuePreview = meta.value?.substring(0, 100) || '(empty)';
+          console.log(`     * ${meta.property}: "${valuePreview}${meta.value?.length > 100 ? '...' : ''}"`);
+        }
+      }
+
       // Enregistrer le projet Tropy dans le VectorStore
       vectorStore.saveTropyProject(tpyPath, result.projectName, false);
 
@@ -188,9 +227,23 @@ export class TropySync {
     let transcriptionCount = 0;
 
     // 1. D'abord, extraire le texte des notes Tropy (transcriptions manuelles dans Tropy)
-    const notesText = this.reader.extractItemText(item);
-    if (notesText.trim()) {
-      transcription = notesText;
+    // Use extractItemNotesOnly to get ONLY the actual transcription content, not metadata
+    const notesOnlyText = this.reader.extractItemNotesOnly(item);
+    const notesCounts = this.reader.countItemNotes(item);
+
+    // DEBUG: Log what we're extracting (only for first few items or if there are notes)
+    if (notesCounts.total > 0) {
+      console.log(`📝 [TROPY-SYNC] Item "${item.title}": ${notesCounts.itemNotes} item notes, ${notesCounts.photoNotes} photo notes, ${notesCounts.selectionNotes} selection notes`);
+      console.log(`📝 [TROPY-SYNC] Notes text length: ${notesOnlyText.length} chars`);
+      if (notesOnlyText.length > 0) {
+        console.log(`📝 [TROPY-SYNC] Notes preview: "${notesOnlyText.substring(0, 200)}..."`);
+      }
+    }
+
+    // Only use notes text if there are actual notes (not just metadata)
+    if (notesOnlyText.trim().length > 0) {
+      // Include metadata header + notes for the full transcription
+      transcription = this.reader.extractItemText(item);
       transcriptionSource = 'tropy-notes';
     }
 

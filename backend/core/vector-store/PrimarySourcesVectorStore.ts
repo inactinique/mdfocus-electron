@@ -745,10 +745,11 @@ export class PrimarySourcesVectorStore {
       return;
     }
 
-    // Check embedding dimension
+    // Check embedding dimension - reinitialize index if dimension changed
     if (embedding.length !== this.hnswDimension) {
-      console.warn(`⚠️ Primary sources: Embedding dimension mismatch (${embedding.length} vs ${this.hnswDimension})`);
-      return;
+      console.log(`📏 Primary sources: Embedding dimension changed (${this.hnswDimension} -> ${embedding.length}), reinitializing HNSW index`);
+      this.hnswDimension = embedding.length;
+      this.initNewHNSWIndex();
     }
 
     const label = this.hnswCurrentSize;
@@ -820,19 +821,36 @@ export class PrimarySourcesVectorStore {
   getAllChunksWithEmbeddings(): Array<{ chunk: PrimarySourceChunk; embedding: Float32Array }> {
     const rows = this.db.prepare('SELECT * FROM source_chunks').all() as any[];
 
-    return rows.map((row) => ({
-      chunk: {
-        id: row.id,
-        sourceId: row.source_id,
-        content: row.content,
-        chunkIndex: row.chunk_index,
-        startPosition: row.start_position,
-        endPosition: row.end_position,
-      },
-      embedding: row.embedding
-        ? new Float32Array(row.embedding.buffer, row.embedding.byteOffset, row.embedding.byteLength / 4)
-        : new Float32Array(0),
-    }));
+    return rows.map((row) => {
+      let embedding: Float32Array;
+
+      if (row.embedding && row.embedding instanceof Buffer) {
+        // Convert Buffer to Float32Array properly
+        const buffer = row.embedding;
+        const floatCount = buffer.byteLength / 4;
+        embedding = new Float32Array(floatCount);
+        for (let i = 0; i < floatCount; i++) {
+          embedding[i] = buffer.readFloatLE(i * 4);
+        }
+      } else if (row.embedding) {
+        // Fallback for other buffer types
+        embedding = new Float32Array(row.embedding.buffer, row.embedding.byteOffset, row.embedding.byteLength / 4);
+      } else {
+        embedding = new Float32Array(0);
+      }
+
+      return {
+        chunk: {
+          id: row.id,
+          sourceId: row.source_id,
+          content: row.content,
+          chunkIndex: row.chunk_index,
+          startPosition: row.start_position,
+          endPosition: row.end_position,
+        },
+        embedding,
+      };
+    });
   }
 
   /**
@@ -851,12 +869,20 @@ export class PrimarySourcesVectorStore {
   search(queryEmbedding: Float32Array, topK: number = 10, query?: string): PrimarySourceSearchResult[] {
     const startTime = Date.now();
 
-    // Check if we have data
-    if (this.hnswCurrentSize === 0) {
-      console.log('📜 Primary sources: No indexed chunks, rebuilding indexes...');
+    // DEBUG: Log index state at search time
+    const dbChunkCount = (this.db.prepare('SELECT COUNT(*) as count FROM source_chunks WHERE embedding IS NOT NULL').get() as any).count;
+    console.log(`🔍 [DEBUG] Search state: HNSW=${this.hnswCurrentSize}, BM25=${this.bm25ChunkMap.size}, DB chunks with embeddings=${dbChunkCount}`);
+
+    // Check if indexes are out of sync with database
+    const needsRebuild = this.hnswCurrentSize === 0 ||
+      (dbChunkCount > 0 && Math.abs(this.hnswCurrentSize - dbChunkCount) > dbChunkCount * 0.1); // More than 10% difference
+
+    if (needsRebuild) {
+      console.log('📜 Primary sources: Indexes out of sync, rebuilding...');
       this.rebuildAllIndexes();
 
       if (this.hnswCurrentSize === 0) {
+        console.log('⚠️ [DEBUG] After rebuild: still 0 chunks. DB has ' + dbChunkCount + ' chunks with embeddings');
         return [];
       }
     }
@@ -1073,17 +1099,34 @@ export class PrimarySourcesVectorStore {
     // Get all chunks with embeddings
     const chunks = this.getAllChunksWithEmbeddings();
 
+    console.log(`🔍 [DEBUG] rebuildAllIndexes: Found ${chunks.length} chunks from database`);
+
     if (chunks.length === 0) {
       console.log('⚠️ Primary sources: No chunks to index');
+      // Additional debug: check if there are any chunks at all
+      const totalChunks = (this.db.prepare('SELECT COUNT(*) as count FROM source_chunks').get() as any).count;
+      const chunksWithEmbedding = (this.db.prepare('SELECT COUNT(*) as count FROM source_chunks WHERE embedding IS NOT NULL').get() as any).count;
+      console.log(`🔍 [DEBUG] Total chunks: ${totalChunks}, with embedding: ${chunksWithEmbedding}`);
       return;
     }
 
+    // Detect dimension from first valid embedding
+    const firstValidEmbedding = chunks.find(c => c.embedding.length > 0);
+    if (firstValidEmbedding && firstValidEmbedding.embedding.length !== this.hnswDimension) {
+      console.log(`📏 Primary sources: Updating HNSW dimension from ${this.hnswDimension} to ${firstValidEmbedding.embedding.length}`);
+      this.hnswDimension = firstValidEmbedding.embedding.length;
+      this.initNewHNSWIndex();
+    }
+
     // Add to HNSW
+    let addedCount = 0;
     for (const { chunk, embedding } of chunks) {
       if (embedding.length > 0) {
         this.addToHNSWIndex(chunk.id, embedding);
+        addedCount++;
       }
     }
+    console.log(`🔨 Primary sources: Added ${addedCount} embeddings to HNSW index`)
 
     // Add to BM25
     let docIndex = 0;

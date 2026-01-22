@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { PDFConverter, createPDFConverter } from './PDFConverter';
 
 // MARK: - Types
 
@@ -38,6 +39,7 @@ export interface TranscriptionImportResult {
 export class TropyOCRPipeline {
   private tesseractWorker: any = null;
   private isInitialized: boolean = false;
+  private pdfConverter: PDFConverter | null = null;
 
   /**
    * Initialise le worker Tesseract.js
@@ -81,28 +83,50 @@ export class TropyOCRPipeline {
   }
 
   /**
-   * Effectue l'OCR sur une image
-   * @param imagePath Chemin vers l'image
+   * Check if a file is a PDF
+   */
+  isPDF(filePath: string): boolean {
+    return path.extname(filePath).toLowerCase() === '.pdf';
+  }
+
+  /**
+   * Get or create PDF converter instance
+   */
+  private async getPDFConverter(): Promise<PDFConverter> {
+    if (!this.pdfConverter) {
+      this.pdfConverter = createPDFConverter();
+    }
+    return this.pdfConverter;
+  }
+
+  /**
+   * Effectue l'OCR sur une image ou un PDF
+   * @param filePath Chemin vers l'image ou le PDF
    * @param options Options OCR
    * @returns Texte extrait avec score de confiance
    */
-  async performOCR(imagePath: string, options?: OCROptions): Promise<OCRResult> {
+  async performOCR(filePath: string, options?: OCROptions): Promise<OCRResult> {
     const language = options?.language || 'fra';
 
-    // Vérifier que l'image existe
-    if (!fs.existsSync(imagePath)) {
-      throw new Error(`Image not found: ${imagePath}`);
+    // Vérifier que le fichier existe
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
     }
 
-    // Initialiser si nécessaire
+    // Si c'est un PDF, le convertir en images d'abord
+    if (this.isPDF(filePath)) {
+      return this.performPDFOCR(filePath, options);
+    }
+
+    // Initialiser Tesseract si nécessaire
     if (!this.isInitialized) {
       await this.initialize(language);
     }
 
     try {
-      console.log(`🔍 Performing OCR on: ${path.basename(imagePath)}`);
+      console.log(`🔍 Performing OCR on: ${path.basename(filePath)}`);
 
-      const result = await this.tesseractWorker.recognize(imagePath);
+      const result = await this.tesseractWorker.recognize(filePath);
 
       return {
         text: result.data.text.trim(),
@@ -111,28 +135,103 @@ export class TropyOCRPipeline {
       };
     } catch (error) {
       console.error('OCR failed:', error);
-      throw new Error(`OCR failed for ${imagePath}: ${error}`);
+      throw new Error(`OCR failed for ${filePath}: ${error}`);
     }
   }
 
   /**
-   * Effectue l'OCR sur plusieurs images et concatène les résultats
-   * @param imagePaths Liste des chemins d'images
+   * Effectue l'OCR sur un fichier PDF
+   * Convertit chaque page en image puis applique l'OCR
+   * @param pdfPath Chemin vers le PDF
+   * @param options Options OCR
+   * @returns Texte combiné de toutes les pages avec confiance moyenne
+   */
+  async performPDFOCR(pdfPath: string, options?: OCROptions): Promise<OCRResult> {
+    const language = options?.language || 'fra';
+
+    console.log(`📄 Performing OCR on PDF: ${path.basename(pdfPath)}`);
+
+    // Initialiser le convertisseur PDF
+    const pdfConverter = await this.getPDFConverter();
+
+    // Convertir le PDF en fichiers temporaires
+    let tempResult: { tempDir: string; files: string[]; pageCount: number };
+    try {
+      tempResult = await pdfConverter.convertToTempFiles(pdfPath, {
+        scale: 2.0, // Bonne qualité pour OCR
+      });
+    } catch (error) {
+      console.error('PDF conversion failed:', error);
+      throw new Error(`Failed to convert PDF ${pdfPath}: ${error}`);
+    }
+
+    console.log(`📄 PDF converted: ${tempResult.pageCount} pages`);
+
+    // Initialiser Tesseract si nécessaire
+    if (!this.isInitialized) {
+      await this.initialize(language);
+    }
+
+    // Effectuer l'OCR sur chaque page
+    const results: OCRResult[] = [];
+    for (let i = 0; i < tempResult.files.length; i++) {
+      const pageFile = tempResult.files[i];
+      try {
+        console.log(`  📃 OCR page ${i + 1}/${tempResult.files.length}`);
+        const result = await this.tesseractWorker.recognize(pageFile);
+        results.push({
+          text: result.data.text.trim(),
+          confidence: result.data.confidence,
+          language,
+        });
+      } catch (error) {
+        console.warn(`⚠️ OCR failed for page ${i + 1}: ${error}`);
+      }
+    }
+
+    // Nettoyer les fichiers temporaires
+    pdfConverter.cleanupTempFiles(tempResult.tempDir);
+
+    if (results.length === 0) {
+      return {
+        text: '',
+        confidence: 0,
+        language,
+      };
+    }
+
+    // Combiner les textes des pages
+    const combinedText = results.map((r, i) => `--- Page ${i + 1} ---\n\n${r.text}`).join('\n\n');
+    const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length;
+
+    console.log(`📄 PDF OCR completed: ${results.length} pages, avg confidence: ${avgConfidence.toFixed(1)}%`);
+
+    return {
+      text: combinedText,
+      confidence: avgConfidence,
+      language,
+    };
+  }
+
+  /**
+   * Effectue l'OCR sur plusieurs fichiers (images ou PDF) et concatène les résultats
+   * @param filePaths Liste des chemins de fichiers (images ou PDF)
    * @param options Options OCR
    * @returns Texte combiné avec confiance moyenne
    */
   async performBatchOCR(
-    imagePaths: string[],
+    filePaths: string[],
     options?: OCROptions
   ): Promise<OCRResult> {
     const results: OCRResult[] = [];
 
-    for (const imagePath of imagePaths) {
+    for (const filePath of filePaths) {
       try {
-        const result = await this.performOCR(imagePath, options);
+        // performOCR gère automatiquement les PDF et les images
+        const result = await this.performOCR(filePath, options);
         results.push(result);
       } catch (error) {
-        console.warn(`Skipping ${imagePath}: ${error}`);
+        console.warn(`Skipping ${filePath}: ${error}`);
       }
     }
 
