@@ -243,6 +243,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   loadRecentProjects: async () => {
     try {
       const recentPaths = await window.electron.project.getRecent();
+      const pathsToRemove: string[] = [];
 
       const recentProjects = await Promise.all(
         recentPaths.map(async (path) => {
@@ -250,6 +251,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             // Use getMetadata instead of load to avoid initializing services for each project
             const result = await window.electron.project.getMetadata(path);
             if (!result.success || !result.project) {
+              // Project doesn't exist anymore, mark for removal
+              pathsToRemove.push(path);
               return null;
             }
             const project = result.project;
@@ -259,10 +262,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
               lastOpenedAt: new Date(project.lastOpenedAt || project.createdAt),
             };
           } catch {
+            // Project doesn't exist anymore, mark for removal
+            pathsToRemove.push(path);
             return null;
           }
         })
       );
+
+      // Remove non-existent projects from the recent list
+      if (pathsToRemove.length > 0) {
+        console.log(`🧹 Removing ${pathsToRemove.length} non-existent project(s) from recent list`);
+        for (const path of pathsToRemove) {
+          await window.electron.project.removeRecent(path);
+        }
+      }
 
       set({
         recentProjects: recentProjects.filter((p): p is Project => p !== null),
