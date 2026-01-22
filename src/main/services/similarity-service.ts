@@ -13,6 +13,7 @@ import { projectManager } from './project-manager.js';
 // MARK: - Types
 
 export type Granularity = 'section' | 'paragraph' | 'sentence';
+export type SourceType = 'secondary' | 'primary' | 'both';
 
 export interface SimilarityOptions {
   granularity: Granularity;
@@ -21,6 +22,7 @@ export interface SimilarityOptions {
   collectionFilter: string[] | null;
   useReranking: boolean; // Use LLM to rerank results for better accuracy
   useContextualEmbedding: boolean; // Add document context to embeddings for better matching
+  sourceType: SourceType; // Which sources to search: secondary (PDFs), primary (Tropy), or both
 }
 
 // Context extracted from the document for contextual embeddings
@@ -46,6 +48,14 @@ export interface PDFRecommendation {
   chunkPreview: string;
   zoteroKey?: string;
   pageNumber?: number;
+  // Source type indicator
+  sourceType?: 'secondary' | 'primary';
+  // Primary source specific fields
+  sourceId?: string;
+  archive?: string;
+  collection?: string;
+  date?: string;
+  tags?: string[];
 }
 
 export interface SimilarityResult {
@@ -84,6 +94,7 @@ const DEFAULT_OPTIONS: SimilarityOptions = {
   collectionFilter: null,
   useReranking: true, // Enable LLM reranking by default for better accuracy
   useContextualEmbedding: true, // Add document context to embeddings by default
+  sourceType: 'secondary', // Default to secondary sources (PDFs) only
 };
 
 // MARK: - Service
@@ -574,9 +585,11 @@ class SimilarityService {
     }
 
     // Use the existing search functionality with contextual query
+    // Pass sourceType to search both secondary (PDFs) and primary (Tropy) sources
     const searchResults = await pdfService.search(searchQuery, {
       topK: options.maxResults * candidateMultiplier,
       collectionKeys: options.collectionFilter || undefined,
+      sourceType: options.sourceType || 'secondary',
     });
 
     // Filter by similarity threshold and deduplicate by document
@@ -587,12 +600,39 @@ class SimilarityService {
         continue;
       }
 
-      // Skip if we already have a recommendation from this document
-      if (recommendations.some((r) => r.pdfId === result.document?.id)) {
+      // Get unique ID based on source type
+      const resultId = result.sourceType === 'primary'
+        ? result.source?.id
+        : result.document?.id;
+
+      // Skip if we already have a recommendation from this document/source
+      if (recommendations.some((r) => {
+        if (result.sourceType === 'primary') {
+          return r.sourceId === resultId;
+        }
+        return r.pdfId === resultId;
+      })) {
         continue;
       }
 
-      if (result.document) {
+      // Handle primary sources (Tropy)
+      if (result.sourceType === 'primary' && result.source) {
+        recommendations.push({
+          pdfId: result.source.id || '',
+          title: result.source.title || 'Sans titre',
+          authors: result.source.creator ? [result.source.creator] : [],
+          similarity: result.similarity,
+          chunkPreview: result.chunk?.content?.substring(0, 200) || '',
+          sourceType: 'primary',
+          sourceId: result.source.id,
+          archive: result.source.archive,
+          collection: result.source.collection,
+          date: result.source.date,
+          tags: result.source.tags,
+        });
+      }
+      // Handle secondary sources (PDFs)
+      else if (result.document) {
         recommendations.push({
           pdfId: result.document.id,
           title: result.document.title || 'Sans titre',
@@ -601,6 +641,7 @@ class SimilarityService {
           chunkPreview: result.chunk?.content?.substring(0, 200) || '',
           zoteroKey: result.document.bibtexKey,
           pageNumber: result.chunk?.pageNumber,
+          sourceType: 'secondary',
         });
       }
     }

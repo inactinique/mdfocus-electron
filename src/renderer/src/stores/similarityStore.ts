@@ -10,6 +10,7 @@ import { logger } from '../utils/logger';
 // MARK: - Types
 
 export type Granularity = 'section' | 'paragraph' | 'sentence';
+export type SourceType = 'secondary' | 'primary' | 'both';
 
 export interface SimilarityOptions {
   granularity: Granularity;
@@ -18,6 +19,7 @@ export interface SimilarityOptions {
   collectionFilter: string[] | null;
   useReranking: boolean; // Use LLM to rerank results for better accuracy
   useContextualEmbedding: boolean; // Add document context to embeddings for better matching
+  sourceType: SourceType; // Which sources to search: secondary (PDFs), primary (Tropy), or both
 }
 
 export interface TextSegment {
@@ -37,6 +39,14 @@ export interface PDFRecommendation {
   chunkPreview: string;
   zoteroKey?: string;
   pageNumber?: number;
+  // Source type indicator (for mixed results)
+  sourceType?: 'secondary' | 'primary';
+  // Primary source specific fields
+  sourceId?: string;
+  archive?: string;
+  collection?: string;
+  date?: string;
+  tags?: string[];
 }
 
 export interface SimilarityResult {
@@ -99,6 +109,7 @@ const DEFAULT_OPTIONS: SimilarityOptions = {
   collectionFilter: null,
   useReranking: true, // Enable LLM reranking by default for better accuracy
   useContextualEmbedding: true, // Add document context to embeddings by default
+  sourceType: 'secondary', // Default to secondary sources (PDFs) only
 };
 
 const DEFAULT_PROGRESS: AnalysisProgress = {

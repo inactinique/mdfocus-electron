@@ -133,3 +133,68 @@
   border-color: var(--accent-color, #4a9eff);
   color: var(--accent-color, #4a9eff);
 }
+
+/* Source type badge */
+.similarity-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
+
+.similarity-card-badge.badge-secondary {
+  background: rgba(74, 158, 255, 0.15);
+  color: #4a9eff;
+}
+
+.similarity-card-badge.badge-primary {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+/* Primary source specific styling */
+.similarity-card.primary-source {
+  border-left: 3px solid #f59e0b;
+}
+
+.similarity-card.secondary-source {
+  border-left: 3px solid #4a9eff;
+}
+
+/* Primary source metadata */
+.similarity-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-secondary, #888);
+}
+
+.similarity-card-archive {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.similarity-card-archive::before {
+  content: "📁";
+  font-size: 9px;
+}
+
+.similarity-card-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.similarity-card-date::before {
+  content: "📅";
+  font-size: 9px;
+}

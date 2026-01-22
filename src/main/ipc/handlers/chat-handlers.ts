@@ -47,6 +47,8 @@ export function setupChatHandlers() {
         useGraphContext: ragConfig.useGraphContext || false,
         additionalGraphDocs: ragConfig.additionalGraphDocs || 3,
         window,
+        // Source type selection (primary = Tropy archives, secondary = PDFs, both = all)
+        sourceType: validatedData.options?.sourceType || 'both',
         // Collection filtering (from RAG settings panel)
         collectionKeys: validatedData.options?.collectionKeys,
         // Provider selection (from RAG settings panel)

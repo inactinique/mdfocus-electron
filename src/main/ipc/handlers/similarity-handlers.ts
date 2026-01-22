@@ -21,6 +21,9 @@ export const SimilarityAnalyzeSchema = z.object({
       maxResults: z.number().min(1).max(20).optional(),
       similarityThreshold: z.number().min(0).max(1).optional(),
       collectionFilter: z.array(z.string()).nullable().optional(),
+      sourceType: z.enum(['secondary', 'primary', 'both']).optional(),
+      useReranking: z.boolean().optional(),
+      useContextualEmbedding: z.boolean().optional(),
     })
     .optional(),
 });

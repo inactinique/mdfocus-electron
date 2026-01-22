@@ -74,6 +74,22 @@
     },
     "openFolder": {
       "button": "Open folder"
+    },
+    "primaryDatabaseInfo": {
+      "title": "Primary Sources Database (Tropy)",
+      "sourcesIndexed": "Sources indexed",
+      "chunksStored": "Chunks stored"
+    },
+    "purgePrimaryDatabase": {
+      "title": "Purge Primary Sources Database",
+      "description": "Deletes all indexed Tropy sources and their vector embeddings.",
+      "button": "Purge Primary Sources",
+      "confirmMessage": "This action will delete {{sourceCount}} primary sources and {{chunkCount}} chunks.\n\nYou will need to re-sync your Tropy project.\n\nContinue?",
+      "finalConfirm": "Final confirmation: This action is IRREVERSIBLE. Continue?",
+      "success": "Primary sources database purged successfully",
+      "error": "Error during purge: {{error}}",
+      "inProgress": "Purging...",
+      "warning": "⚠️ This action is irreversible!"
     }
   },
   "settings": {
@@ -811,6 +827,15 @@
     "granularity.section": "Section",
     "granularity.paragraph": "Paragraph",
     "granularity.sentence": "Sentence",
+    "sourceType": "Source Type",
+    "sourceTypeDescription": "Select which type of sources to search",
+    "sourceType.secondary": "Secondary",
+    "sourceType.primary": "Primary",
+    "sourceType.both": "Both",
+    "help.sourceType": "Choose which sources to search: secondary sources (PDFs from bibliography) or primary sources (Tropy archives).",
+    "badge.primary": "Primary",
+    "badge.secondary": "Secondary",
+    "openSource": "Open",
     "maxResults": "Results per segment",
     "maxResultsDescription": "Maximum number of recommended PDFs per segment",
     "threshold": "Similarity threshold",
@@ -842,5 +867,32 @@
     "showPreview": "Show excerpt",
     "hidePreview": "Hide excerpt",
     "page": "Page {{page}}"
+  },
+  "primarySources": {
+    "noClioDeckProject": "No Project Open",
+    "openClioDeckFirst": "Open or create a ClioDeck project first to use primary sources.",
+    "selectTropyProject": "Select Tropy Project",
+    "selectTropyMessage": "Choose a .tropy package or .tpy file",
+    "invalidProject": "Please select a .tropy package or .tpy file",
+    "openProject": "Open Tropy Project",
+    "sync": "Synchronize",
+    "stopWatching": "Stop auto-sync",
+    "startWatching": "Enable auto-sync",
+    "ocr": "OCR Settings",
+    "importTranscription": "Import Transcription",
+    "statistics": "Statistics",
+    "reading": "Reading project...",
+    "processing": "Processing",
+    "indexing": "Indexing...",
+    "autoSync": "Auto-sync",
+    "searchAndFilters": "Search & Filters",
+    "searchPlaceholder": "Search sources...",
+    "withTranscription": "with transcription",
+    "withoutTranscription": "without transcription",
+    "sources": "Primary Sources",
+    "noProject": "No Tropy Project",
+    "openPrompt": "Click the folder icon to open a Tropy project (.tropy or .tpy)",
+    "noSources": "No Sources",
+    "syncPrompt": "Click sync to import sources from Tropy"
   }
 }

@@ -114,6 +114,19 @@ export const PrimarySourcesPanel: React.FC = () => {
   const withTranscription = statistics?.withTranscription || 0;
   const withoutTranscription = statistics?.withoutTranscription || 0;
 
+  // Si aucun projet ClioDeck n'est ouvert, afficher un message
+  if (!currentProject) {
+    return (
+      <div className="primary-sources-panel">
+        <div className="primary-sources-empty" style={{ marginTop: '2rem' }}>
+          <Archive size={48} strokeWidth={1} />
+          <h4>{t('primarySources.noClioDeckProject', 'No Project Open')}</h4>
+          <p>{t('primarySources.openClioDeckFirst', 'Open or create a ClioDeck project first to use primary sources.')}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="primary-sources-panel">
       {/* Header Toolbar */}

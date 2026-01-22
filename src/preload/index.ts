@@ -432,6 +432,9 @@ const api = {
     getStatistics: () => ipcRenderer.invoke('tropy:get-statistics'),
     getAllTags: () => ipcRenderer.invoke('tropy:get-all-tags'),
 
+    // Database Management
+    purge: () => ipcRenderer.invoke('tropy:purge'),
+
     // Events
     onFileChanged: (callback: (tpyPath: string) => void) => {
       const listener = (_event: any, tpyPath: string) => callback(tpyPath);

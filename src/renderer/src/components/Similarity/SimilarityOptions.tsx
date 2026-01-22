@@ -6,7 +6,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { useSimilarityStore, type Granularity } from '../../stores/similarityStore';
+import { useSimilarityStore, type Granularity, type SourceType } from '../../stores/similarityStore';
 import { HelperTooltip } from '../Methodology/HelperTooltip';
 import './SimilarityOptions.css';
 
@@ -20,6 +20,10 @@ export const SimilarityOptions: React.FC<SimilarityOptionsProps> = ({ onClose })
 
   const handleGranularityChange = (granularity: Granularity) => {
     setOptions({ granularity });
+  };
+
+  const handleSourceTypeChange = (sourceType: SourceType) => {
+    setOptions({ sourceType });
   };
 
   const handleMaxResultsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,6 +93,42 @@ export const SimilarityOptions: React.FC<SimilarityOptionsProps> = ({ onClose })
               >
                 <span className="similarity-option-btn-icon">💬</span>
                 <span className="similarity-option-btn-label">{t('similarity.granularity.sentence')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Source Type */}
+          <div className="similarity-option-group">
+            <div className="similarity-option-label-wrapper">
+              <label className="similarity-option-label">
+                {t('similarity.sourceType', 'Source Type')}
+              </label>
+              <HelperTooltip content={t('similarity.help.sourceType', 'Choose which sources to search: secondary sources (PDFs from bibliography) or primary sources (Tropy archives).')} />
+            </div>
+            <p className="similarity-option-description">
+              {t('similarity.sourceTypeDescription', 'Select which type of sources to search')}
+            </p>
+            <div className="similarity-option-buttons">
+              <button
+                className={`similarity-option-btn ${options.sourceType === 'secondary' ? 'active' : ''}`}
+                onClick={() => handleSourceTypeChange('secondary')}
+              >
+                <span className="similarity-option-btn-icon">📚</span>
+                <span className="similarity-option-btn-label">{t('similarity.sourceType.secondary', 'Secondary')}</span>
+              </button>
+              <button
+                className={`similarity-option-btn ${options.sourceType === 'primary' ? 'active' : ''}`}
+                onClick={() => handleSourceTypeChange('primary')}
+              >
+                <span className="similarity-option-btn-icon">📜</span>
+                <span className="similarity-option-btn-label">{t('similarity.sourceType.primary', 'Primary')}</span>
+              </button>
+              <button
+                className={`similarity-option-btn ${options.sourceType === 'both' ? 'active' : ''}`}
+                onClick={() => handleSourceTypeChange('both')}
+              >
+                <span className="similarity-option-btn-icon">🔄</span>
+                <span className="similarity-option-btn-label">{t('similarity.sourceType.both', 'Both')}</span>
               </button>
             </div>
           </div>

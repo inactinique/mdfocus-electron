@@ -6,6 +6,7 @@ import { configManager } from '../../services/config-manager.js';
 import { projectManager } from '../../services/project-manager.js';
 import { historyService } from '../../services/history-service.js';
 import { pdfService } from '../../services/pdf-service.js';
+import { tropyService } from '../../services/tropy-service.js';
 import { successResponse, errorResponse } from '../utils/error-handler.js';
 import { validate, ProjectCreateSchema, ProjectSaveSchema, BibliographySourceSchema } from '../utils/validation.js';
 
@@ -41,6 +42,9 @@ export function setupProjectHandlers() {
           await pdfService.init(projectPath, (progress) => {
             event.sender.send('project:rebuild-progress', progress);
           });
+
+          // Initialize Tropy service
+          await tropyService.init(projectPath);
 
           console.log('✅ All services initialized successfully');
         }
@@ -85,6 +89,9 @@ export function setupProjectHandlers() {
             event.sender.send('project:rebuild-progress', progress);
           });
 
+          // Initialize Tropy service
+          await tropyService.init(projectPath);
+
           console.log('✅ All services initialized successfully');
         }
       }
@@ -105,6 +112,9 @@ export function setupProjectHandlers() {
 
       // Close PDF Service and free resources
       pdfService.close();
+
+      // Close Tropy Service and free resources
+      await tropyService.close();
 
       console.log('📤 IPC Response: project:close - success');
       return successResponse();

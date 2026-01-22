@@ -15,6 +15,9 @@ interface EnrichedRAGOptions {
   additionalGraphDocs?: number;   // Nombre de documents liés à inclure
   window?: BrowserWindow;         // Fenêtre pour streaming
 
+  // Source type selection (primary = Tropy archives, secondary = PDFs, both = all)
+  sourceType?: 'secondary' | 'primary' | 'both';
+
   // Collection filtering (filter RAG search by Zotero collections)
   collectionKeys?: string[];      // Zotero collection keys to filter by
 
@@ -185,9 +188,10 @@ class ChatService {
         });
 
         // Check cache first (identical queries = instant results)
-        // Include collection filter in cache key to avoid mixing results
+        // Include collection filter and source type in cache key to avoid mixing results
         const collectionSuffix = options.collectionKeys?.length ? `-coll:${options.collectionKeys.sort().join(',')}` : '';
-        const cacheKey = `${queryHash}-${options.topK || 5}${collectionSuffix}`;
+        const sourceTypeSuffix = options.sourceType ? `-src:${options.sourceType}` : '-src:both';
+        const cacheKey = `${queryHash}-${options.topK || 5}${collectionSuffix}${sourceTypeSuffix}`;
         const cachedResults = this.ragCache.get(cacheKey);
 
         if (cachedResults) {
@@ -198,6 +202,7 @@ class ChatService {
           searchResults = await pdfService.search(message, {
             topK: options.topK,
             collectionKeys: options.collectionKeys,
+            sourceType: options.sourceType,
           });
 
           // Store in cache for future identical queries

@@ -140,6 +140,7 @@ class TropyService {
 
   /**
    * Synchronise le projet Tropy avec ClioDeck
+   * Inclut la génération des embeddings pour la recherche vectorielle
    */
   async sync(options: TropySyncOptions): Promise<TropySyncResult> {
     if (!this.tropySync || !this.vectorStore || !this.currentTPYPath) {
@@ -163,6 +164,7 @@ class TropyService {
       });
     };
 
+    // Phase 1: Synchroniser les métadonnées
     const result = await this.tropySync.sync(
       this.currentTPYPath,
       this.vectorStore,
@@ -170,7 +172,163 @@ class TropyService {
       onProgress
     );
 
+    // Phase 2: Générer les embeddings pour les sources avec du texte
+    if (result.success && (result.newItems > 0 || result.updatedItems > 0 || options.forceReindex)) {
+      try {
+        console.log('📐 [TROPY-SERVICE] Starting embedding generation...');
+        const embeddingResult = await this.generateEmbeddingsForSources(onProgress);
+        console.log(`📐 [TROPY-SERVICE] Embeddings generated: ${embeddingResult.chunksCreated} chunks for ${embeddingResult.sourcesProcessed} sources`);
+      } catch (error: any) {
+        console.error('❌ [TROPY-SERVICE] Embedding generation failed:', error);
+        result.errors.push(`Embedding generation failed: ${error.message}`);
+      }
+    }
+
     return result;
+  }
+
+  /**
+   * Génère les embeddings pour toutes les sources qui n'en ont pas encore
+   */
+  private async generateEmbeddingsForSources(
+    onProgress?: (progress: TropySyncProgress) => void
+  ): Promise<{ sourcesProcessed: number; chunksCreated: number }> {
+    if (!this.vectorStore) {
+      return { sourcesProcessed: 0, chunksCreated: 0 };
+    }
+
+    // Import OllamaClient dynamically to avoid circular dependencies
+    const { pdfService } = await import('./pdf-service.js');
+    const ollamaClient = pdfService.getOllamaClient();
+
+    if (!ollamaClient) {
+      console.warn('⚠️ [TROPY-SERVICE] OllamaClient not available, skipping embedding generation');
+      return { sourcesProcessed: 0, chunksCreated: 0 };
+    }
+
+    // Récupérer toutes les sources
+    const allSources = this.vectorStore.getAllSources();
+    let sourcesProcessed = 0;
+    let chunksCreated = 0;
+
+    // Filtrer les sources qui ont du texte mais pas encore de chunks
+    const sourcesToProcess = allSources.filter(source => {
+      // Vérifier si la source a du texte (transcription ou métadonnées)
+      const hasText = source.transcription && source.transcription.trim().length > 0;
+      if (!hasText) return false;
+
+      // Vérifier si la source a déjà des chunks
+      const existingChunks = this.vectorStore!.getChunks(source.id);
+      return existingChunks.length === 0;
+    });
+
+    if (sourcesToProcess.length === 0) {
+      console.log('📐 [TROPY-SERVICE] No sources need embedding generation');
+      return { sourcesProcessed: 0, chunksCreated: 0 };
+    }
+
+    console.log(`📐 [TROPY-SERVICE] Processing ${sourcesToProcess.length} sources for embeddings...`);
+
+    for (let i = 0; i < sourcesToProcess.length; i++) {
+      const source = sourcesToProcess[i];
+
+      onProgress?.({
+        phase: 'indexing',
+        current: i + 1,
+        total: sourcesToProcess.length,
+        currentItem: source.title,
+      });
+
+      try {
+        // Créer le texte complet pour le chunking
+        let fullText = '';
+        if (source.title) fullText += `Titre: ${source.title}\n\n`;
+        if (source.creator) fullText += `Auteur: ${source.creator}\n`;
+        if (source.date) fullText += `Date: ${source.date}\n`;
+        if (source.archive) fullText += `Archive: ${source.archive}\n`;
+        if (source.collection) fullText += `Collection: ${source.collection}\n`;
+        fullText += '\n';
+        if (source.transcription) fullText += source.transcription;
+
+        // Simple chunking (split by paragraphs or fixed size)
+        const chunks = this.chunkText(fullText, source.id, 1000, 100);
+
+        // Générer les embeddings pour chaque chunk
+        for (const chunk of chunks) {
+          try {
+            const embedding = await ollamaClient.generateEmbedding(chunk.content);
+            this.vectorStore!.saveChunk(chunk, embedding);
+            chunksCreated++;
+          } catch (error) {
+            console.warn(`⚠️ [TROPY-SERVICE] Failed to generate embedding for chunk in source ${source.id}:`, error);
+          }
+        }
+
+        sourcesProcessed++;
+      } catch (error) {
+        console.error(`❌ [TROPY-SERVICE] Failed to process source ${source.id}:`, error);
+      }
+    }
+
+    return { sourcesProcessed, chunksCreated };
+  }
+
+  /**
+   * Découpe un texte en chunks pour l'indexation
+   */
+  private chunkText(
+    text: string,
+    sourceId: string,
+    maxChunkSize: number = 1000,
+    overlap: number = 100
+  ): Array<{ id: string; sourceId: string; content: string; chunkIndex: number; startPosition: number; endPosition: number }> {
+    const chunks: Array<{ id: string; sourceId: string; content: string; chunkIndex: number; startPosition: number; endPosition: number }> = [];
+
+    // Split by paragraphs first
+    const paragraphs = text.split(/\n\n+/);
+    let currentChunk = '';
+    let chunkIndex = 0;
+    let startPosition = 0;
+
+    for (const paragraph of paragraphs) {
+      const trimmedParagraph = paragraph.trim();
+      if (!trimmedParagraph) continue;
+
+      // If adding this paragraph would exceed max size, save current chunk
+      if (currentChunk && (currentChunk.length + trimmedParagraph.length + 2) > maxChunkSize) {
+        chunks.push({
+          id: `${sourceId}-chunk-${chunkIndex}`,
+          sourceId,
+          content: currentChunk.trim(),
+          chunkIndex,
+          startPosition,
+          endPosition: startPosition + currentChunk.length,
+        });
+
+        // Start new chunk with overlap
+        const words = currentChunk.split(/\s+/);
+        const overlapWords = words.slice(-Math.ceil(overlap / 5)); // Approximate word count for overlap
+        currentChunk = overlapWords.join(' ') + '\n\n' + trimmedParagraph;
+        startPosition = startPosition + currentChunk.length - overlap;
+        chunkIndex++;
+      } else {
+        currentChunk = currentChunk ? currentChunk + '\n\n' + trimmedParagraph : trimmedParagraph;
+      }
+    }
+
+    // Don't forget the last chunk
+    if (currentChunk.trim()) {
+      chunks.push({
+        id: `${sourceId}-chunk-${chunkIndex}`,
+        sourceId,
+        content: currentChunk.trim(),
+        chunkIndex,
+        startPosition,
+        endPosition: text.length,
+      });
+    }
+
+    return chunks;
   }
 
   /**
@@ -492,6 +650,45 @@ class TropyService {
       console.error('Failed to reindex source:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  /**
+   * Purge la base de données des sources primaires
+   * Supprime toutes les sources, chunks, photos et tags
+   */
+  async purge(): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!this.vectorStore || !this.projectPath) {
+        return { success: false, error: 'Service not initialized' };
+      }
+
+      // Fermer la base de données actuelle
+      this.vectorStore.close();
+
+      // Supprimer le fichier de base de données
+      const dbPath = path.join(this.projectPath, '.cliodeck', 'primary-sources.db');
+      if (fs.existsSync(dbPath)) {
+        fs.unlinkSync(dbPath);
+        console.log(`🗑️ Deleted primary sources database: ${dbPath}`);
+      }
+
+      // Réinitialiser le vectorStore (crée une nouvelle base vide)
+      this.vectorStore = new PrimarySourcesVectorStore(this.projectPath);
+      this.currentTPYPath = null;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to purge primary sources database:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Retourne le chemin de la base de données
+   */
+  getDatabasePath(): string | null {
+    if (!this.projectPath) return null;
+    return path.join(this.projectPath, '.cliodeck', 'primary-sources.db');
   }
 }
 

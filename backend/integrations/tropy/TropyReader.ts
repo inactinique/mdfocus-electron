@@ -292,15 +292,24 @@ export class TropyReader {
     const items: TropyItem[] = [];
 
     try {
-      const itemRows = this.db.prepare('SELECT * FROM items').all() as Array<{
+      // Join items with subjects to get template info
+      const itemRows = this.db
+        .prepare(`
+          SELECT i.id, s.template, s.type
+          FROM items i
+          LEFT JOIN subjects s ON i.id = s.id
+        `)
+        .all() as Array<{
         id: number;
         template: string;
+        type: string | null;
       }>;
 
       for (const itemRow of itemRows) {
         const item: TropyItem = {
           id: itemRow.id,
-          template: itemRow.template,
+          template: itemRow.template || 'https://tropy.org/v1/templates/generic',
+          type: itemRow.type || undefined,
           tags: [],
           notes: [],
           photos: [],
@@ -336,16 +345,25 @@ export class TropyReader {
     if (!this.db) throw new Error('No project opened');
 
     try {
-      const itemRow = this.db.prepare('SELECT * FROM items WHERE id = ?').get(itemId) as {
+      const itemRow = this.db
+        .prepare(`
+          SELECT i.id, s.template, s.type
+          FROM items i
+          LEFT JOIN subjects s ON i.id = s.id
+          WHERE i.id = ?
+        `)
+        .get(itemId) as {
         id: number;
         template: string;
+        type: string | null;
       } | undefined;
 
       if (!itemRow) return null;
 
       const item: TropyItem = {
         id: itemRow.id,
-        template: itemRow.template,
+        template: itemRow.template || 'https://tropy.org/v1/templates/generic',
+        type: itemRow.type || undefined,
         tags: [],
         notes: [],
         photos: [],
@@ -408,15 +426,21 @@ export class TropyReader {
     const photos: Array<{ itemId: number; photo: TropyPhoto }> = [];
 
     try {
+      // Join with images table to get width/height
       const photoRows = this.db
-        .prepare('SELECT id, item_id, path, width, height, mimetype FROM photos')
+        .prepare(`
+          SELECT p.id, p.item_id, p.path, p.filename, p.mimetype, i.width, i.height
+          FROM photos p
+          LEFT JOIN images i ON p.id = i.id
+        `)
         .all() as Array<{
         id: number;
         item_id: number;
         path: string;
+        filename?: string;
+        mimetype?: string;
         width?: number;
         height?: number;
-        mimetype?: string;
       }>;
 
       for (const row of photoRows) {
@@ -426,7 +450,7 @@ export class TropyReader {
         const photo: TropyPhoto = {
           id: row.id,
           path: resolvedPath,
-          filename: path.basename(row.path),
+          filename: row.filename || path.basename(row.path),
           width: row.width,
           height: row.height,
           mimetype: row.mimetype,
@@ -451,7 +475,7 @@ export class TropyReader {
     if (!this.db) throw new Error('No project opened');
 
     try {
-      const tagRows = this.db.prepare('SELECT DISTINCT name FROM tags').all() as Array<{
+      const tagRows = this.db.prepare('SELECT name FROM tags ORDER BY name').all() as Array<{
         name: string;
       }>;
       return tagRows.map((row) => row.name);
@@ -466,21 +490,28 @@ export class TropyReader {
     if (!this.db) return {};
 
     try {
+      // Tropy stores metadata with value_id referencing metadata_values table
       const metadataRows = this.db
-        .prepare('SELECT property, value FROM metadata WHERE id = ?')
+        .prepare(`
+          SELECT m.property, mv.text as value
+          FROM metadata m
+          JOIN metadata_values mv ON m.value_id = mv.value_id
+          WHERE m.id = ?
+        `)
         .all(itemId) as Array<{ property: string; value: string }>;
 
       const metadata: Record<string, string> = {};
 
       for (const row of metadataRows) {
         const propertyName = this.extractPropertyName(row.property);
-        if (propertyName) {
+        if (propertyName && row.value) {
           metadata[propertyName] = row.value;
         }
       }
 
       return metadata as Partial<TropyItem>;
-    } catch {
+    } catch (error) {
+      console.warn(`Failed to get metadata for item ${itemId}:`, error);
       return {};
     }
   }
@@ -496,8 +527,14 @@ export class TropyReader {
     if (!this.db) return [];
 
     try {
+      // taggings links subjects (items) to tags via tag_id and id
       const tagRows = this.db
-        .prepare('SELECT name FROM tags WHERE id IN (SELECT tag_id FROM taggings WHERE id = ?)')
+        .prepare(`
+          SELECT t.name
+          FROM tags t
+          JOIN taggings tg ON t.tag_id = tg.tag_id
+          WHERE tg.id = ?
+        `)
         .all(itemId) as Array<{ name: string }>;
 
       return tagRows.map((row) => row.name);
@@ -510,13 +547,15 @@ export class TropyReader {
     if (!this.db) return [];
 
     try {
+      // Notes reference subjects via the 'id' column (not a separate column per type)
+      // state column contains the HTML/JSON representation
       const noteRows = this.db
-        .prepare('SELECT id, html, text FROM notes WHERE id = ?')
-        .all(itemId) as Array<{ id: number; html: string; text: string }>;
+        .prepare('SELECT note_id, text, state FROM notes WHERE id = ? AND deleted IS NULL')
+        .all(itemId) as Array<{ note_id: number; text: string; state: string }>;
 
       return noteRows.map((row) => ({
-        id: row.id,
-        html: row.html || '',
+        id: row.note_id,
+        html: row.state || '',
         text: row.text || '',
       }));
     } catch {
@@ -528,14 +567,22 @@ export class TropyReader {
     if (!this.db) return [];
 
     try {
+      // Join with images table to get width/height
       const photoRows = this.db
-        .prepare('SELECT id, path, width, height, mimetype FROM photos WHERE item_id = ?')
+        .prepare(`
+          SELECT p.id, p.path, p.filename, p.mimetype, i.width, i.height
+          FROM photos p
+          LEFT JOIN images i ON p.id = i.id
+          WHERE p.item_id = ?
+          ORDER BY p.position
+        `)
         .all(itemId) as Array<{
         id: number;
         path: string;
+        filename?: string;
+        mimetype?: string;
         width?: number;
         height?: number;
-        mimetype?: string;
       }>;
 
       return photoRows.map((row) => {
@@ -545,7 +592,7 @@ export class TropyReader {
         const photo: TropyPhoto = {
           id: row.id,
           path: resolvedPath,
-          filename: path.basename(row.path),
+          filename: row.filename || path.basename(row.path),
           width: row.width,
           height: row.height,
           mimetype: row.mimetype,
@@ -564,13 +611,14 @@ export class TropyReader {
     if (!this.db) return [];
 
     try {
+      // Notes reference subjects via the 'id' column (photos are subjects too)
       const noteRows = this.db
-        .prepare('SELECT id, html, text FROM notes WHERE photo_id = ?')
-        .all(photoId) as Array<{ id: number; html: string; text: string }>;
+        .prepare('SELECT note_id, text, state FROM notes WHERE id = ? AND deleted IS NULL')
+        .all(photoId) as Array<{ note_id: number; text: string; state: string }>;
 
       return noteRows.map((row) => ({
-        id: row.id,
-        html: row.html || '',
+        id: row.note_id,
+        html: row.state || '',
         text: row.text || '',
       }));
     } catch {
@@ -582,8 +630,18 @@ export class TropyReader {
     if (!this.db) return [];
 
     try {
+      // Selections only have id, photo_id, x, y, position
+      // Width/height/angle are stored in subjects or images tables
       const selectionRows = this.db
-        .prepare('SELECT id, x, y, width, height, angle FROM selections WHERE photo_id = ?')
+        .prepare(`
+          SELECT s.id, s.x, s.y,
+                 COALESCE(i.width, 100) as width,
+                 COALESCE(i.height, 100) as height,
+                 COALESCE(i.angle, 0) as angle
+          FROM selections s
+          LEFT JOIN images i ON s.id = i.id
+          WHERE s.photo_id = ?
+        `)
         .all(photoId) as Array<{
         id: number;
         x: number;
@@ -595,11 +653,11 @@ export class TropyReader {
 
       return selectionRows.map((row) => ({
         id: row.id,
-        x: row.x,
-        y: row.y,
-        width: row.width,
-        height: row.height,
-        angle: row.angle,
+        x: row.x || 0,
+        y: row.y || 0,
+        width: row.width || 100,
+        height: row.height || 100,
+        angle: row.angle || 0,
         notes: this.getSelectionNotes(row.id),
       }));
     } catch {
@@ -611,13 +669,14 @@ export class TropyReader {
     if (!this.db) return [];
 
     try {
+      // Notes reference subjects via the 'id' column (selections are subjects too)
       const noteRows = this.db
-        .prepare('SELECT id, html, text FROM notes WHERE selection_id = ?')
-        .all(selectionId) as Array<{ id: number; html: string; text: string }>;
+        .prepare('SELECT note_id, text, state FROM notes WHERE id = ? AND deleted IS NULL')
+        .all(selectionId) as Array<{ note_id: number; text: string; state: string }>;
 
       return noteRows.map((row) => ({
-        id: row.id,
-        html: row.html || '',
+        id: row.note_id,
+        html: row.state || '',
         text: row.text || '',
       }));
     } catch {

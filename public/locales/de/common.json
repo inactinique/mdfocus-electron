@@ -74,6 +74,22 @@
     },
     "openFolder": {
       "button": "Ordner öffnen"
+    },
+    "primaryDatabaseInfo": {
+      "title": "Primärquellen-Datenbank (Tropy)",
+      "sourcesIndexed": "Indexierte Quellen",
+      "chunksStored": "Gespeicherte Chunks"
+    },
+    "purgePrimaryDatabase": {
+      "title": "Primärquellen-Datenbank bereinigen",
+      "description": "Löscht alle indexierten Tropy-Quellen und ihre Vektor-Embeddings.",
+      "button": "Primärquellen bereinigen",
+      "confirmMessage": "Diese Aktion wird {{sourceCount}} Primärquellen und {{chunkCount}} Chunks löschen.\n\nSie müssen Ihr Tropy-Projekt neu synchronisieren.\n\nFortfahren?",
+      "finalConfirm": "Letzte Bestätigung: Diese Aktion ist UNWIDERRUFLICH. Fortfahren?",
+      "success": "Primärquellen-Datenbank erfolgreich bereinigt",
+      "error": "Fehler beim Bereinigen: {{error}}",
+      "inProgress": "Bereinigung läuft...",
+      "warning": "⚠️ Diese Aktion ist unwiderruflich!"
     }
   },
   "settings": {
@@ -726,6 +742,15 @@
     "granularity.section": "Abschnitt",
     "granularity.paragraph": "Absatz",
     "granularity.sentence": "Satz",
+    "sourceType": "Quellentyp",
+    "sourceTypeDescription": "Wählen Sie, in welchen Quellen gesucht werden soll",
+    "sourceType.secondary": "Sekundär",
+    "sourceType.primary": "Primär",
+    "sourceType.both": "Beide",
+    "help.sourceType": "Wählen Sie, welche Quellen durchsucht werden sollen: Sekundärquellen (PDFs aus der Bibliographie) oder Primärquellen (Tropy-Archive).",
+    "badge.primary": "Primär",
+    "badge.secondary": "Sekundär",
+    "openSource": "Öffnen",
     "maxResults": "Ergebnisse pro Segment",
     "maxResultsDescription": "Maximale Anzahl empfohlener PDFs pro Segment",
     "threshold": "Ähnlichkeitsschwelle",
@@ -757,5 +782,32 @@
     "showPreview": "Auszug anzeigen",
     "hidePreview": "Auszug ausblenden",
     "page": "Seite {{page}}"
+  },
+  "primarySources": {
+    "noClioDeckProject": "Kein Projekt geöffnet",
+    "openClioDeckFirst": "Öffnen oder erstellen Sie zuerst ein ClioDeck-Projekt, um Primärquellen zu verwenden.",
+    "selectTropyProject": "Tropy-Projekt auswählen",
+    "selectTropyMessage": "Wählen Sie ein .tropy-Paket oder eine .tpy-Datei",
+    "invalidProject": "Bitte wählen Sie ein .tropy-Paket oder eine .tpy-Datei",
+    "openProject": "Tropy-Projekt öffnen",
+    "sync": "Synchronisieren",
+    "stopWatching": "Auto-Sync stoppen",
+    "startWatching": "Auto-Sync aktivieren",
+    "ocr": "OCR-Einstellungen",
+    "importTranscription": "Transkription importieren",
+    "statistics": "Statistiken",
+    "reading": "Projekt wird gelesen...",
+    "processing": "Verarbeitung",
+    "indexing": "Indexierung...",
+    "autoSync": "Auto-Sync",
+    "searchAndFilters": "Suche & Filter",
+    "searchPlaceholder": "In Quellen suchen...",
+    "withTranscription": "mit Transkription",
+    "withoutTranscription": "ohne Transkription",
+    "sources": "Primärquellen",
+    "noProject": "Kein Tropy-Projekt",
+    "openPrompt": "Klicken Sie auf das Ordnersymbol, um ein Tropy-Projekt (.tropy oder .tpy) zu öffnen",
+    "noSources": "Keine Quellen",
+    "syncPrompt": "Klicken Sie auf Synchronisieren, um Quellen aus Tropy zu importieren"
   }
 }

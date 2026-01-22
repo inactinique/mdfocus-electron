@@ -264,9 +264,25 @@ export function setupTropyHandlers() {
     console.log('📞 IPC Call: tropy:get-statistics');
     try {
       const stats = tropyService.getStatistics();
-      return { success: true, statistics: stats };
+      const databasePath = tropyService.getDatabasePath();
+      return { success: true, statistics: stats, databasePath };
     } catch (error: any) {
       console.error('❌ tropy:get-statistics error:', error);
+      return errorResponse(error);
+    }
+  });
+
+  /**
+   * Purge la base de données des sources primaires
+   */
+  ipcMain.handle('tropy:purge', async () => {
+    console.log('📞 IPC Call: tropy:purge');
+    try {
+      const result = await tropyService.purge();
+      console.log('📤 IPC Response: tropy:purge', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ tropy:purge error:', error);
       return errorResponse(error);
     }
   });
