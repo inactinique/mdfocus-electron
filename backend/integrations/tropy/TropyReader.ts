@@ -85,27 +85,114 @@ export interface PrimarySourcePhoto {
 // MARK: - TropyReader
 
 /**
- * Lecteur de projets Tropy (.tpy)
+ * Lecteur de projets Tropy (.tropy package ou .tpy)
  * IMPORTANT: Ce lecteur ouvre les fichiers en mode LECTURE SEULE.
  * Il ne modifie JAMAIS le fichier .tpy.
+ *
+ * Supports two formats:
+ * - .tropy package: A folder with .tropy extension containing project.tpy and assets/
+ * - .tpy file: Direct SQLite database file
  */
 export class TropyReader {
   private db: Database.Database | null = null;
   private tpyPath: string | null = null;
+  private packagePath: string | null = null; // Path to .tropy package if applicable
+  private assetsPath: string | null = null; // Path to assets folder if in package
 
   /**
-   * Ouvre un projet Tropy (.tpy) en mode lecture seule
-   * @param tpyPath Chemin vers le fichier .tpy
+   * Ouvre un projet Tropy (.tropy package ou .tpy) en mode lecture seule
+   * @param projectPath Chemin vers le fichier .tropy ou .tpy
    * @throws Error si le fichier n'existe pas
    */
-  openProject(tpyPath: string): void {
-    if (!fs.existsSync(tpyPath)) {
-      throw new Error(`Tropy project not found: ${tpyPath}`);
+  openProject(projectPath: string): void {
+    if (!fs.existsSync(projectPath)) {
+      throw new Error(`Tropy project not found: ${projectPath}`);
+    }
+
+    let tpyPath: string;
+
+    // Check if it's a .tropy package (directory with .tropy extension)
+    const stats = fs.statSync(projectPath);
+    if (stats.isDirectory() && projectPath.endsWith('.tropy')) {
+      // It's a .tropy package
+      this.packagePath = projectPath;
+      tpyPath = path.join(projectPath, 'project.tpy');
+      this.assetsPath = path.join(projectPath, 'assets');
+
+      if (!fs.existsSync(tpyPath)) {
+        throw new Error(`project.tpy not found inside .tropy package: ${projectPath}`);
+      }
+
+      console.log(`📦 Opening Tropy package: ${projectPath}`);
+      console.log(`   Database: ${tpyPath}`);
+      console.log(`   Assets: ${this.assetsPath}`);
+    } else if (projectPath.endsWith('.tpy')) {
+      // It's a direct .tpy file
+      tpyPath = projectPath;
+      this.packagePath = null;
+      this.assetsPath = null;
+      console.log(`📄 Opening Tropy database: ${tpyPath}`);
+    } else {
+      throw new Error(`Invalid Tropy project path: ${projectPath}. Expected .tropy or .tpy`);
     }
 
     // IMPORTANT: Mode lecture seule - ne jamais modifier le fichier .tpy
     this.db = new Database(tpyPath, { readonly: true });
     this.tpyPath = tpyPath;
+  }
+
+  /**
+   * Returns the path to the .tropy package, if applicable
+   */
+  getPackagePath(): string | null {
+    return this.packagePath;
+  }
+
+  /**
+   * Returns the path to the assets folder, if in a package
+   */
+  getAssetsPath(): string | null {
+    return this.assetsPath;
+  }
+
+  /**
+   * Resolves a photo path to an absolute path
+   * Handles both absolute paths and relative paths within the package
+   */
+  resolvePhotoPath(photoPath: string): string {
+    // If it's already an absolute path and exists, return it
+    if (path.isAbsolute(photoPath) && fs.existsSync(photoPath)) {
+      return photoPath;
+    }
+
+    // If we have an assets folder, try to resolve relative to it
+    if (this.assetsPath) {
+      // Photo paths in Tropy packages are often stored as relative paths
+      // or as paths relative to the assets folder
+      const possiblePaths = [
+        path.join(this.assetsPath, photoPath),
+        path.join(this.assetsPath, path.basename(photoPath)),
+        path.join(this.packagePath!, photoPath),
+      ];
+
+      for (const possiblePath of possiblePaths) {
+        if (fs.existsSync(possiblePath)) {
+          return possiblePath;
+        }
+      }
+    }
+
+    // If we have a tpy path, try relative to its directory
+    if (this.tpyPath) {
+      const tpyDir = path.dirname(this.tpyPath);
+      const relativePath = path.join(tpyDir, photoPath);
+      if (fs.existsSync(relativePath)) {
+        return relativePath;
+      }
+    }
+
+    // Return the original path as fallback
+    return photoPath;
   }
 
   /**
@@ -158,6 +245,13 @@ export class TropyReader {
 
     const stats = fs.statSync(this.tpyPath);
     return stats.mtime;
+  }
+
+  /**
+   * Returns the original project path (either .tropy package or .tpy file)
+   */
+  getOriginalProjectPath(): string | null {
+    return this.packagePath || this.tpyPath;
   }
 
   /**
@@ -326,9 +420,12 @@ export class TropyReader {
       }>;
 
       for (const row of photoRows) {
+        // Resolve the photo path (handles package structure)
+        const resolvedPath = this.resolvePhotoPath(row.path);
+
         const photo: TropyPhoto = {
           id: row.id,
-          path: row.path,
+          path: resolvedPath,
           filename: path.basename(row.path),
           width: row.width,
           height: row.height,
@@ -442,9 +539,12 @@ export class TropyReader {
       }>;
 
       return photoRows.map((row) => {
+        // Resolve the photo path (handles package structure)
+        const resolvedPath = this.resolvePhotoPath(row.path);
+
         const photo: TropyPhoto = {
           id: row.id,
-          path: row.path,
+          path: resolvedPath,
           filename: path.basename(row.path),
           width: row.width,
           height: row.height,

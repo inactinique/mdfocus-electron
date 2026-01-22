@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import { EventEmitter } from 'events';
 
 // MARK: - Types
@@ -15,15 +16,20 @@ export interface TropyWatcherOptions {
 // MARK: - TropyWatcher
 
 /**
- * Watcher pour les fichiers Tropy (.tpy)
+ * Watcher pour les fichiers Tropy (.tropy package ou .tpy)
  * Surveille les modifications du fichier et émet des événements
  * avec un debounce pour éviter les faux positifs.
+ *
+ * Supports two formats:
+ * - .tropy package: A folder with .tropy extension containing project.tpy
+ * - .tpy file: Direct SQLite database file
  *
  * IMPORTANT: Ce watcher ne modifie JAMAIS le fichier .tpy.
  * Il observe uniquement les changements effectués par Tropy.
  */
 export class TropyWatcher extends EventEmitter {
   private tpyPath: string | null = null;
+  private originalPath: string | null = null; // Original path provided (could be .tropy or .tpy)
   private watcher: fs.FSWatcher | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private lastMtime: number = 0;
@@ -39,17 +45,38 @@ export class TropyWatcher extends EventEmitter {
   }
 
   /**
-   * Démarre la surveillance d'un fichier .tpy
-   * @param tpyPath Chemin vers le fichier .tpy à surveiller
+   * Démarre la surveillance d'un projet Tropy (.tropy package ou .tpy)
+   * @param projectPath Chemin vers le fichier .tropy ou .tpy à surveiller
    */
-  watch(tpyPath: string): void {
+  watch(projectPath: string): void {
     // Arrêter la surveillance précédente si active
     if (this.isWatching) {
       this.unwatch();
     }
 
-    if (!fs.existsSync(tpyPath)) {
-      this.emit('error', new Error(`Tropy project not found: ${tpyPath}`));
+    if (!fs.existsSync(projectPath)) {
+      this.emit('error', new Error(`Tropy project not found: ${projectPath}`));
+      return;
+    }
+
+    this.originalPath = projectPath;
+
+    // Resolve the actual .tpy path
+    let tpyPath: string;
+    const stats = fs.statSync(projectPath);
+
+    if (stats.isDirectory() && projectPath.endsWith('.tropy')) {
+      // It's a .tropy package - watch the project.tpy inside
+      tpyPath = path.join(projectPath, 'project.tpy');
+      if (!fs.existsSync(tpyPath)) {
+        this.emit('error', new Error(`project.tpy not found inside .tropy package: ${projectPath}`));
+        return;
+      }
+      console.log(`📦 Watching Tropy package: ${projectPath}`);
+    } else if (projectPath.endsWith('.tpy')) {
+      tpyPath = projectPath;
+    } else {
+      this.emit('error', new Error(`Invalid Tropy project path: ${projectPath}. Expected .tropy or .tpy`));
       return;
     }
 
@@ -57,8 +84,8 @@ export class TropyWatcher extends EventEmitter {
 
     // Enregistrer le mtime initial
     try {
-      const stats = fs.statSync(tpyPath);
-      this.lastMtime = stats.mtimeMs;
+      const tpyStats = fs.statSync(tpyPath);
+      this.lastMtime = tpyStats.mtimeMs;
     } catch (error) {
       this.emit('error', new Error(`Failed to get file stats: ${error}`));
       return;
@@ -77,7 +104,7 @@ export class TropyWatcher extends EventEmitter {
       });
 
       this.isWatching = true;
-      console.log(`👁️ Watching Tropy project: ${tpyPath}`);
+      console.log(`👁️ Watching Tropy database: ${tpyPath}`);
     } catch (error) {
       this.emit('error', new Error(`Failed to start watcher: ${error}`));
     }
@@ -114,10 +141,17 @@ export class TropyWatcher extends EventEmitter {
   }
 
   /**
-   * Retourne le chemin surveillé
+   * Retourne le chemin surveillé (le fichier .tpy réel)
    */
   getWatchedPath(): string | null {
     return this.tpyPath;
+  }
+
+  /**
+   * Retourne le chemin original fourni (.tropy ou .tpy)
+   */
+  getOriginalPath(): string | null {
+    return this.originalPath;
   }
 
   /**

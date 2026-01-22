@@ -336,17 +336,26 @@ export class TropySync {
   /**
    * Vérifie si une synchronisation est nécessaire
    * Compare la date de modification du fichier .tpy avec la dernière sync
+   * Supports both .tropy packages and .tpy files
    */
-  checkSyncNeeded(tpyPath: string, vectorStore: PrimarySourcesVectorStore): boolean {
+  checkSyncNeeded(projectPath: string, vectorStore: PrimarySourcesVectorStore): boolean {
     const project = vectorStore.getTropyProject();
     if (!project) return true;
 
-    if (project.tpyPath !== tpyPath) return true;
+    if (project.tpyPath !== projectPath) return true;
 
     try {
-      const stats = fs.statSync(tpyPath);
+      // Resolve actual .tpy path if it's a .tropy package
+      let tpyPath = projectPath;
+      const stats = fs.statSync(projectPath);
+
+      if (stats.isDirectory() && projectPath.endsWith('.tropy')) {
+        tpyPath = path.join(projectPath, 'project.tpy');
+      }
+
+      const tpyStats = fs.statSync(tpyPath);
       const lastSync = new Date(project.lastSync);
-      return stats.mtime > lastSync;
+      return tpyStats.mtime > lastSync;
     } catch {
       return true;
     }

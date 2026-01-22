@@ -60,13 +60,28 @@ export const PrimarySourcesPanel: React.FC = () => {
 
   const handleOpenTPY = async () => {
     try {
+      // On macOS, .tropy files are actually packages (folders with .tropy extension)
+      // containing project.tpy and an assets folder.
+      // We use openDirectory to allow selecting .tropy packages directly.
       const result = await window.electron.dialog.openFile({
-        filters: [{ name: 'Tropy Project', extensions: ['tpy'] }],
+        title: t('primarySources.selectTropyProject', 'Select Tropy Project'),
+        message: t('primarySources.selectTropyMessage', 'Choose a .tropy package or .tpy file'),
+        properties: ['openFile', 'openDirectory'],
+        filters: [
+          { name: 'Tropy Project', extensions: ['tropy', 'tpy'] },
+        ],
       });
 
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
-        const tpyPath = result.filePaths[0];
-        const openResult = await openTPYProject(tpyPath);
+        const projectPath = result.filePaths[0];
+
+        // Validate that it's a valid Tropy project path
+        if (!projectPath.endsWith('.tropy') && !projectPath.endsWith('.tpy')) {
+          alert(t('primarySources.invalidProject', 'Please select a .tropy package or .tpy file'));
+          return;
+        }
+
+        const openResult = await openTPYProject(projectPath);
 
         if (!openResult.success) {
           alert(`Failed to open Tropy project: ${openResult.error}`);
@@ -238,7 +253,7 @@ export const PrimarySourcesPanel: React.FC = () => {
           <div className="primary-sources-empty">
             <Archive size={48} strokeWidth={1} />
             <h4>{t('primarySources.noProject', 'No Tropy Project')}</h4>
-            <p>{t('primarySources.openPrompt', 'Click the folder icon to open a Tropy project (.tpy)')}</p>
+            <p>{t('primarySources.openPrompt', 'Click the folder icon to open a Tropy project (.tropy or .tpy)')}</p>
           </div>
         ) : sources.length === 0 ? (
           <div className="primary-sources-empty">
