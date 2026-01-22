@@ -6,6 +6,8 @@ import { TropySync, TropySyncOptions, TropySyncResult, TropySyncProgress } from 
 import { TropyWatcher } from '../../../backend/integrations/tropy/TropyWatcher.js';
 import { TropyOCRPipeline, OCRResult, TranscriptionFormat, SUPPORTED_OCR_LANGUAGES } from '../../../backend/integrations/tropy/TropyOCRPipeline.js';
 import { PrimarySourcesVectorStore, PrimarySourceDocument, PrimarySourceSearchResult, PrimarySourcesStatistics } from '../../../backend/core/vector-store/PrimarySourcesVectorStore.js';
+import { NERService, createNERService } from '../../../backend/core/ner/NERService.js';
+import type { EntityStatistics, ExtractedEntity } from '../../../backend/types/entity.js';
 
 // MARK: - Types
 
@@ -14,6 +16,7 @@ export interface TropyProjectInfo {
   itemCount: number;
   lastModified: string;
   isWatching: boolean;
+  tpyPath: string | null;
 }
 
 export interface TropyOpenResult {
@@ -37,6 +40,7 @@ class TropyService {
   private tropySync: TropySync | null = null;
   private watcher: TropyWatcher | null = null;
   private ocrPipeline: TropyOCRPipeline | null = null;
+  private nerService: NERService | null = null;
   private currentTPYPath: string | null = null;
   private projectPath: string | null = null;
 
@@ -133,6 +137,7 @@ class TropyService {
       itemCount: this.vectorStore.getStatistics().sourceCount,
       lastModified: project.lastSync,
       isWatching: this.watcher?.isActive() || false,
+      tpyPath: project.tpyPath,
     };
   }
 
@@ -164,11 +169,26 @@ class TropyService {
       });
     };
 
-    // Phase 1: Synchroniser les métadonnées
+    // Get OllamaClient for NER extraction
+    let ollamaClient = null;
+    try {
+      const { pdfService } = await import('./pdf-service.js');
+      ollamaClient = pdfService.getOllamaClient();
+    } catch (error) {
+      console.warn('⚠️ [TROPY-SERVICE] Could not get OllamaClient for NER:', error);
+    }
+
+    // Phase 1: Synchroniser les métadonnées (includes NER if ollamaClient is available)
+    const syncOptions = {
+      ...options,
+      ollamaClient,  // Pass to TropySync for NER extraction
+      extractEntities: options.extractEntities !== false,  // Enable by default
+    };
+
     const result = await this.tropySync.sync(
       this.currentTPYPath,
       this.vectorStore,
-      options,
+      syncOptions,
       onProgress
     );
 
@@ -501,6 +521,7 @@ class TropyService {
   /**
    * Recherche dans les sources primaires
    * Accepte une query text et des options, génère l'embedding via OllamaClient
+   * Utilise la recherche hybride (HNSW + BM25) pour de meilleurs résultats
    */
   async search(
     query: string,
@@ -512,7 +533,7 @@ class TropyService {
     }
 
     const topK = options?.topK || 10;
-    const threshold = options?.threshold || 0.3;
+    const threshold = options?.threshold || 0.2; // Reduced threshold for hybrid search
 
     try {
       // Import OllamaClient dynamically to avoid circular dependencies
@@ -524,21 +545,109 @@ class TropyService {
         return [];
       }
 
-      // Generate embedding for the query
-      const queryEmbedding = await ollamaClient.generateEmbedding(query);
+      // Expand query for multilingual search (FR + EN)
+      const expandedQuery = await this.expandQueryMultilingual(query, ollamaClient);
+      console.log(`📜 [TROPY-SERVICE] Expanded query: "${expandedQuery}"`);
 
-      // Search in primary sources vector store
-      const results = this.vectorStore.search(queryEmbedding, topK);
+      // Generate embedding for the expanded query
+      const queryEmbedding = await ollamaClient.generateEmbedding(expandedQuery);
+
+      // Search using hybrid search (HNSW + BM25) - pass both embedding and text
+      const results = this.vectorStore.search(queryEmbedding, topK * 2, expandedQuery);
 
       // Filter by threshold - results already include source data
       const enrichedResults = results.filter((r) => r.similarity >= threshold);
 
-      console.log(`📜 [TROPY-SERVICE] Search found ${enrichedResults.length} results (threshold: ${threshold})`);
+      console.log(`📜 [TROPY-SERVICE] Hybrid search found ${enrichedResults.length} results (threshold: ${threshold})`);
 
-      return enrichedResults;
+      return enrichedResults.slice(0, topK);
     } catch (error) {
       console.error('❌ [TROPY-SERVICE] Search failed:', error);
       return [];
+    }
+  }
+
+  /**
+   * Expand query with multilingual terms (FR/EN)
+   * This helps find relevant results across languages
+   */
+  private async expandQueryMultilingual(query: string, ollamaClient: any): Promise<string> {
+    // Simple heuristic: if query is short, keep it as is
+    if (query.length < 20) {
+      return query;
+    }
+
+    // For longer queries, we could use LLM to translate key terms
+    // For now, just return the original query
+    // TODO: Add LLM-based term expansion for better cross-lingual search
+    return query;
+  }
+
+  /**
+   * Search with entity boosting (Graph RAG)
+   * Uses NER to extract entities from query and boost matching results
+   */
+  async searchWithEntities(
+    query: string,
+    options?: { topK?: number; threshold?: number; useEntities?: boolean }
+  ): Promise<PrimarySourceSearchResult[]> {
+    if (!this.vectorStore) {
+      console.warn('⚠️ [TROPY-SERVICE] VectorStore not initialized');
+      return [];
+    }
+
+    const topK = options?.topK || 10;
+    const threshold = options?.threshold || 0.2;
+    const useEntities = options?.useEntities ?? true;
+
+    try {
+      // Import OllamaClient dynamically
+      const { pdfService } = await import('./pdf-service.js');
+      const ollamaClient = pdfService.getOllamaClient();
+
+      if (!ollamaClient) {
+        console.warn('⚠️ [TROPY-SERVICE] OllamaClient not available');
+        return [];
+      }
+
+      // Initialize NER service if needed
+      if (!this.nerService && useEntities) {
+        this.nerService = createNERService(ollamaClient);
+        console.log('🏷️ [TROPY-SERVICE] NER service initialized');
+      }
+
+      // Generate query embedding
+      const expandedQuery = await this.expandQueryMultilingual(query, ollamaClient);
+      const queryEmbedding = await ollamaClient.generateEmbedding(expandedQuery);
+
+      // If not using entities, fallback to hybrid search
+      if (!useEntities || !this.nerService) {
+        const results = this.vectorStore.search(queryEmbedding, topK * 2, expandedQuery);
+        return results.filter(r => r.similarity >= threshold).slice(0, topK);
+      }
+
+      // Extract entities from query
+      const queryEntities = await this.nerService.extractQueryEntities(query);
+
+      console.log(`🏷️ [TROPY-SERVICE] Query entities: ${queryEntities.map(e => `${e.name}(${e.type})`).join(', ')}`);
+
+      // Search with entity boosting
+      const results = this.vectorStore.searchWithEntityBoost(
+        queryEmbedding,
+        queryEntities,
+        topK * 2,
+        expandedQuery
+      );
+
+      const filteredResults = results.filter(r => r.similarity >= threshold);
+
+      console.log(`🏷️ [TROPY-SERVICE] Entity-boosted search found ${filteredResults.length} results`);
+
+      return filteredResults.slice(0, topK);
+    } catch (error) {
+      console.error('❌ [TROPY-SERVICE] Entity search failed:', error);
+      // Fallback to regular search
+      return this.search(query, options);
     }
   }
 
@@ -600,6 +709,17 @@ class TropyService {
     }
 
     return this.vectorStore.getAllTags();
+  }
+
+  /**
+   * Retourne les statistiques des entités (Graph RAG)
+   */
+  getEntityStatistics(): EntityStatistics | null {
+    if (!this.vectorStore) {
+      return null;
+    }
+
+    return this.vectorStore.getEntityStatistics();
   }
 
   // MARK: - Indexing

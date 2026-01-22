@@ -50,12 +50,18 @@ export const PrimarySourcesPanel: React.FC = () => {
     loadOCRLanguages();
   }, [loadOCRLanguages]);
 
-  // Refresh sources when project changes
+  // Load project info and sources when project changes
   useEffect(() => {
-    if (currentProject) {
-      refreshSources();
-      refreshStatistics();
-    }
+    const loadData = async () => {
+      if (currentProject) {
+        // D'abord récupérer les infos du projet Tropy (restaure tpyPath et projectInfo)
+        await usePrimarySourcesStore.getState().getProjectInfo();
+        // Ensuite charger les sources et stats
+        await refreshSources();
+        await refreshStatistics();
+      }
+    };
+    loadData();
   }, [currentProject, refreshSources, refreshStatistics]);
 
   const handleOpenTPY = async () => {

@@ -34,6 +34,7 @@ export interface TropyProjectInfo {
   itemCount: number;
   lastModified: string;
   isWatching: boolean;
+  tpyPath?: string | null;
 }
 
 export interface SyncProgress {
@@ -183,7 +184,11 @@ export const usePrimarySourcesStore = create<PrimarySourcesState>((set, get) => 
     try {
       const result = await window.electron.tropy.getProjectInfo();
       if (result.success && result.info) {
-        set({ projectInfo: result.info });
+        // Restaurer aussi le tpyPath depuis les infos du projet
+        set({
+          projectInfo: result.info,
+          tpyPath: result.info.tpyPath || null,
+        });
       }
     } catch (error) {
       console.error('Failed to get project info:', error);

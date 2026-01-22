@@ -1,8 +1,23 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { existsSync, mkdirSync, chmodSync } from 'fs';
+import { existsSync, mkdirSync, chmodSync, unlinkSync, writeFileSync, readFileSync } from 'fs';
 import { randomUUID } from 'crypto';
+import hnswlib from 'hnswlib-node';
+import natural from 'natural';
 import type { PrimarySourceItem, PrimarySourcePhoto } from '../../integrations/tropy/TropyReader';
+import type {
+  Entity,
+  EntityType,
+  EntityMention,
+  ExtractedEntity,
+  EntityStatistics,
+  ENTITY_TYPE_WEIGHTS,
+} from '../../types/entity';
+import { entityNormalizer } from '../ner/EntityNormalizer';
+
+const { HierarchicalNSW } = hnswlib;
+type HierarchicalNSW = InstanceType<typeof HierarchicalNSW>;
+const { TfIdf } = natural;
 
 // MARK: - Types
 
@@ -61,6 +76,36 @@ export class PrimarySourcesVectorStore {
   private dbPath: string;
   public readonly projectPath: string;
 
+  // HNSW Index for fast approximate nearest neighbor search
+  private hnswIndex: HierarchicalNSW | null = null;
+  private hnswIndexPath: string;
+  private hnswDimension: number = 768;
+  private hnswMaxElements: number = 100000;
+  private hnswLabelMap: Map<number, string> = new Map(); // HNSW label -> chunk ID
+  private hnswCurrentSize: number = 0;
+  private hnswInitialized: boolean = false;
+
+  // BM25 Index for keyword-based search
+  private bm25Index: any;
+  private bm25ChunkMap: Map<number, PrimarySourceChunk> = new Map();
+  private bm25IdfCache: Map<string, number> = new Map();
+  private bm25AvgDocLength: number = 0;
+  private bm25IsDirty: boolean = true;
+
+  // BM25 parameters
+  private readonly bm25K1 = 1.5;
+  private readonly bm25B = 0.75;
+
+  // HNSW parameters
+  private readonly hnswM = 16;
+  private readonly hnswEfConstruction = 100;
+  private hnswEfSearch = 50;
+
+  // Hybrid search parameters
+  private readonly rrfK = 60;
+  private denseWeight = 0.6;
+  private sparseWeight = 0.4;
+
   constructor(projectPath: string) {
     if (!projectPath) {
       throw new Error('PrimarySourcesVectorStore requires a project path.');
@@ -69,6 +114,7 @@ export class PrimarySourcesVectorStore {
     this.projectPath = projectPath;
     // Base de données séparée: project/.cliodeck/primary-sources.db
     this.dbPath = path.join(projectPath, '.cliodeck', 'primary-sources.db');
+    this.hnswIndexPath = path.join(projectPath, '.cliodeck', 'primary-hnsw.index');
 
     console.log(`📁 Primary sources database: ${this.dbPath}`);
 
@@ -98,6 +144,180 @@ export class PrimarySourcesVectorStore {
 
     this.enableForeignKeys();
     this.createTables();
+
+    // Initialize BM25 index
+    this.bm25Index = new TfIdf();
+
+    // Initialize HNSW and BM25 from existing data
+    this.initializeIndexes();
+  }
+
+  /**
+   * Initialize HNSW and BM25 indexes from existing data
+   */
+  private initializeIndexes(): void {
+    try {
+      // Detect embedding dimension from existing data
+      const detectedDim = this.getEmbeddingDimension();
+      if (detectedDim) {
+        this.hnswDimension = detectedDim;
+        console.log(`📏 Primary sources: detected embedding dimension ${this.hnswDimension}`);
+      }
+
+      // Try to load existing HNSW index
+      if (existsSync(this.hnswIndexPath)) {
+        this.loadHNSWIndex();
+      } else {
+        this.initNewHNSWIndex();
+      }
+
+      // Rebuild BM25 from database
+      this.rebuildBM25Index();
+
+    } catch (error) {
+      console.warn('⚠️ Primary sources: Failed to initialize indexes, will rebuild on first search:', error);
+      this.initNewHNSWIndex();
+    }
+  }
+
+  /**
+   * Initialize a new empty HNSW index
+   */
+  private initNewHNSWIndex(): void {
+    this.hnswIndex = new HierarchicalNSW('cosine', this.hnswDimension);
+    this.hnswIndex.initIndex(this.hnswMaxElements, this.hnswM, this.hnswEfConstruction);
+    this.hnswLabelMap.clear();
+    this.hnswCurrentSize = 0;
+    this.hnswInitialized = true;
+    console.log('🆕 Primary sources: Created new HNSW index');
+  }
+
+  /**
+   * Load HNSW index from disk
+   */
+  private loadHNSWIndex(): void {
+    try {
+      this.hnswIndex = new HierarchicalNSW('cosine', this.hnswDimension);
+      this.hnswIndex.readIndexSync(this.hnswIndexPath);
+      this.hnswCurrentSize = this.hnswIndex.getCurrentCount();
+
+      // Load metadata
+      const metadataPath = this.hnswIndexPath + '.meta.json';
+      if (existsSync(metadataPath)) {
+        const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
+        this.hnswLabelMap = new Map(metadata.labelMap || []);
+        this.hnswDimension = metadata.dimension || this.hnswDimension;
+      }
+
+      this.hnswInitialized = true;
+      console.log(`✅ Primary sources: Loaded HNSW index with ${this.hnswCurrentSize} vectors`);
+    } catch (error) {
+      console.warn('⚠️ Primary sources: Failed to load HNSW index, creating new:', error);
+      this.initNewHNSWIndex();
+    }
+  }
+
+  /**
+   * Save HNSW index to disk
+   */
+  saveHNSWIndex(): void {
+    if (!this.hnswInitialized || !this.hnswIndex) return;
+
+    try {
+      this.hnswIndex.writeIndexSync(this.hnswIndexPath);
+
+      // Save metadata
+      const metadataPath = this.hnswIndexPath + '.meta.json';
+      const metadata = {
+        dimension: this.hnswDimension,
+        currentSize: this.hnswCurrentSize,
+        labelMap: Array.from(this.hnswLabelMap.entries()),
+      };
+      writeFileSync(metadataPath, JSON.stringify(metadata));
+
+      console.log(`💾 Primary sources: Saved HNSW index (${this.hnswCurrentSize} vectors)`);
+    } catch (error) {
+      console.error('❌ Primary sources: Failed to save HNSW index:', error);
+    }
+  }
+
+  /**
+   * Rebuild BM25 index from database
+   */
+  private rebuildBM25Index(): void {
+    const startTime = Date.now();
+    this.bm25Index = new TfIdf();
+    this.bm25ChunkMap.clear();
+
+    const rows = this.db.prepare('SELECT * FROM source_chunks').all() as any[];
+    let docIndex = 0;
+
+    for (const row of rows) {
+      const chunk: PrimarySourceChunk = {
+        id: row.id,
+        sourceId: row.source_id,
+        content: row.content,
+        chunkIndex: row.chunk_index,
+        startPosition: row.start_position,
+        endPosition: row.end_position,
+      };
+
+      this.bm25Index.addDocument(this.preprocessTextForBM25(chunk.content));
+      this.bm25ChunkMap.set(docIndex, chunk);
+      docIndex++;
+    }
+
+    this.bm25IsDirty = true;
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ Primary sources: BM25 index rebuilt with ${this.bm25ChunkMap.size} chunks in ${duration}ms`);
+  }
+
+  /**
+   * Preprocess text for BM25 indexing
+   */
+  private preprocessTextForBM25(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Update BM25 IDF cache
+   */
+  private updateBM25Cache(): void {
+    this.bm25IdfCache.clear();
+
+    const N = this.bm25Index.documents.length;
+    if (N === 0) {
+      this.bm25AvgDocLength = 0;
+      this.bm25IsDirty = false;
+      return;
+    }
+
+    const termDocFreq = new Map<string, number>();
+    let totalLength = 0;
+
+    for (const doc of this.bm25Index.documents) {
+      const docLength = Object.keys(doc).length;
+      totalLength += docLength;
+
+      for (const term in doc) {
+        const termLower = term.toLowerCase();
+        termDocFreq.set(termLower, (termDocFreq.get(termLower) || 0) + 1);
+      }
+    }
+
+    this.bm25AvgDocLength = totalLength / N;
+
+    for (const [term, df] of termDocFreq.entries()) {
+      const idf = Math.log((N - df + 0.5) / (df + 0.5) + 1);
+      this.bm25IdfCache.set(term, idf);
+    }
+
+    this.bm25IsDirty = false;
   }
 
   private enableForeignKeys(): void {
@@ -186,7 +406,71 @@ export class PrimarySourcesVectorStore {
       CREATE INDEX IF NOT EXISTS idx_primary_sources_collection ON primary_sources(collection);
     `);
 
+    // Entity tables for Graph RAG
+    this.createEntityTables();
+
     console.log('✅ Primary sources tables created');
+  }
+
+  /**
+   * Creates entity tables for Graph RAG (NER)
+   */
+  private createEntityTables(): void {
+    // Table des entités uniques
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS entities (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        normalized_name TEXT NOT NULL,
+        aliases TEXT,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    // Index pour recherche rapide
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_entities_normalized ON entities(normalized_name);
+      CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
+      CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);
+    `);
+
+    // Mentions d'entités dans les chunks
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS entity_mentions (
+        id TEXT PRIMARY KEY,
+        entity_id TEXT NOT NULL,
+        chunk_id TEXT,
+        source_id TEXT NOT NULL,
+        start_position INTEGER,
+        end_position INTEGER,
+        context TEXT,
+        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+        FOREIGN KEY (source_id) REFERENCES primary_sources(id) ON DELETE CASCADE
+      );
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_entity_mentions_entity ON entity_mentions(entity_id);
+      CREATE INDEX IF NOT EXISTS idx_entity_mentions_chunk ON entity_mentions(chunk_id);
+      CREATE INDEX IF NOT EXISTS idx_entity_mentions_source ON entity_mentions(source_id);
+    `);
+
+    // Relations entre entités (co-occurrences)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS entity_relations (
+        entity1_id TEXT NOT NULL,
+        entity2_id TEXT NOT NULL,
+        relation_type TEXT DEFAULT 'co-occurrence',
+        weight INTEGER DEFAULT 1,
+        source_ids TEXT,
+        PRIMARY KEY (entity1_id, entity2_id),
+        FOREIGN KEY (entity1_id) REFERENCES entities(id) ON DELETE CASCADE,
+        FOREIGN KEY (entity2_id) REFERENCES entities(id) ON DELETE CASCADE
+      );
+    `);
+
+    console.log('✅ Entity tables created for Graph RAG');
   }
 
   // MARK: - Source CRUD
@@ -440,6 +724,48 @@ export class PrimarySourcesVectorStore {
         chunk.endPosition,
         embeddingBuffer
       );
+
+    // Add to HNSW index
+    this.addToHNSWIndex(chunk.id, embedding);
+
+    // Add to BM25 index
+    this.addToBM25Index(chunk);
+  }
+
+  /**
+   * Add a chunk to HNSW index
+   */
+  private addToHNSWIndex(chunkId: string, embedding: Float32Array): void {
+    if (!this.hnswInitialized || !this.hnswIndex) {
+      this.initNewHNSWIndex();
+    }
+
+    if (this.hnswCurrentSize >= this.hnswMaxElements) {
+      console.warn('⚠️ Primary sources: HNSW index full');
+      return;
+    }
+
+    // Check embedding dimension
+    if (embedding.length !== this.hnswDimension) {
+      console.warn(`⚠️ Primary sources: Embedding dimension mismatch (${embedding.length} vs ${this.hnswDimension})`);
+      return;
+    }
+
+    const label = this.hnswCurrentSize;
+    const embeddingArray = Array.from(embedding);
+    this.hnswIndex!.addPoint(embeddingArray, label);
+    this.hnswLabelMap.set(label, chunkId);
+    this.hnswCurrentSize++;
+  }
+
+  /**
+   * Add a chunk to BM25 index
+   */
+  private addToBM25Index(chunk: PrimarySourceChunk): void {
+    const docIndex = this.bm25Index.documents.length;
+    this.bm25Index.addDocument(this.preprocessTextForBM25(chunk.content));
+    this.bm25ChunkMap.set(docIndex, chunk);
+    this.bm25IsDirty = true;
   }
 
   /**
@@ -516,24 +842,88 @@ export class PrimarySourcesVectorStore {
     this.db.prepare('DELETE FROM source_chunks WHERE source_id = ?').run(sourceId);
   }
 
-  // MARK: - Search (Basic cosine similarity)
+  // MARK: - Hybrid Search (HNSW + BM25)
 
   /**
-   * Recherche par similarité cosinus
-   * Note: Pour de meilleures performances, utiliser HNSWVectorStore
+   * Hybrid search combining HNSW (dense) and BM25 (sparse) retrieval
+   * Uses Reciprocal Rank Fusion for result combination
    */
-  search(queryEmbedding: Float32Array, topK: number = 10): PrimarySourceSearchResult[] {
-    const chunks = this.getAllChunksWithEmbeddings();
-    const results: PrimarySourceSearchResult[] = [];
+  search(queryEmbedding: Float32Array, topK: number = 10, query?: string): PrimarySourceSearchResult[] {
+    const startTime = Date.now();
 
-    for (const { chunk, embedding } of chunks) {
-      if (embedding.length === 0) continue;
+    // Check if we have data
+    if (this.hnswCurrentSize === 0) {
+      console.log('📜 Primary sources: No indexed chunks, rebuilding indexes...');
+      this.rebuildAllIndexes();
 
-      const similarity = this.cosineSimilarity(queryEmbedding, embedding);
+      if (this.hnswCurrentSize === 0) {
+        return [];
+      }
+    }
+
+    const candidateSize = Math.max(topK * 5, 50);
+
+    // 1. Dense retrieval (HNSW)
+    const denseResults = this.searchHNSW(queryEmbedding, candidateSize);
+
+    // 2. Sparse retrieval (BM25) - only if query text is provided
+    let sparseResults: Array<{ chunk: PrimarySourceChunk; score: number }> = [];
+    if (query && query.trim()) {
+      sparseResults = this.searchBM25(query, candidateSize);
+    }
+
+    // 3. Fusion (RRF) or just dense if no sparse results
+    let results: PrimarySourceSearchResult[];
+    if (sparseResults.length > 0) {
+      results = this.reciprocalRankFusion(denseResults, sparseResults, topK);
+    } else {
+      results = denseResults.slice(0, topK);
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`🔍 Primary sources: Hybrid search found ${results.length} results in ${duration}ms (dense: ${denseResults.length}, sparse: ${sparseResults.length})`);
+
+    return results;
+  }
+
+  /**
+   * Search using HNSW index (fast approximate nearest neighbor)
+   */
+  private searchHNSW(queryEmbedding: Float32Array, k: number): PrimarySourceSearchResult[] {
+    if (!this.hnswInitialized || !this.hnswIndex || this.hnswCurrentSize === 0) {
+      return [];
+    }
+
+    this.hnswIndex.setEf(this.hnswEfSearch);
+
+    const queryArray = Array.from(queryEmbedding);
+    const result = this.hnswIndex.searchKnn(queryArray, Math.min(k, this.hnswCurrentSize));
+
+    const searchResults: PrimarySourceSearchResult[] = [];
+
+    for (let i = 0; i < result.neighbors.length; i++) {
+      const label = result.neighbors[i];
+      const similarity = 1 - result.distances[i]; // Convert distance to similarity
+
+      const chunkId = this.hnswLabelMap.get(label);
+      if (!chunkId) continue;
+
+      // Get chunk from database
+      const chunkRow = this.db.prepare('SELECT * FROM source_chunks WHERE id = ?').get(chunkId) as any;
+      if (!chunkRow) continue;
+
+      const chunk: PrimarySourceChunk = {
+        id: chunkRow.id,
+        sourceId: chunkRow.source_id,
+        content: chunkRow.content,
+        chunkIndex: chunkRow.chunk_index,
+        startPosition: chunkRow.start_position,
+        endPosition: chunkRow.end_position,
+      };
+
       const source = this.getSource(chunk.sourceId);
-
       if (source) {
-        results.push({
+        searchResults.push({
           chunk,
           source,
           similarity,
@@ -542,10 +932,173 @@ export class PrimarySourcesVectorStore {
       }
     }
 
-    // Trier par similarité décroissante
-    results.sort((a, b) => b.similarity - a.similarity);
+    return searchResults;
+  }
 
-    return results.slice(0, topK);
+  /**
+   * Search using BM25 index (keyword-based)
+   */
+  private searchBM25(query: string, k: number): Array<{ chunk: PrimarySourceChunk; score: number }> {
+    const processedQuery = this.preprocessTextForBM25(query);
+    const queryTerms = processedQuery.split(/\s+/).filter(t => t.length > 0);
+
+    if (queryTerms.length === 0 || this.bm25ChunkMap.size === 0) {
+      return [];
+    }
+
+    // Update cache if needed
+    if (this.bm25IsDirty) {
+      this.updateBM25Cache();
+    }
+
+    const scores: Array<{ index: number; score: number; chunk: PrimarySourceChunk }> = [];
+
+    this.bm25ChunkMap.forEach((chunk, docIndex) => {
+      let score = 0;
+      const doc = this.bm25Index.documents[docIndex];
+      if (!doc) return;
+
+      const docLength = Object.keys(doc).length;
+
+      for (const term of queryTerms) {
+        const termLower = term.toLowerCase();
+        const tf = doc[termLower] || 0;
+
+        if (tf === 0) continue;
+
+        const idf = this.bm25IdfCache.get(termLower) || 0;
+
+        // BM25 formula
+        const numerator = tf * (this.bm25K1 + 1);
+        const denominator = tf + this.bm25K1 * (1 - this.bm25B + this.bm25B * (docLength / this.bm25AvgDocLength));
+        score += idf * (numerator / denominator);
+      }
+
+      if (score > 0) {
+        scores.push({ index: docIndex, score, chunk });
+      }
+    });
+
+    return scores
+      .sort((a, b) => b.score - a.score)
+      .slice(0, k)
+      .map(result => ({
+        chunk: result.chunk,
+        score: result.score,
+      }));
+  }
+
+  /**
+   * Reciprocal Rank Fusion to combine dense and sparse results
+   */
+  private reciprocalRankFusion(
+    denseResults: PrimarySourceSearchResult[],
+    sparseResults: Array<{ chunk: PrimarySourceChunk; score: number }>,
+    k: number
+  ): PrimarySourceSearchResult[] {
+    const scores = new Map<string, {
+      chunk: PrimarySourceChunk;
+      source: PrimarySourceDocument;
+      denseScore: number;
+      sparseScore: number;
+      rrfScore: number;
+    }>();
+
+    // Add dense results
+    denseResults.forEach((result, rank) => {
+      const chunkId = result.chunk.id;
+      const rrfScore = this.denseWeight * (1 / (this.rrfK + rank + 1));
+
+      if (!scores.has(chunkId)) {
+        scores.set(chunkId, {
+          chunk: result.chunk,
+          source: result.source,
+          denseScore: result.similarity,
+          sparseScore: 0,
+          rrfScore: 0,
+        });
+      }
+
+      const entry = scores.get(chunkId)!;
+      entry.rrfScore += rrfScore;
+    });
+
+    // Add sparse results
+    sparseResults.forEach((result, rank) => {
+      const chunkId = result.chunk.id;
+      const rrfScore = this.sparseWeight * (1 / (this.rrfK + rank + 1));
+
+      if (!scores.has(chunkId)) {
+        const source = this.getSource(result.chunk.sourceId);
+        if (!source) return;
+
+        scores.set(chunkId, {
+          chunk: result.chunk,
+          source,
+          denseScore: 0,
+          sparseScore: result.score,
+          rrfScore: 0,
+        });
+      }
+
+      const entry = scores.get(chunkId)!;
+      entry.rrfScore += rrfScore;
+      entry.sparseScore = result.score;
+    });
+
+    // Sort by RRF score and convert to results
+    return Array.from(scores.values())
+      .sort((a, b) => b.rrfScore - a.rrfScore)
+      .slice(0, k)
+      .map(entry => ({
+        chunk: entry.chunk,
+        source: entry.source,
+        similarity: entry.rrfScore, // Use RRF score as similarity
+        sourceType: 'primary' as const,
+      }));
+  }
+
+  /**
+   * Rebuild all indexes from database
+   */
+  rebuildAllIndexes(): void {
+    console.log('🔨 Primary sources: Rebuilding all indexes...');
+    const startTime = Date.now();
+
+    // Clear existing indexes
+    this.initNewHNSWIndex();
+    this.bm25Index = new TfIdf();
+    this.bm25ChunkMap.clear();
+
+    // Get all chunks with embeddings
+    const chunks = this.getAllChunksWithEmbeddings();
+
+    if (chunks.length === 0) {
+      console.log('⚠️ Primary sources: No chunks to index');
+      return;
+    }
+
+    // Add to HNSW
+    for (const { chunk, embedding } of chunks) {
+      if (embedding.length > 0) {
+        this.addToHNSWIndex(chunk.id, embedding);
+      }
+    }
+
+    // Add to BM25
+    let docIndex = 0;
+    for (const { chunk } of chunks) {
+      this.bm25Index.addDocument(this.preprocessTextForBM25(chunk.content));
+      this.bm25ChunkMap.set(docIndex, chunk);
+      docIndex++;
+    }
+    this.bm25IsDirty = true;
+
+    // Save HNSW index
+    this.saveHNSWIndex();
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ Primary sources: Indexes rebuilt in ${duration}ms (${chunks.length} chunks)`);
   }
 
   private cosineSimilarity(a: Float32Array, b: Float32Array): number {
@@ -668,6 +1221,372 @@ export class PrimarySourcesVectorStore {
     };
   }
 
+  // MARK: - Entity CRUD
+
+  /**
+   * Saves an entity, returns existing ID if already exists
+   */
+  saveEntity(entity: Omit<Entity, 'id' | 'createdAt'>): string {
+    const normalizedName = entityNormalizer.normalize(entity.name, entity.type as EntityType);
+
+    // Check if entity already exists
+    const existing = this.db
+      .prepare('SELECT id FROM entities WHERE normalized_name = ? AND type = ?')
+      .get(normalizedName, entity.type) as any;
+
+    if (existing) {
+      return existing.id;
+    }
+
+    const id = randomUUID();
+    const now = new Date().toISOString();
+
+    this.db
+      .prepare(`
+        INSERT INTO entities (id, name, type, normalized_name, aliases, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        id,
+        entity.name,
+        entity.type,
+        normalizedName,
+        entity.aliases ? JSON.stringify(entity.aliases) : null,
+        now
+      );
+
+    return id;
+  }
+
+  /**
+   * Saves an entity mention
+   */
+  saveEntityMention(mention: Omit<EntityMention, 'id'>): void {
+    const id = randomUUID();
+
+    this.db
+      .prepare(`
+        INSERT INTO entity_mentions (id, entity_id, chunk_id, source_id, start_position, end_position, context)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `)
+      .run(
+        id,
+        mention.entityId,
+        mention.chunkId || null,
+        mention.sourceId,
+        mention.startPosition || null,
+        mention.endPosition || null,
+        mention.context || null
+      );
+  }
+
+  /**
+   * Updates or creates a relation between two entities
+   */
+  updateEntityRelation(entity1Id: string, entity2Id: string, sourceId: string): void {
+    // Ensure consistent ordering (smaller ID first)
+    const [id1, id2] = entity1Id < entity2Id ? [entity1Id, entity2Id] : [entity2Id, entity1Id];
+
+    const existing = this.db
+      .prepare('SELECT weight, source_ids FROM entity_relations WHERE entity1_id = ? AND entity2_id = ?')
+      .get(id1, id2) as any;
+
+    if (existing) {
+      // Update existing relation
+      const sourceIds = JSON.parse(existing.source_ids || '[]') as string[];
+      if (!sourceIds.includes(sourceId)) {
+        sourceIds.push(sourceId);
+      }
+
+      this.db
+        .prepare(`
+          UPDATE entity_relations
+          SET weight = weight + 1, source_ids = ?
+          WHERE entity1_id = ? AND entity2_id = ?
+        `)
+        .run(JSON.stringify(sourceIds), id1, id2);
+    } else {
+      // Create new relation
+      this.db
+        .prepare(`
+          INSERT INTO entity_relations (entity1_id, entity2_id, relation_type, weight, source_ids)
+          VALUES (?, ?, 'co-occurrence', 1, ?)
+        `)
+        .run(id1, id2, JSON.stringify([sourceId]));
+    }
+  }
+
+  /**
+   * Saves entities extracted from a source and creates relations
+   */
+  saveEntitiesForSource(sourceId: string, entities: ExtractedEntity[], chunkId?: string): void {
+    if (entities.length === 0) return;
+
+    const entityIds: string[] = [];
+
+    // Save each entity and its mention
+    for (const extracted of entities) {
+      const entityId = this.saveEntity({
+        name: extracted.name,
+        type: extracted.type,
+        normalizedName: entityNormalizer.normalize(extracted.name, extracted.type),
+      });
+
+      entityIds.push(entityId);
+
+      this.saveEntityMention({
+        entityId,
+        chunkId: chunkId || '',
+        sourceId,
+        startPosition: extracted.startPosition,
+        endPosition: extracted.endPosition,
+        context: extracted.context,
+      });
+    }
+
+    // Create co-occurrence relations between all pairs of entities
+    for (let i = 0; i < entityIds.length; i++) {
+      for (let j = i + 1; j < entityIds.length; j++) {
+        this.updateEntityRelation(entityIds[i], entityIds[j], sourceId);
+      }
+    }
+  }
+
+  /**
+   * Gets entities by name (fuzzy search)
+   */
+  getEntitiesByName(name: string, type?: EntityType): Entity[] {
+    const normalizedName = entityNormalizer.normalize(name, type || 'PERSON');
+
+    let query = 'SELECT * FROM entities WHERE normalized_name LIKE ?';
+    const params: any[] = [`%${normalizedName}%`];
+
+    if (type) {
+      query += ' AND type = ?';
+      params.push(type);
+    }
+
+    const rows = this.db.prepare(query).all(...params) as any[];
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      type: row.type as EntityType,
+      normalizedName: row.normalized_name,
+      aliases: row.aliases ? JSON.parse(row.aliases) : undefined,
+      createdAt: row.created_at,
+    }));
+  }
+
+  /**
+   * Gets all chunk IDs containing a specific entity
+   */
+  getChunkIdsWithEntity(entityId: string): string[] {
+    const rows = this.db
+      .prepare('SELECT DISTINCT chunk_id FROM entity_mentions WHERE entity_id = ? AND chunk_id IS NOT NULL')
+      .all(entityId) as any[];
+
+    return rows.map(r => r.chunk_id);
+  }
+
+  /**
+   * Gets related entities (by co-occurrence)
+   */
+  getRelatedEntities(entityId: string, limit: number = 10): Array<{ entity: Entity; weight: number }> {
+    const rows = this.db
+      .prepare(`
+        SELECT e.*, er.weight
+        FROM entities e
+        JOIN entity_relations er ON (
+          (er.entity1_id = ? AND er.entity2_id = e.id) OR
+          (er.entity2_id = ? AND er.entity1_id = e.id)
+        )
+        ORDER BY er.weight DESC
+        LIMIT ?
+      `)
+      .all(entityId, entityId, limit) as any[];
+
+    return rows.map(row => ({
+      entity: {
+        id: row.id,
+        name: row.name,
+        type: row.type as EntityType,
+        normalizedName: row.normalized_name,
+        aliases: row.aliases ? JSON.parse(row.aliases) : undefined,
+        createdAt: row.created_at,
+      },
+      weight: row.weight,
+    }));
+  }
+
+  /**
+   * Deletes all entities for a source
+   */
+  deleteEntitiesForSource(sourceId: string): void {
+    // Delete mentions for this source
+    this.db.prepare('DELETE FROM entity_mentions WHERE source_id = ?').run(sourceId);
+
+    // Clean up orphaned entities (no mentions left)
+    this.db.exec(`
+      DELETE FROM entities
+      WHERE id NOT IN (SELECT DISTINCT entity_id FROM entity_mentions)
+    `);
+
+    // Clean up orphaned relations
+    this.db.exec(`
+      DELETE FROM entity_relations
+      WHERE entity1_id NOT IN (SELECT id FROM entities)
+         OR entity2_id NOT IN (SELECT id FROM entities)
+    `);
+  }
+
+  /**
+   * Gets entity statistics
+   */
+  getEntityStatistics(): EntityStatistics {
+    const totalEntities = (this.db.prepare('SELECT COUNT(*) as count FROM entities').get() as any).count;
+
+    const byTypeRows = this.db
+      .prepare('SELECT type, COUNT(*) as count FROM entities GROUP BY type')
+      .all() as any[];
+
+    const byType: Record<EntityType, number> = {
+      PERSON: 0,
+      LOCATION: 0,
+      DATE: 0,
+      ORGANIZATION: 0,
+      EVENT: 0,
+    };
+
+    for (const row of byTypeRows) {
+      byType[row.type as EntityType] = row.count;
+    }
+
+    const totalMentions = (this.db.prepare('SELECT COUNT(*) as count FROM entity_mentions').get() as any).count;
+    const totalRelations = (this.db.prepare('SELECT COUNT(*) as count FROM entity_relations').get() as any).count;
+
+    const topEntitiesRows = this.db
+      .prepare(`
+        SELECT e.*, COUNT(em.id) as mention_count
+        FROM entities e
+        JOIN entity_mentions em ON e.id = em.entity_id
+        GROUP BY e.id
+        ORDER BY mention_count DESC
+        LIMIT 20
+      `)
+      .all() as any[];
+
+    const topEntities = topEntitiesRows.map(row => ({
+      entity: {
+        id: row.id,
+        name: row.name,
+        type: row.type as EntityType,
+        normalizedName: row.normalized_name,
+        aliases: row.aliases ? JSON.parse(row.aliases) : undefined,
+        createdAt: row.created_at,
+      },
+      mentionCount: row.mention_count,
+    }));
+
+    return {
+      totalEntities,
+      byType,
+      totalMentions,
+      totalRelations,
+      topEntities,
+    };
+  }
+
+  // MARK: - Entity-Boosted Search
+
+  /**
+   * Entity type weights for search scoring
+   */
+  private readonly entityTypeWeights: Record<EntityType, number> = {
+    PERSON: 1.5,
+    EVENT: 1.4,
+    DATE: 1.3,
+    LOCATION: 1.2,
+    ORGANIZATION: 1.1,
+  };
+
+  /**
+   * Search with entity boosting
+   * Combines hybrid search with entity matching for improved relevance
+   */
+  searchWithEntityBoost(
+    queryEmbedding: Float32Array,
+    queryEntities: ExtractedEntity[],
+    topK: number = 10,
+    query?: string,
+    hybridWeight: number = 0.7,
+    entityWeight: number = 0.3
+  ): PrimarySourceSearchResult[] {
+    // 1. Get base hybrid search results (more candidates)
+    const candidateSize = Math.max(topK * 3, 50);
+    const baseResults = this.search(queryEmbedding, candidateSize, query);
+
+    if (queryEntities.length === 0 || baseResults.length === 0) {
+      return baseResults.slice(0, topK);
+    }
+
+    // 2. Find matching entities in the database
+    const matchingEntityIds = new Map<string, { entityId: string; type: EntityType; score: number }>();
+
+    for (const qEntity of queryEntities) {
+      const matches = this.getEntitiesByName(qEntity.name, qEntity.type);
+      for (const match of matches) {
+        const isExact = entityNormalizer.areSameEntity(qEntity.name, match.name, qEntity.type);
+        const score = isExact ? 1.0 : 0.7;
+        matchingEntityIds.set(match.id, {
+          entityId: match.id,
+          type: match.type,
+          score,
+        });
+      }
+    }
+
+    if (matchingEntityIds.size === 0) {
+      return baseResults.slice(0, topK);
+    }
+
+    // 3. Get chunk IDs that contain these entities
+    const chunkEntityScores = new Map<string, number>();
+
+    for (const [entityId, { type, score }] of matchingEntityIds) {
+      const chunkIds = this.getChunkIdsWithEntity(entityId);
+      const typeWeight = this.entityTypeWeights[type] || 1.0;
+
+      for (const chunkId of chunkIds) {
+        const currentScore = chunkEntityScores.get(chunkId) || 0;
+        chunkEntityScores.set(chunkId, currentScore + score * typeWeight);
+      }
+    }
+
+    // 4. Combine scores
+    const boostedResults = baseResults.map(result => {
+      const entityScore = chunkEntityScores.get(result.chunk.id) || 0;
+      const normalizedEntityScore = entityScore / queryEntities.length; // Normalize by query entity count
+
+      const combinedScore =
+        hybridWeight * result.similarity +
+        entityWeight * normalizedEntityScore;
+
+      return {
+        ...result,
+        similarity: combinedScore,
+        entityScore: normalizedEntityScore,
+      };
+    });
+
+    // 5. Re-sort by combined score and return top K
+    boostedResults.sort((a, b) => b.similarity - a.similarity);
+
+    console.log(`🏷️ [ENTITY-BOOST] Boosted ${boostedResults.filter(r => (r as any).entityScore > 0).length} results with entity matches`);
+
+    return boostedResults.slice(0, topK);
+  }
+
   // MARK: - Utilities
 
   private rowToDocument(row: any): PrimarySourceDocument {
@@ -713,7 +1632,42 @@ export class PrimarySourcesVectorStore {
    * Ferme la connexion à la base de données
    */
   close(): void {
+    // Save HNSW index before closing
+    this.saveHNSWIndex();
     this.db.close();
     console.log('✅ Primary sources database closed');
+  }
+
+  /**
+   * Clear HNSW index files (used when purging)
+   */
+  clearHNSWIndex(): void {
+    if (existsSync(this.hnswIndexPath)) {
+      unlinkSync(this.hnswIndexPath);
+    }
+    const metadataPath = this.hnswIndexPath + '.meta.json';
+    if (existsSync(metadataPath)) {
+      unlinkSync(metadataPath);
+    }
+    this.initNewHNSWIndex();
+    this.bm25Index = new TfIdf();
+    this.bm25ChunkMap.clear();
+    this.bm25IsDirty = true;
+    console.log('✅ Primary sources: HNSW and BM25 indexes cleared');
+  }
+
+  /**
+   * Get index statistics
+   */
+  getIndexStats(): {
+    hnswSize: number;
+    bm25Size: number;
+    hnswDimension: number;
+  } {
+    return {
+      hnswSize: this.hnswCurrentSize,
+      bm25Size: this.bm25ChunkMap.size,
+      hnswDimension: this.hnswDimension,
+    };
   }
 }

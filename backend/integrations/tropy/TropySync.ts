@@ -10,6 +10,8 @@ import {
   PrimarySourcesVectorStore,
   PrimarySourceDocument,
 } from '../../core/vector-store/PrimarySourcesVectorStore';
+import { NERService } from '../../core/ner/NERService';
+import type { OllamaClient } from '../../core/llm/OllamaClient';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -20,6 +22,8 @@ export interface TropySyncOptions {
   ocrLanguage: string;
   transcriptionDirectory?: string;
   forceReindex?: boolean;
+  extractEntities?: boolean;  // Enable NER extraction (default: true)
+  ollamaClient?: OllamaClient;  // Required for NER extraction
 }
 
 export interface TropySyncResult {
@@ -35,7 +39,7 @@ export interface TropySyncResult {
 }
 
 export interface TropySyncProgress {
-  phase: 'reading' | 'processing' | 'indexing' | 'done';
+  phase: 'reading' | 'processing' | 'extracting-entities' | 'indexing' | 'done';
   current: number;
   total: number;
   currentItem?: string;
@@ -52,10 +56,19 @@ export type TropySyncProgressCallback = (progress: TropySyncProgress) => void;
 export class TropySync {
   private reader: TropyReader;
   private ocrPipeline: TropyOCRPipeline;
+  private nerService: NERService | null = null;
 
   constructor() {
     this.reader = new TropyReader();
     this.ocrPipeline = new TropyOCRPipeline();
+  }
+
+  /**
+   * Initializes the NER service with an Ollama client
+   */
+  initNERService(ollamaClient: OllamaClient): void {
+    this.nerService = new NERService(ollamaClient);
+    console.log('🏷️ [TROPY-SYNC] NER service initialized');
   }
 
   /**
@@ -121,6 +134,19 @@ export class TropySync {
           result.transcriptionsImported += processResult.transcriptionCount;
         } catch (error) {
           result.errors.push(`Item ${item.id} (${item.title}): ${error}`);
+        }
+      }
+
+      // Phase 2.5: Extract named entities (if enabled)
+      const shouldExtractEntities = options.extractEntities !== false;
+      if (shouldExtractEntities && options.ollamaClient) {
+        // Initialize NER service if not already done
+        if (!this.nerService) {
+          this.initNERService(options.ollamaClient);
+        }
+
+        if (this.nerService) {
+          await this.extractEntitiesForSources(vectorStore, onProgress);
         }
       }
 
@@ -331,6 +357,63 @@ export class TropySync {
     }
 
     return metadata;
+  }
+
+  /**
+   * Extracts named entities from all sources with transcriptions
+   */
+  private async extractEntitiesForSources(
+    vectorStore: PrimarySourcesVectorStore,
+    onProgress?: TropySyncProgressCallback
+  ): Promise<void> {
+    if (!this.nerService) {
+      console.warn('⚠️ [TROPY-SYNC] NER service not initialized, skipping entity extraction');
+      return;
+    }
+
+    // Get all sources with transcriptions
+    const allSources = vectorStore.getAllSources();
+    const sourcesWithText = allSources.filter(s => s.transcription && s.transcription.trim().length > 50);
+
+    if (sourcesWithText.length === 0) {
+      console.log('🏷️ [TROPY-SYNC] No sources with transcriptions to extract entities from');
+      return;
+    }
+
+    console.log(`🏷️ [TROPY-SYNC] Extracting entities from ${sourcesWithText.length} sources...`);
+
+    let totalEntities = 0;
+
+    for (let i = 0; i < sourcesWithText.length; i++) {
+      const source = sourcesWithText[i];
+
+      onProgress?.({
+        phase: 'extracting-entities',
+        current: i + 1,
+        total: sourcesWithText.length,
+        currentItem: source.title,
+      });
+
+      try {
+        // Delete existing entities for this source (in case of re-sync)
+        vectorStore.deleteEntitiesForSource(source.id);
+
+        // Extract entities from transcription
+        const result = await this.nerService.extractEntities(source.transcription!);
+
+        if (result.entities.length > 0) {
+          // Save entities and their mentions
+          vectorStore.saveEntitiesForSource(source.id, result.entities);
+          totalEntities += result.entities.length;
+
+          console.log(`  📝 ${source.title}: ${result.entities.length} entities (${result.processingTimeMs}ms)`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ [TROPY-SYNC] Failed to extract entities from ${source.title}:`, error);
+      }
+    }
+
+    console.log(`🏷️ [TROPY-SYNC] Entity extraction complete: ${totalEntities} total entities`);
   }
 
   /**
