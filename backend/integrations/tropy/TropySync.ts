@@ -22,7 +22,7 @@ export interface TropySyncOptions {
   ocrLanguage: string;
   transcriptionDirectory?: string;
   forceReindex?: boolean;
-  extractEntities?: boolean;  // Enable NER extraction (default: true)
+  extractEntities?: boolean;  // Enable NER extraction (default: false - opt-in due to slow performance)
   ollamaClient?: OllamaClient;  // Required for NER extraction
 }
 
@@ -179,7 +179,7 @@ export class TropySync {
       }
 
       // Phase 2.5: Extract named entities (if enabled)
-      const shouldExtractEntities = options.extractEntities !== false;
+      const shouldExtractEntities = options.extractEntities === true;
       if (shouldExtractEntities && options.ollamaClient) {
         // Initialize NER service if not already done
         if (!this.nerService) {

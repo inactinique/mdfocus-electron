@@ -182,7 +182,7 @@ class TropyService {
     const syncOptions = {
       ...options,
       ollamaClient,  // Pass to TropySync for NER extraction
-      extractEntities: options.extractEntities !== false,  // Enable by default
+      extractEntities: options.extractEntities === true,  // Disabled by default (opt-in due to slow performance)
     };
 
     const result = await this.tropySync.sync(
