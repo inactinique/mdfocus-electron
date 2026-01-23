@@ -193,7 +193,8 @@ class TropyService {
     );
 
     // Phase 2: Générer les embeddings pour les sources avec du texte
-    if (result.success && (result.newItems > 0 || result.updatedItems > 0 || options.forceReindex)) {
+    // Always try to generate embeddings - the method will skip sources that already have chunks
+    if (result.success) {
       try {
         console.log('📐 [TROPY-SERVICE] Starting embedding generation...');
         const embeddingResult = await this.generateEmbeddingsForSources(onProgress);
