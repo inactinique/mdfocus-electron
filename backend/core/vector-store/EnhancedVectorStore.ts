@@ -185,21 +185,33 @@ export class EnhancedVectorStore {
   async addChunks(
     chunks: Array<{ chunk: DocumentChunk; embedding: Float32Array }>
   ): Promise<void> {
-    console.log(`📥 Adding ${chunks.length} chunks to all indexes...`);
+    console.log(`📥 [ENHANCED] Adding ${chunks.length} chunks to all indexes...`);
 
     // Save to SQLite
-    for (const { chunk, embedding } of chunks) {
+    console.log(`📥 [ENHANCED] Step 1: Saving ${chunks.length} chunks to SQLite...`);
+    for (let i = 0; i < chunks.length; i++) {
+      const { chunk, embedding } = chunks[i];
       await this.vectorStore.saveChunk(chunk, embedding);
+      if ((i + 1) % 10 === 0) {
+        console.log(`📥 [ENHANCED] SQLite: ${i + 1}/${chunks.length} saved`);
+      }
     }
+    console.log(`📥 [ENHANCED] Step 1 complete: SQLite save done`);
 
     // Add to HNSW (batch)
+    console.log(`📥 [ENHANCED] Step 2: Adding to HNSW index...`);
     await this.hnswStore.addChunks(chunks);
+    console.log(`📥 [ENHANCED] Step 2 complete: HNSW add done`);
 
     // Add to BM25 (batch)
+    console.log(`📥 [ENHANCED] Step 3: Adding to BM25 index...`);
     this.bm25Index.addChunks(chunks.map((c) => c.chunk));
+    console.log(`📥 [ENHANCED] Step 3 complete: BM25 add done`);
 
     // Save indexes to disk
+    console.log(`📥 [ENHANCED] Step 4: Saving indexes to disk...`);
     await this.save();
+    console.log(`📥 [ENHANCED] Step 4 complete: Indexes saved`);
   }
 
   /**

@@ -98,12 +98,12 @@ export class ModelDownloader {
       const stats = fs.statSync(modelPath);
       const sizeMB = stats.size / (1024 * 1024);
 
-      // Tolérance de 5% sur la taille pour gérer les variations de compression
-      const sizeValid = sizeMB > modelInfo.sizeMB * 0.95;
+      // Strict tolerance of 2% - truncated files should not pass
+      const sizeValid = sizeMB >= modelInfo.sizeMB * 0.98;
 
       if (!sizeValid) {
         console.warn(
-          `⚠️ [DOWNLOAD] Model ${modelId} exists but size mismatch: ${sizeMB.toFixed(1)} MB vs expected ${modelInfo.sizeMB} MB`
+          `⚠️ [DOWNLOAD] Model ${modelId} exists but size mismatch: ${sizeMB.toFixed(1)} MB vs expected ≥${(modelInfo.sizeMB * 0.98).toFixed(1)} MB`
         );
         return false;
       }
@@ -252,8 +252,16 @@ export class ModelDownloader {
       let lastTime = startTime;
       let lastBytes = 0;
 
-      // Créer le stream de fichier
+      // Créer le stream de fichier avec gestion des erreurs
       const fileStream = fs.createWriteStream(destPath);
+      let streamError: Error | null = null;
+
+      // Capture stream errors
+      fileStream.on('error', (err) => {
+        streamError = err;
+        console.error('❌ [DOWNLOAD] File stream error:', err);
+      });
+
       const reader = response.body?.getReader();
 
       if (!reader) {
@@ -270,13 +278,31 @@ export class ModelDownloader {
         message: `Téléchargement de ${modelInfo.name}...`,
       });
 
-      // Lire et écrire par chunks
+      // Helper to wait for drain if buffer is full
+      const waitForDrain = (): Promise<void> => {
+        return new Promise((resolve) => {
+          fileStream.once('drain', resolve);
+        });
+      };
+
+      // Lire et écrire par chunks avec gestion du backpressure
       while (true) {
+        // Check for stream errors
+        if (streamError) {
+          throw streamError;
+        }
+
         const { done, value } = await reader.read();
         if (done) break;
 
-        fileStream.write(Buffer.from(value));
+        const buffer = Buffer.from(value);
+        const canContinue = fileStream.write(buffer);
         downloadedSize += value.length;
+
+        // Handle backpressure - wait for drain if buffer is full
+        if (!canContinue) {
+          await waitForDrain();
+        }
 
         // Calculer vitesse et ETA toutes les 500ms
         const now = Date.now();
@@ -304,6 +330,23 @@ export class ModelDownloader {
         }
       }
 
+      // Final check for any stream errors that occurred during writing
+      if (streamError) {
+        fileStream.destroy();
+        if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+        throw streamError;
+      }
+
+      // Check that we received all expected bytes before closing
+      if (downloadedSize < totalSize * 0.99) {
+        fileStream.destroy();
+        if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
+        throw new Error(
+          `Download stream ended prematurely: received ${(downloadedSize / (1024 * 1024)).toFixed(1)} MB ` +
+          `of ${(totalSize / (1024 * 1024)).toFixed(1)} MB (${((downloadedSize / totalSize) * 100).toFixed(1)}%)`
+        );
+      }
+
       // Fermer le fichier
       await new Promise<void>((resolve, reject) => {
         fileStream.end((err: Error | null | undefined) => {
@@ -325,12 +368,32 @@ export class ModelDownloader {
 
       // Vérifier la taille du fichier téléchargé
       const stats = fs.statSync(destPath);
-      const expectedMinSize = totalSize * 0.95;
+      const actualSizeMB = stats.size / (1024 * 1024);
+      const contentLengthMB = totalSize / (1024 * 1024);
+      const expectedSizeMB = modelInfo.sizeMB;
 
+      console.log(`📏 [DOWNLOAD] Size verification:`);
+      console.log(`   Downloaded: ${actualSizeMB.toFixed(2)} MB`);
+      console.log(`   Content-Length: ${contentLengthMB.toFixed(2)} MB`);
+      console.log(`   Expected (model config): ${expectedSizeMB} MB`);
+
+      // Strict check: downloaded bytes should match Content-Length (99% tolerance for minor variations)
+      const contentLengthMinSize = totalSize * 0.99;
+      if (stats.size < contentLengthMinSize) {
+        fs.unlinkSync(destPath);
+        throw new Error(
+          `Téléchargement incomplet: ${actualSizeMB.toFixed(1)} MB reçus sur ${contentLengthMB.toFixed(1)} MB attendus (Content-Length). ` +
+          `Veuillez vérifier votre connexion internet et réessayer.`
+        );
+      }
+
+      // Also check against expected model size from config (with 5% tolerance for compression variations)
+      const expectedMinSize = expectedSizeMB * 1024 * 1024 * 0.95;
       if (stats.size < expectedMinSize) {
         fs.unlinkSync(destPath);
         throw new Error(
-          `Fichier incomplet: ${(stats.size / (1024 * 1024)).toFixed(1)} MB au lieu de ${(totalSize / (1024 * 1024)).toFixed(1)} MB`
+          `Fichier trop petit: ${actualSizeMB.toFixed(1)} MB au lieu de ${expectedSizeMB} MB minimum attendu. ` +
+          `Le fichier source peut avoir été modifié.`
         );
       }
 

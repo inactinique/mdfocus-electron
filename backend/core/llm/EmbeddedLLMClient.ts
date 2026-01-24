@@ -54,17 +54,17 @@ export const EMBEDDED_MODELS: Record<string, EmbeddedModelInfo> = {
     name: 'Qwen2.5-0.5B-Instruct',
     filename: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
     repo: 'Qwen/Qwen2.5-0.5B-Instruct-GGUF',
-    sizeMB: 491,
+    sizeMB: 469, // Actual size: 491400032 bytes = 468.57 MB
     contextSize: 32768,
-    description: 'Modèle léger (~490 Mo), rapide sur CPU, 29+ langues',
+    description: 'Modèle léger (~469 Mo), rapide sur CPU, 29+ langues',
   },
   'qwen2.5-1.5b': {
     name: 'Qwen2.5-1.5B-Instruct',
     filename: 'qwen2.5-1.5b-instruct-q4_k_m.gguf',
     repo: 'Qwen/Qwen2.5-1.5B-Instruct-GGUF',
-    sizeMB: 1120,
+    sizeMB: 1066, // Actual size: 1117320736 bytes = 1065.5 MB
     contextSize: 32768,
-    description: 'Modèle équilibré (~1.1 Go), meilleure qualité',
+    description: 'Modèle équilibré (~1 Go), meilleure qualité',
   },
 };
 
@@ -128,6 +128,22 @@ export class EmbeddedLLMClient {
     } catch (error) {
       console.error('❌ [EMBEDDED] Failed to initialize:', error);
       this.initialized = false;
+
+      // Clean up any partially initialized resources to prevent SIGSEGV
+      try {
+        if (this.context) {
+          await this.context.dispose();
+          this.context = null;
+        }
+      } catch (disposeError) {
+        console.warn('⚠️ [EMBEDDED] Error disposing context during cleanup:', disposeError);
+      }
+      this.model = null;
+      this.llama = null;
+      this.sequence = null;
+      this.modelPath = null;
+      this.modelId = null;
+
       return false;
     }
   }

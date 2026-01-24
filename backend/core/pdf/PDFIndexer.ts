@@ -86,8 +86,13 @@ export class PDFIndexer {
     onProgress?: (progress: IndexingProgress) => void,
     bibliographyMetadata?: { title?: string; author?: string; year?: string }
   ): Promise<PDFDocument> {
+    console.log('🔍 [INDEXER] Starting PDF indexing...');
+    console.log(`   File: ${filePath}`);
+    console.log(`   BibtexKey: ${bibtexKey || 'none'}`);
+
     try {
       // 1. Extraire le texte + métadonnées
+      console.log('🔍 [INDEXER] Step 1: Extracting text and metadata...');
       onProgress?.({
         stage: 'extracting',
         progress: 10,
@@ -95,6 +100,7 @@ export class PDFIndexer {
       });
 
       const { pages, metadata, title: extractedTitle } = await this.pdfExtractor.extractDocument(filePath);
+      console.log(`🔍 [INDEXER] Step 1 complete: ${pages.length} pages extracted`);
 
       // Use bibliography metadata if provided, otherwise fall back to PDF extraction
       const title = bibliographyMetadata?.title || extractedTitle;
@@ -274,6 +280,7 @@ export class PDFIndexer {
 
       // Check if we're using EnhancedVectorStore
       const isEnhancedStore = this.vectorStore instanceof EnhancedVectorStore;
+      console.log(`🔍 [INDEXER] Step 7: Generating embeddings (EnhancedStore: ${isEnhancedStore})...`);
 
       if (isEnhancedStore) {
         // Batch processing for EnhancedVectorStore
@@ -284,7 +291,9 @@ export class PDFIndexer {
           const chunk = chunks[i];
 
           // Générer l'embedding
+          console.log(`🔍 [INDEXER] Generating embedding ${i + 1}/${chunks.length}...`);
           const embedding = await this.ollamaClient.generateEmbedding(chunk.content);
+          console.log(`🔍 [INDEXER] Embedding ${i + 1} generated, dimension: ${embedding.length}`);
 
           chunksWithEmbeddings.push({ chunk, embedding });
 
@@ -305,7 +314,10 @@ export class PDFIndexer {
         }
 
         // Batch add to all indexes (HNSW, BM25, SQLite)
+        console.log(`🔍 [INDEXER] Step 8: Adding ${chunksWithEmbeddings.length} chunks to indexes...`);
+        console.log(`🔍 [INDEXER] First embedding dimension: ${chunksWithEmbeddings[0]?.embedding?.length || 'N/A'}`);
         await (this.vectorStore as EnhancedVectorStore).addChunks(chunksWithEmbeddings);
+        console.log(`🔍 [INDEXER] Step 8 complete: Chunks added to HNSW, BM25, SQLite`);
 
         onProgress?.({
           stage: 'embedding',

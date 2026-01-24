@@ -219,16 +219,23 @@ export class HNSWVectorStore {
    * Batch add chunks (more efficient than adding one by one)
    */
   async addChunks(chunks: Array<{ chunk: DocumentChunk; embedding: Float32Array }>): Promise<void> {
+    console.log(`📥 [HNSW] addChunks called with ${chunks.length} chunks`);
+    console.log(`📥 [HNSW] Index state: initialized=${this.isInitialized}, hasIndex=${!!this.index}, currentSize=${this.currentSize}`);
+
     if (!this.isInitialized || !this.index) {
+      console.log(`📥 [HNSW] Initializing index...`);
       await this.initialize();
+      console.log(`📥 [HNSW] Index initialized`);
     }
 
+    console.log(`📥 [HNSW] Index parameters: dimension=${this.dimension}, maxElements=${this.maxElements}`);
     console.log(`📥 Adding ${chunks.length} chunks to HNSW index...`);
     const startTime = Date.now();
     let addedCount = 0;
     let skippedCount = 0;
 
-    for (const { chunk, embedding } of chunks) {
+    for (let idx = 0; idx < chunks.length; idx++) {
+      const { chunk, embedding } = chunks[idx];
       if (this.currentSize >= this.maxElements) {
         console.warn(`⚠️  HNSW index full, stopping at ${this.currentSize} chunks`);
         break;
@@ -259,13 +266,22 @@ export class HNSWVectorStore {
       // Convert Float32Array to number[]
       const embeddingArray = Array.from(embedding);
 
+      // Log first few points for debugging
+      if (idx < 3 || idx === chunks.length - 1) {
+        console.log(`📥 [HNSW] About to add point ${idx + 1}/${chunks.length}: label=${label}, embeddingLength=${embeddingArray.length}`);
+      }
+
       try {
         this.index!.addPoint(embeddingArray, label);
         this.chunkIdMap.set(label, chunk.id);
         this.chunkDataMap.set(chunk.id, chunk);
         this.currentSize++;
         addedCount++;
-      } catch (error) {
+
+        if (idx < 3 || idx === chunks.length - 1) {
+          console.log(`📥 [HNSW] Point ${idx + 1} added successfully`);
+        }
+      } catch (error: any) {
         console.warn(`⚠️  Failed to add chunk ${chunk.id}: ${error.message}`);
         skippedCount++;
       }
