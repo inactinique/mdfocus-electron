@@ -56,8 +56,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isStreami
         )}
       </div>
 
-      {/* Warning when RAG was not used */}
-      {!isUser && message.ragUsed === false && (
+      {/* Warning when RAG was not used (but not for error messages) */}
+      {!isUser && message.ragUsed === false && !message.isError && (
         <div className="message-no-context-warning">
           <span className="warning-icon">⚠️</span>
           <span className="warning-text">{t('chat.noContextWarning')}</span>

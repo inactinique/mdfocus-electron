@@ -10,6 +10,7 @@ export interface ChatMessage {
   sources?: ChatSource[];
   timestamp: Date;
   ragUsed?: boolean; // true if RAG context was used for this response
+  isError?: boolean; // true if this message is an error response
 }
 
 export interface ChatSource {
@@ -40,7 +41,7 @@ interface ChatState {
 
   // Internal
   addUserMessage: (content: string) => void;
-  addAssistantMessage: (content: string, sources?: ChatSource[], ragUsed?: boolean) => void;
+  addAssistantMessage: (content: string, sources?: ChatSource[], ragUsed?: boolean, isError?: boolean) => void;
 }
 
 // MARK: - Store
@@ -64,7 +65,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
   },
 
-  addAssistantMessage: (content: string, sources?: ChatSource[], ragUsed?: boolean) => {
+  addAssistantMessage: (content: string, sources?: ChatSource[], ragUsed?: boolean, isError?: boolean) => {
     const assistantMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'assistant',
@@ -72,6 +73,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       sources,
       timestamp: new Date(),
       ragUsed,
+      isError,
     };
 
     set((state) => ({
@@ -127,11 +129,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
         addAssistantMessage(result.response, undefined, result.ragUsed);
       } else {
         logger.error('Chat', 'No response or error: ' + (result.error || 'Réponse vide'));
-        addAssistantMessage(`Erreur: ${result.error || 'Réponse vide'}`, undefined, false);
+        addAssistantMessage(`Erreur: ${result.error || 'Réponse vide'}`, undefined, undefined, true);
       }
     } catch (error: any) {
       logger.error('Chat', error);
-      addAssistantMessage(`Erreur: ${error.message || error}`);
+      addAssistantMessage(`Erreur: ${error.message || error}`, undefined, undefined, true);
     } finally {
       set({ isProcessing: false, currentStreamingMessage: '' });
     }

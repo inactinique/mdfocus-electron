@@ -144,22 +144,49 @@ export interface ClassifiedError {
   suggestion: string;
 }
 
-export function classifyOllamaError(error: any, context?: { model?: string; promptLength?: number }): ClassifiedError {
+export interface ErrorContext {
+  model?: string;
+  promptLength?: number;
+  sourceCount?: number;
+  numCtx?: number;
+}
+
+export function classifyOllamaError(error: any, context?: ErrorContext): ClassifiedError {
   const message = error?.message || String(error);
   const messageLower = message.toLowerCase();
 
-  // Context overflow / prompt too long
+  // Helper to format context info
+  const formatContext = () => {
+    const parts: string[] = [];
+    if (context?.promptLength) parts.push(`Prompt: ${Math.round(context.promptLength / 1000)}k caractères`);
+    if (context?.sourceCount) parts.push(`Sources: ${context.sourceCount}`);
+    if (context?.numCtx) parts.push(`Contexte LLM: ${context.numCtx} tokens`);
+    if (context?.model) parts.push(`Modèle: ${context.model}`);
+    return parts.join(', ');
+  };
+
+  // Estimate if the request is "heavy" based on context
+  const isHeavyRequest = () => {
+    if (!context) return false;
+    // Heavy if: many sources, large prompt, or large context window requested
+    const largePrompt = (context.promptLength || 0) > 5000;
+    const manySources = (context.sourceCount || 0) > 10;
+    const largeContext = (context.numCtx || 0) > 16000;
+    return largePrompt || manySources || largeContext;
+  };
+
+  // Context overflow / prompt too long - explicit errors from Ollama
   if (
     messageLower.includes('context length') ||
     messageLower.includes('maximum context') ||
     messageLower.includes('token limit') ||
     messageLower.includes('too many tokens') ||
-    messageLower.includes('exceeds') && messageLower.includes('context')
+    (messageLower.includes('exceeds') && messageLower.includes('context'))
   ) {
     return {
       type: 'context_overflow',
       userMessage: '⚠️ Le contexte est trop long pour le modèle.',
-      technicalDetails: `Prompt: ${context?.promptLength || '?'} caractères, Modèle: ${context?.model || '?'}`,
+      technicalDetails: formatContext(),
       suggestion: 'Réduisez le nombre de sources (topK) ou utilisez un modèle avec un contexte plus large (ex: llama3.1, mistral).',
     };
   }
@@ -171,19 +198,21 @@ export function classifyOllamaError(error: any, context?: { model?: string; prom
     messageLower.includes('aborterror') ||
     messageLower.includes('aborted')
   ) {
+    const suggestion = isHeavyRequest()
+      ? 'La requête est trop lourde. Réduisez topK (5-10) ou le contexte LLM, ou augmentez le timeout.'
+      : 'Essayez avec une question plus courte, moins de sources, ou augmentez le timeout.';
     return {
       type: 'timeout',
       userMessage: '⏱️ Le modèle a mis trop de temps à répondre.',
-      technicalDetails: message,
-      suggestion: 'Essayez avec une question plus courte, moins de sources, ou augmentez le timeout dans les paramètres.',
+      technicalDetails: formatContext(),
+      suggestion,
     };
   }
 
-  // Connection errors (Ollama not running)
+  // Connection errors - ONLY for explicit connection refused
   if (
     messageLower.includes('econnrefused') ||
-    messageLower.includes('connection refused') ||
-    messageLower.includes('fetch failed') && !messageLower.includes('context')
+    messageLower.includes('connection refused')
   ) {
     return {
       type: 'connection',
@@ -195,8 +224,8 @@ export function classifyOllamaError(error: any, context?: { model?: string; prom
 
   // Model not found
   if (
-    messageLower.includes('model') && (messageLower.includes('not found') || messageLower.includes('does not exist')) ||
-    messageLower.includes('pull') && messageLower.includes('first')
+    (messageLower.includes('model') && (messageLower.includes('not found') || messageLower.includes('does not exist'))) ||
+    (messageLower.includes('pull') && messageLower.includes('first'))
   ) {
     return {
       type: 'model_not_found',
@@ -206,31 +235,47 @@ export function classifyOllamaError(error: any, context?: { model?: string; prom
     };
   }
 
-  // Out of memory
+  // Out of memory - explicit OOM errors
   if (
     messageLower.includes('out of memory') ||
     messageLower.includes('oom') ||
-    messageLower.includes('cuda') && messageLower.includes('memory') ||
+    (messageLower.includes('cuda') && messageLower.includes('memory')) ||
     messageLower.includes('insufficient memory')
   ) {
     return {
       type: 'out_of_memory',
       userMessage: '💾 Mémoire insuffisante pour ce modèle.',
-      technicalDetails: message,
-      suggestion: 'Utilisez un modèle plus petit (ex: gemma2:2b, phi3:mini) ou fermez d\'autres applications.',
+      technicalDetails: formatContext(),
+      suggestion: 'Utilisez un modèle plus petit (ex: gemma2:2b, phi3:mini) ou réduisez le contexte LLM.',
     };
   }
 
-  // Fetch failed - likely context overflow if prompt is large
+  // Fetch failed - IMPORTANT: Check if it's likely a resource issue vs connection issue
   if (messageLower.includes('fetch failed')) {
-    if (context?.promptLength && context.promptLength > 10000) {
+    // If the request was heavy, it's likely a resource exhaustion, not a connection issue
+    if (isHeavyRequest()) {
+      const details = formatContext();
+      let suggestion = 'La requête est trop lourde pour Ollama. ';
+
+      if ((context?.sourceCount || 0) > 15) {
+        suggestion += `Réduisez topK (actuellement ${context?.sourceCount}, essayez 5-10). `;
+      }
+      if ((context?.numCtx || 0) > 16000) {
+        suggestion += `Réduisez le contexte LLM (actuellement ${context?.numCtx}, essayez 8192-16384). `;
+      }
+      if ((context?.promptLength || 0) > 50000) {
+        suggestion += 'Le prompt est très long - moins de sources réduira sa taille.';
+      }
+
       return {
         type: 'context_overflow',
-        userMessage: '⚠️ Requête trop volumineuse - le contexte dépasse probablement la limite du modèle.',
-        technicalDetails: `Prompt: ${context.promptLength} caractères, Modèle: ${context?.model || '?'}`,
-        suggestion: 'Réduisez le nombre de sources (topK: 3-5) ou utilisez un modèle avec un contexte plus large.',
+        userMessage: '⚠️ Ollama n\'a pas pu traiter la requête (trop volumineuse).',
+        technicalDetails: details || message,
+        suggestion: suggestion.trim(),
       };
     }
+
+    // Small request failed - more likely a real connection issue
     return {
       type: 'connection',
       userMessage: '🔌 Erreur de connexion à Ollama.',
@@ -239,7 +284,16 @@ export function classifyOllamaError(error: any, context?: { model?: string; prom
     };
   }
 
-  // Unknown error
+  // Unknown error - but if request was heavy, hint at that
+  if (isHeavyRequest()) {
+    return {
+      type: 'context_overflow',
+      userMessage: '⚠️ Erreur lors du traitement - la requête est peut-être trop volumineuse.',
+      technicalDetails: formatContext() + ` | Erreur: ${message}`,
+      suggestion: 'Essayez avec moins de sources (topK: 5-10) ou un contexte LLM plus petit.',
+    };
+  }
+
   return {
     type: 'unknown',
     userMessage: '❌ Une erreur inattendue s\'est produite.',
@@ -629,6 +683,14 @@ export class OllamaClient {
       generationParams: request.options,
     });
 
+    // Error context for classification (no sources in this method)
+    const errorContext: ErrorContext = {
+      model,
+      promptLength: fullPrompt.length,
+      sourceCount: context.length, // context strings, not SearchResult
+      numCtx: options.num_ctx,
+    };
+
     let response: Response;
     try {
       response = await fetch(url, {
@@ -642,7 +704,7 @@ export class OllamaClient {
       });
     } catch (fetchError: any) {
       // Classify and enhance the error
-      const classified = classifyOllamaError(fetchError, { model, promptLength: fullPrompt.length });
+      const classified = classifyOllamaError(fetchError, errorContext);
       console.error('❌ [OLLAMA] Fetch error classified:', classified);
       const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
       (enhancedError as any).classified = classified;
@@ -660,7 +722,7 @@ export class OllamaClient {
       });
       const classified = classifyOllamaError(
         new Error(`${response.status} ${response.statusText}: ${errorBody}`),
-        { model, promptLength: fullPrompt.length }
+        errorContext
       );
       const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
       (enhancedError as any).classified = classified;
@@ -735,6 +797,14 @@ export class OllamaClient {
       generationParams: request.options,
     });
 
+    // Error context for classification (with sources)
+    const errorContext: ErrorContext = {
+      model,
+      promptLength: fullPrompt.length,
+      sourceCount: sources.length,
+      numCtx: options.num_ctx,
+    };
+
     let response: Response;
     try {
       response = await fetch(url, {
@@ -748,7 +818,7 @@ export class OllamaClient {
       });
     } catch (fetchError: any) {
       // Classify and enhance the error
-      const classified = classifyOllamaError(fetchError, { model, promptLength: fullPrompt.length });
+      const classified = classifyOllamaError(fetchError, errorContext);
       console.error('❌ [OLLAMA] Fetch error classified:', classified);
       const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
       (enhancedError as any).classified = classified;
@@ -766,7 +836,7 @@ export class OllamaClient {
       });
       const classified = classifyOllamaError(
         new Error(`${response.status} ${response.statusText}: ${errorBody}`),
-        { model, promptLength: fullPrompt.length }
+        errorContext
       );
       const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
       (enhancedError as any).classified = classified;
