@@ -15,7 +15,7 @@ export const ChatInterface: React.FC = () => {
   const { messages, isProcessing, sendMessage, cancelGeneration, clearChat } = useChatStore();
   const { indexedFilePaths, refreshIndexedPDFs } = useBibliographyStore();
   const [inputValue, setInputValue] = useState('');
-  const [ragStatus, setRagStatus] = useState<string | null>(null);
+  const [ragStatus, setRagStatus] = useState<{ message: string; isError: boolean } | null>(null);
 
   const indexedCount = indexedFilePaths.size;
 
@@ -27,7 +27,10 @@ export const ChatInterface: React.FC = () => {
   // Listen for RAG status updates
   useEffect(() => {
     const handleStatus = (_event: unknown, data: { stage: string; message: string }) => {
-      setRagStatus(data.message);
+      setRagStatus({
+        message: data.message,
+        isError: data.stage === 'error',
+      });
     };
 
     // @ts-expect-error - electron IPC
@@ -39,12 +42,15 @@ export const ChatInterface: React.FC = () => {
     };
   }, []);
 
-  // Clear status when processing ends
+  // Clear status when processing ends (with delay for errors)
   useEffect(() => {
-    if (!isProcessing) {
-      setRagStatus(null);
+    if (!isProcessing && ragStatus) {
+      // Keep error messages visible longer
+      const delay = ragStatus.isError ? 5000 : 0;
+      const timer = setTimeout(() => setRagStatus(null), delay);
+      return () => clearTimeout(timer);
     }
-  }, [isProcessing]);
+  }, [isProcessing, ragStatus]);
 
   const handleSend = async () => {
     logger.component('ChatInterface', 'handleSend called', { inputValue, isProcessing });
@@ -125,9 +131,9 @@ export const ChatInterface: React.FC = () => {
           <MessageList messages={messages} />
         )}
         {/* RAG Status indicator */}
-        {isProcessing && ragStatus && (
-          <div className="rag-status-indicator">
-            {ragStatus}
+        {ragStatus && (isProcessing || ragStatus.isError) && (
+          <div className={`rag-status-indicator ${ragStatus.isError ? 'rag-status-error' : ''}`}>
+            {ragStatus.message}
           </div>
         )}
       </div>

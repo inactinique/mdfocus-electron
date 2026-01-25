@@ -132,6 +132,122 @@ export function getModelContextInfo(modelName: string): { maxContext: number; re
   };
 }
 
+// MARK: - Error Classification
+
+/**
+ * Classifies Ollama errors and provides user-friendly messages
+ */
+export interface ClassifiedError {
+  type: 'context_overflow' | 'timeout' | 'connection' | 'model_not_found' | 'out_of_memory' | 'unknown';
+  userMessage: string;
+  technicalDetails: string;
+  suggestion: string;
+}
+
+export function classifyOllamaError(error: any, context?: { model?: string; promptLength?: number }): ClassifiedError {
+  const message = error?.message || String(error);
+  const messageLower = message.toLowerCase();
+
+  // Context overflow / prompt too long
+  if (
+    messageLower.includes('context length') ||
+    messageLower.includes('maximum context') ||
+    messageLower.includes('token limit') ||
+    messageLower.includes('too many tokens') ||
+    messageLower.includes('exceeds') && messageLower.includes('context')
+  ) {
+    return {
+      type: 'context_overflow',
+      userMessage: '⚠️ Le contexte est trop long pour le modèle.',
+      technicalDetails: `Prompt: ${context?.promptLength || '?'} caractères, Modèle: ${context?.model || '?'}`,
+      suggestion: 'Réduisez le nombre de sources (topK) ou utilisez un modèle avec un contexte plus large (ex: llama3.1, mistral).',
+    };
+  }
+
+  // Timeout
+  if (
+    messageLower.includes('timeout') ||
+    messageLower.includes('timed out') ||
+    messageLower.includes('aborterror') ||
+    messageLower.includes('aborted')
+  ) {
+    return {
+      type: 'timeout',
+      userMessage: '⏱️ Le modèle a mis trop de temps à répondre.',
+      technicalDetails: message,
+      suggestion: 'Essayez avec une question plus courte, moins de sources, ou augmentez le timeout dans les paramètres.',
+    };
+  }
+
+  // Connection errors (Ollama not running)
+  if (
+    messageLower.includes('econnrefused') ||
+    messageLower.includes('connection refused') ||
+    messageLower.includes('fetch failed') && !messageLower.includes('context')
+  ) {
+    return {
+      type: 'connection',
+      userMessage: '🔌 Impossible de se connecter à Ollama.',
+      technicalDetails: message,
+      suggestion: 'Vérifiez qu\'Ollama est lancé (ollama serve) et accessible sur le port configuré.',
+    };
+  }
+
+  // Model not found
+  if (
+    messageLower.includes('model') && (messageLower.includes('not found') || messageLower.includes('does not exist')) ||
+    messageLower.includes('pull') && messageLower.includes('first')
+  ) {
+    return {
+      type: 'model_not_found',
+      userMessage: `🔍 Modèle "${context?.model || 'inconnu'}" non trouvé.`,
+      technicalDetails: message,
+      suggestion: `Téléchargez le modèle avec: ollama pull ${context?.model || 'nom_du_modele'}`,
+    };
+  }
+
+  // Out of memory
+  if (
+    messageLower.includes('out of memory') ||
+    messageLower.includes('oom') ||
+    messageLower.includes('cuda') && messageLower.includes('memory') ||
+    messageLower.includes('insufficient memory')
+  ) {
+    return {
+      type: 'out_of_memory',
+      userMessage: '💾 Mémoire insuffisante pour ce modèle.',
+      technicalDetails: message,
+      suggestion: 'Utilisez un modèle plus petit (ex: gemma2:2b, phi3:mini) ou fermez d\'autres applications.',
+    };
+  }
+
+  // Fetch failed - likely context overflow if prompt is large
+  if (messageLower.includes('fetch failed')) {
+    if (context?.promptLength && context.promptLength > 10000) {
+      return {
+        type: 'context_overflow',
+        userMessage: '⚠️ Requête trop volumineuse - le contexte dépasse probablement la limite du modèle.',
+        technicalDetails: `Prompt: ${context.promptLength} caractères, Modèle: ${context?.model || '?'}`,
+        suggestion: 'Réduisez le nombre de sources (topK: 3-5) ou utilisez un modèle avec un contexte plus large.',
+      };
+    }
+    return {
+      type: 'connection',
+      userMessage: '🔌 Erreur de connexion à Ollama.',
+      technicalDetails: message,
+      suggestion: 'Vérifiez qu\'Ollama est lancé et que le modèle est téléchargé.',
+    };
+  }
+
+  // Unknown error
+  return {
+    type: 'unknown',
+    userMessage: '❌ Une erreur inattendue s\'est produite.',
+    technicalDetails: message,
+    suggestion: 'Consultez les logs pour plus de détails.',
+  };
+}
+
 // MARK: - OllamaClient
 
 // Presets de génération pour différents cas d'usage
@@ -513,24 +629,42 @@ export class OllamaClient {
       generationParams: request.options,
     });
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(timeout),
-      // @ts-ignore - undici-specific options
-      headersTimeout: timeout, // Wait for headers as long as the main timeout
-      bodyTimeout: timeout, // Wait for body chunks as long as the main timeout
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(timeout),
+        // @ts-ignore - undici-specific options
+        headersTimeout: timeout, // Wait for headers as long as the main timeout
+        bodyTimeout: timeout, // Wait for body chunks as long as the main timeout
+      });
+    } catch (fetchError: any) {
+      // Classify and enhance the error
+      const classified = classifyOllamaError(fetchError, { model, promptLength: fullPrompt.length });
+      console.error('❌ [OLLAMA] Fetch error classified:', classified);
+      const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
+      (enhancedError as any).classified = classified;
+      throw enhancedError;
+    }
 
     if (!response.ok || !response.body) {
+      const errorBody = await response.text().catch(() => '');
       console.error('❌ [OLLAMA DEBUG] Ollama API error:', {
         status: response.status,
         statusText: response.statusText,
+        body: errorBody,
         url,
         model
       });
-      throw new Error(`Ollama streaming error: ${response.status} - Model: ${model}`);
+      const classified = classifyOllamaError(
+        new Error(`${response.status} ${response.statusText}: ${errorBody}`),
+        { model, promptLength: fullPrompt.length }
+      );
+      const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
+      (enhancedError as any).classified = classified;
+      throw enhancedError;
     }
 
     const reader = response.body.getReader();
@@ -601,24 +735,42 @@ export class OllamaClient {
       generationParams: request.options,
     });
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(timeout),
-      // @ts-ignore - undici-specific options
-      headersTimeout: timeout, // Wait for headers as long as the main timeout
-      bodyTimeout: timeout, // Wait for body chunks as long as the main timeout
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(timeout),
+        // @ts-ignore - undici-specific options
+        headersTimeout: timeout, // Wait for headers as long as the main timeout
+        bodyTimeout: timeout, // Wait for body chunks as long as the main timeout
+      });
+    } catch (fetchError: any) {
+      // Classify and enhance the error
+      const classified = classifyOllamaError(fetchError, { model, promptLength: fullPrompt.length });
+      console.error('❌ [OLLAMA] Fetch error classified:', classified);
+      const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
+      (enhancedError as any).classified = classified;
+      throw enhancedError;
+    }
 
     if (!response.ok || !response.body) {
+      const errorBody = await response.text().catch(() => '');
       console.error('❌ [OLLAMA DEBUG] Ollama API error:', {
         status: response.status,
         statusText: response.statusText,
+        body: errorBody,
         url,
         model
       });
-      throw new Error(`Ollama streaming error: ${response.status} - Model: ${model}`);
+      const classified = classifyOllamaError(
+        new Error(`${response.status} ${response.statusText}: ${errorBody}`),
+        { model, promptLength: fullPrompt.length }
+      );
+      const enhancedError = new Error(`${classified.userMessage}\n\n💡 ${classified.suggestion}`);
+      (enhancedError as any).classified = classified;
+      throw enhancedError;
     }
 
     const reader = response.body.getReader();

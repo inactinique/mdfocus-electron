@@ -522,12 +522,22 @@ class ChatService {
         ragUsed: searchResults.length > 0,
         sourcesCount: searchResults.length,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [RAG DETAILED DEBUG] Chat error:', {
         queryHash: queryHash,
         error: error.message,
         stack: error.stack,
+        classified: error.classified, // If error was classified by OllamaClient
       });
+
+      // 🚀 FEEDBACK: Send error status to renderer
+      if (options.window) {
+        options.window.webContents.send('chat:status', {
+          stage: 'error',
+          message: error.message || 'Une erreur est survenue',
+        });
+      }
+
       throw error;
     }
   }
