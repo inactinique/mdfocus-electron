@@ -55,9 +55,10 @@ class ChatService {
   private compressor: ContextCompressor = new ContextCompressor();
 
   // LRU Cache for RAG search results (cache identical queries)
+  // 🚀 OPTIMIZED: Increased capacity (100→200) and TTL (10→30 minutes)
   private ragCache = new LRUCache<string, any[]>({
-    max: 100, // Store up to 100 different queries
-    ttl: 1000 * 60 * 10, // 10 minutes TTL
+    max: 200, // Store up to 200 different queries
+    ttl: 1000 * 60 * 30, // 30 minutes TTL
     updateAgeOnGet: true, // Refresh TTL on access
   });
 
@@ -178,6 +179,14 @@ class ChatService {
       if (options.context) {
         const searchStart = Date.now();
 
+        // 🚀 FEEDBACK: Send status update - searching
+        if (options.window) {
+          options.window.webContents.send('chat:status', {
+            stage: 'searching',
+            message: '🔍 Recherche dans les documents...',
+          });
+        }
+
         console.log('🔍 [RAG DETAILED DEBUG] Starting RAG search:', {
           query: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
           queryLength: message.length,
@@ -226,6 +235,15 @@ class ChatService {
 
         if (searchResults.length > 0) {
           console.log(`📚 Using ${searchResults.length} context chunks for RAG`);
+
+          // 🚀 FEEDBACK: Send status update - found sources
+          if (options.window) {
+            options.window.webContents.send('chat:status', {
+              stage: 'found',
+              message: `📚 ${searchResults.length} sources trouvées`,
+            });
+          }
+
           // Log first result for debugging
           console.log('🔍 [RAG DEBUG] First result:', {
             document: searchResults[0].document?.title || 'Unknown',
@@ -338,6 +356,14 @@ class ChatService {
         repeat_penalty: options.repeat_penalty,
         num_ctx: options.numCtx,  // Context window size for Ollama
       };
+
+      // 🚀 FEEDBACK: Send status update - generating
+      if (options.window) {
+        options.window.webContents.send('chat:status', {
+          stage: 'generating',
+          message: '✨ Génération de la réponse...',
+        });
+      }
 
       // Stream la réponse avec contexte RAG si disponible
       if (searchResults.length > 0) {

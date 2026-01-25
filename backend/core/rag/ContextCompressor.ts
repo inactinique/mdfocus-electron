@@ -38,6 +38,25 @@ export class ContextCompressor {
     const originalSize = this.calculateTotalSize(chunks);
     const originalCount = chunks.length;
 
+    // 🚀 OPTIMIZATION: Skip compression for small contexts (< 10k chars)
+    if (originalSize <= 10000) {
+      console.log('⏭️  [COMPRESSION] Skipping - context already small:', {
+        originalChunks: originalCount,
+        originalSize,
+      });
+      return {
+        chunks,
+        stats: {
+          originalSize,
+          compressedSize: originalSize,
+          originalChunks: originalCount,
+          compressedChunks: originalCount,
+          reductionPercent: 0,
+          strategy: 'none-small',
+        },
+      };
+    }
+
     console.log('🗜️  [COMPRESSION] Starting intelligent compression:', {
       originalChunks: originalCount,
       originalSize,

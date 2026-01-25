@@ -15,6 +15,7 @@ export const ChatInterface: React.FC = () => {
   const { messages, isProcessing, sendMessage, cancelGeneration, clearChat } = useChatStore();
   const { indexedFilePaths, refreshIndexedPDFs } = useBibliographyStore();
   const [inputValue, setInputValue] = useState('');
+  const [ragStatus, setRagStatus] = useState<string | null>(null);
 
   const indexedCount = indexedFilePaths.size;
 
@@ -22,6 +23,28 @@ export const ChatInterface: React.FC = () => {
   useEffect(() => {
     refreshIndexedPDFs();
   }, [refreshIndexedPDFs]);
+
+  // Listen for RAG status updates
+  useEffect(() => {
+    const handleStatus = (_event: unknown, data: { stage: string; message: string }) => {
+      setRagStatus(data.message);
+    };
+
+    // @ts-expect-error - electron IPC
+    window.electron?.ipcRenderer?.on('chat:status', handleStatus);
+
+    return () => {
+      // @ts-expect-error - electron IPC
+      window.electron?.ipcRenderer?.removeListener('chat:status', handleStatus);
+    };
+  }, []);
+
+  // Clear status when processing ends
+  useEffect(() => {
+    if (!isProcessing) {
+      setRagStatus(null);
+    }
+  }, [isProcessing]);
 
   const handleSend = async () => {
     logger.component('ChatInterface', 'handleSend called', { inputValue, isProcessing });
@@ -100,6 +123,12 @@ export const ChatInterface: React.FC = () => {
           </div>
         ) : (
           <MessageList messages={messages} />
+        )}
+        {/* RAG Status indicator */}
+        {isProcessing && ragStatus && (
+          <div className="rag-status-indicator">
+            {ragStatus}
+          </div>
         )}
       </div>
 

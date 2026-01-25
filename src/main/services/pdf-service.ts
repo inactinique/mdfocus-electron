@@ -7,6 +7,7 @@ import { LLMProviderManager, type LLMProvider } from '../../../backend/core/llm/
 import { KnowledgeGraphBuilder } from '../../../backend/core/analysis/KnowledgeGraphBuilder.js';
 import { TopicModelingService } from '../../../backend/core/analysis/TopicModelingService.js';
 import { TextometricsService } from '../../../backend/core/analysis/TextometricsService.js';
+import { QueryEmbeddingCache } from '../../../backend/core/rag/QueryEmbeddingCache.js';
 import { configManager } from './config-manager.js';
 import { tropyService } from './tropy-service.js';
 import path from 'path';
@@ -61,6 +62,9 @@ class PDFService {
   private ollamaClient: OllamaClient | null = null;
   private llmProviderManager: LLMProviderManager | null = null;
   private currentProjectPath: string | null = null;
+
+  // Query embedding cache for faster repeated searches
+  private queryEmbeddingCache = new QueryEmbeddingCache(500, 60);
 
   /**
    * Initialise le PDF Service pour un projet spécifique
@@ -191,10 +195,45 @@ class PDFService {
       console.log(`   Ollama URL: ${config.ollamaURL}`);
       console.log(`   Chat Model: ${config.ollamaChatModel}`);
       console.log(`   Embedding Model: ${config.ollamaEmbeddingModel}`);
+
+      // Warmup embedding model (Phase 6) - run in background
+      this.warmupEmbeddingModel();
     } catch (error) {
       console.error('❌ Failed to initialize PDF Service:', error);
       throw error;
     }
+  }
+
+  /**
+   * Warmup embedding model to reduce first-query latency
+   */
+  private async warmupEmbeddingModel(): Promise<void> {
+    if (!this.ollamaClient) return;
+
+    console.log('🔥 [WARMUP] Pre-loading embedding model...');
+    try {
+      await this.ollamaClient.generateEmbedding('warmup query');
+      console.log('✅ [WARMUP] Embedding model ready');
+    } catch (e) {
+      console.warn('⚠️  [WARMUP] Failed - first query may be slower');
+    }
+  }
+
+  /**
+   * Get query embedding with caching
+   * Returns cached embedding if available, otherwise generates and caches
+   */
+  private async getQueryEmbedding(query: string): Promise<Float32Array> {
+    // Check cache first
+    const cached = this.queryEmbeddingCache.get(query);
+    if (cached) {
+      return cached;
+    }
+
+    // Generate and cache
+    const embedding = await this.ollamaClient!.generateEmbedding(query);
+    this.queryEmbeddingCache.set(query, embedding);
+    return embedding;
   }
 
   /**
@@ -361,50 +400,50 @@ class PDFService {
     const expandedQueries = expandQueryMultilingual(query);
     const allResults = new Map<string, any>(); // chunk.id → meilleur résultat
 
-    // Générer embeddings et chercher pour chaque variante
-    for (const expandedQuery of expandedQueries) {
-      console.log('🔍 [PDF-SERVICE DEBUG] Generating embedding for query variant:', {
-        queryLength: expandedQuery.length,
-        queryPreview: expandedQuery.substring(0, 50) + (expandedQuery.length > 50 ? '...' : ''),
-      });
+    // 🚀 PARALLEL: Generate all embeddings in parallel (using cache)
+    const embeddingStart = Date.now();
+    console.log(`🔍 [PDF-SERVICE] Generating ${expandedQueries.length} embeddings in parallel...`);
 
-      const queryEmbedding = await this.ollamaClient!.generateEmbedding(expandedQuery);
-      const embeddingDuration = Date.now() - searchStart;
+    const embeddingPromises = expandedQueries.map(q => this.getQueryEmbedding(q));
+    const embeddings = await Promise.all(embeddingPromises);
 
-      console.log('🔍 [PDF-SERVICE DEBUG] Embedding generated:', {
-        embeddingDimensions: queryEmbedding.length,
-        embeddingDuration: `${embeddingDuration}ms`,
-        embeddingPreview: Array.from(queryEmbedding.slice(0, 5)).map(v => v.toFixed(4)),
-      });
+    const embeddingDuration = Date.now() - embeddingStart;
+    console.log(`✅ [PDF-SERVICE] All embeddings generated in ${embeddingDuration}ms`);
 
-      console.log('🔍 [PDF-SERVICE DEBUG] Searching vector store:', {
-        topK: topK,
-        documentIdsFilter: documentIdsFilter?.length || 'none',
-      });
+    // Log cache stats periodically
+    const cacheStats = this.queryEmbeddingCache.getStats();
+    if ((cacheStats.hits + cacheStats.misses) % 10 === 0) {
+      console.log(`💾 [EMB CACHE] Stats: ${cacheStats.hits} hits, ${cacheStats.misses} misses (${cacheStats.hitRate})`);
+    }
 
-      const vectorSearchStart = Date.now();
+    // 🚀 PARALLEL: Search with all embeddings in parallel
+    const searchStart2 = Date.now();
+    const searchPromises = embeddings.map((queryEmbedding, i) => {
+      const expandedQuery = expandedQueries[i];
 
-      // EnhancedVectorStore requires query string + embedding
-      // VectorStore requires only embedding
-      let results;
       if (this.vectorStore instanceof EnhancedVectorStore) {
-        results = await this.vectorStore.search(
+        return this.vectorStore.search(
           expandedQuery,
           queryEmbedding,
           topK,
           documentIdsFilter
         );
       } else {
-        results = this.vectorStore!.search(
+        return Promise.resolve(this.vectorStore!.search(
           queryEmbedding,
           topK,
           documentIdsFilter
-        );
+        ));
       }
+    });
 
-      const vectorSearchDuration = Date.now() - vectorSearchStart;
+    const allSearchResults = await Promise.all(searchPromises);
+    const searchDuration = Date.now() - searchStart2;
+    console.log(`✅ [PDF-SERVICE] All searches completed in ${searchDuration}ms`);
 
-      // Merger les résultats (garder le meilleur score par chunk)
+    // Merge results (keep best score per chunk)
+    for (let i = 0; i < allSearchResults.length; i++) {
+      const results = allSearchResults[i];
       for (const result of results) {
         const chunkId = result.chunk.id;
         const existing = allResults.get(chunkId);
@@ -413,14 +452,9 @@ class PDFService {
           allResults.set(chunkId, result);
         }
       }
-
-      console.log('🔍 [PDF-SERVICE DEBUG] Query variant results:', {
-        query: expandedQuery.substring(0, 50),
-        variantResults: results.length,
-        totalUniqueChunks: allResults.size,
-        vectorSearchDuration: `${vectorSearchDuration}ms`,
-      });
     }
+
+    console.log(`🔍 [PDF-SERVICE] Merged ${allResults.size} unique chunks from ${expandedQueries.length} query variants`);
 
     // Convertir Map en array et trier par similarité
     let mergedResults = Array.from(allResults.values())
