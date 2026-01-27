@@ -1,6 +1,6 @@
 # ClioDeck - Writing Assistant for Historians
 
-Multi-platform desktop application (Electron + React + TypeScript) to assist historians in writing articles (v1) and books (not implmented yet), with RAG (Retrieval-Augmented Generation) and Zotero (v1) / Tropy (not implemented yet) integrations.
+Multi-platform desktop application (Electron + React + TypeScript) to assist historians in writing articles (v1) and books (not implemented yet), with RAG (Retrieval-Augmented Generation) and Zotero (v1) / Tropy (v1 - beta) integrations.
 
 **NOTE that *ClioDeck* is a [vibe-coding](https://en.wikipedia.org/wiki/Vibe_coding) experiment aimed at developping a Proof Of Concept. It is provided *as is*, at your own risk**: it has been designed by [Frédéric Clavert](https://inactinique.net) and coded through [claude code](https://claude.com/product/claude-code). I made a small talk on vibe-coding / vibe-writing for historians, [that you can see here](https://inactinique.net/prez/2025-07-03_DH-LLM/2025-07-03_DH-LLM.html#/title-slide) (in French, once open, hit 's' to get my notes). On the ethics of vibe coding, see [here](https://github.com/inactinique/cliodeck/wiki/4.-Ethics).
 
@@ -14,7 +14,7 @@ Create a writing assistant that allows historians to:
 - Efficiently search their bibliographic data
 - Query their digitized sources (PDFs) via RAG
 - Integrate Zotero for bibliography
-- Integrate Tropy for archival sources (not implemented yet)
+- Integrate Tropy for archival sources (v1 - beta)
 - Edit in markdown (WYSIWYG v1) with contextual AI assistant (not implmented yet)
 
 
